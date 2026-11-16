@@ -13,5 +13,7 @@
 	"tags.title": "Tag",
 	"about.title": "Tentang",
 	"notfound.title": "Tidak ditemukan",
-	"notfound.body": "Halaman ini tidak ada, atau tulisannya belum diterbitkan."
+	"notfound.body": "Halaman ini tidak ada, atau tulisannya belum diterbitkan.",
+	"nav.skip": "Lewati ke konten",
+	"nav.primary": "Utama"
 }

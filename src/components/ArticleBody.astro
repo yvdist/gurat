@@ -1,0 +1,12 @@
+---
+// The ONLY set:html in the repo. Safe because `html` is the output of
+// renderDoc (src/lib/content/render.ts), which escapes every text and
+// attribute value by construction. Never pass anything else here.
+interface Props {
+	html: string;
+}
+
+const { html } = Astro.props;
+---
+
+<div class="article-body" set:html={html} />

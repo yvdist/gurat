@@ -13,5 +13,7 @@
 	"tags.title": "Tags",
 	"about.title": "About",
 	"notfound.title": "Not found",
-	"notfound.body": "This page does not exist, or the post is not published."
+	"notfound.body": "This page does not exist, or the post is not published.",
+	"nav.skip": "Skip to content",
+	"nav.primary": "Primary"
 }

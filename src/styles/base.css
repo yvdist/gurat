@@ -1,0 +1,79 @@
+/* Element defaults: reset + system font stack, ~65ch measure,
+   light + dark via tokens. Neutral only; DESIGN: Phase 3 refines. */
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+* {
+	margin: 0;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	color: var(--fg);
+	background: var(--surface);
+	font-family:
+		system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+		sans-serif;
+	font-size: var(--font-size-base);
+	line-height: var(--line-height-body);
+}
+
+main {
+	max-width: var(--measure);
+	margin-inline: auto;
+	padding: var(--space-4);
+}
+
+h1,
+h2,
+h3,
+h4 {
+	line-height: var(--line-height-heading);
+	text-wrap: balance;
+}
+
+a {
+	color: var(--accent);
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+	display: block;
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.skip-link {
+	position: absolute;
+	left: var(--space-4);
+	top: -100%;
+	z-index: 100;
+	background: var(--surface);
+	padding: var(--space-2) var(--space-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.skip-link:focus {
+	top: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
+}
