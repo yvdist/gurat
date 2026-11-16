@@ -21,8 +21,10 @@ import "@fontsource/newsreader/latin-ext-400-italic.css";
 import "@fontsource/newsreader/latin-ext-500.css";
 import "@fontsource/ibm-plex-mono/latin-400.css";
 import "@fontsource/ibm-plex-mono/latin-500.css";
-// Preload only the display face woff2 (LCP text); body/mono swap in.
+// Preload display + body 400 woff2 (LCP headline + article text; the body
+// face swap reflows the first paragraphs, so it is CLS-critical too).
 import bodoni400 from "@fontsource/bodoni-moda/files/bodoni-moda-latin-400-normal.woff2?url";
+import newsreader400 from "@fontsource/newsreader/files/newsreader-latin-400-normal.woff2?url";
 
 interface Hreflang {
 	locale: Locale;
@@ -69,6 +71,13 @@ const fullCanonical = `${SITE.url}${canonical}`;
 		<link
 			rel="preload"
 			href={bodoni400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={newsreader400}
 			as="font"
 			type="font/woff2"
 			crossorigin
