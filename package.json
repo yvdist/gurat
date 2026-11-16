@@ -14,7 +14,8 @@
 		"db:generate": "pnpm exec drizzle-kit generate",
 		"db:migrate:local": "wrangler d1 migrations apply gurat --local",
 		"db:migrate:remote": "wrangler d1 migrations apply gurat --remote",
-		"db:seed:local": "tsx scripts/seed.ts > .seed.sql && wrangler d1 execute gurat --local --file .seed.sql && rm -f .seed.sql"
+		"db:seed:local": "tsx scripts/seed.ts > .seed.sql && wrangler d1 execute gurat --local --file .seed.sql && rm -f .seed.sql",
+		"db:rerender": "pnpm exec tsx scripts/rerender.ts"
 	},
 	"dependencies": {
 		"astro": "7.4.4",
