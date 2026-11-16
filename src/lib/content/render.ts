@@ -259,9 +259,7 @@ function renderBlock(
 		case "orderedList":
 			return renderListItems(node.content, ctx, state, `${path}.content`, "ol");
 		case "codeBlock": {
-			const body = (node.content ?? [])
-				.map((t) => escapeHtml(t.text))
-				.join("");
+			const body = (node.content ?? []).map((t) => escapeHtml(t.text)).join("");
 			return {
 				html: `<pre><code${codeClass(node.attrs.language)}>${body}</code></pre>`,
 				plain: (node.content ?? []).map((t) => t.text).join(""),
