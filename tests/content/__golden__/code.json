@@ -1,0 +1,13 @@
+[
+	{
+		"type": "codeBlock",
+		"attrs": { "language": "ts" },
+		"content": [{ "type": "text", "text": "const x = 1;" }]
+	},
+	{
+		"type": "codeBlock",
+		"attrs": { "language": "" },
+		"content": [{ "type": "text", "text": "plain" }]
+	},
+	{ "type": "horizontalRule" }
+]

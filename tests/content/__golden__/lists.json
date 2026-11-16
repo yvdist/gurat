@@ -1,0 +1,48 @@
+[
+	{
+		"type": "bulletList",
+		"content": [
+			{
+				"type": "listItem",
+				"content": [
+					{
+						"type": "paragraph",
+						"content": [{ "type": "text", "text": "First" }]
+					}
+				]
+			},
+			{
+				"type": "listItem",
+				"content": [
+					{
+						"type": "paragraph",
+						"content": [{ "type": "text", "text": "Second" }]
+					}
+				]
+			}
+		]
+	},
+	{
+		"type": "orderedList",
+		"content": [
+			{
+				"type": "listItem",
+				"content": [
+					{
+						"type": "paragraph",
+						"content": [{ "type": "text", "text": "Step one" }]
+					}
+				]
+			},
+			{
+				"type": "listItem",
+				"content": [
+					{
+						"type": "paragraph",
+						"content": [{ "type": "text", "text": "Step two" }]
+					}
+				]
+			}
+		]
+	}
+]

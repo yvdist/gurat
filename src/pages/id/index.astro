@@ -1,0 +1,44 @@
+---
+import { type Locale, SITE } from "../../config/site";
+import { formatPostDate, localizePath, t } from "../../i18n";
+import Base from "../../layouts/Base.astro";
+import { rootHreflangs } from "../../lib/archive";
+import { getEnv } from "../../lib/env";
+import { createDb, listPublishedPosts } from "../../server/db";
+
+const locale: Locale = "id";
+const db = createDb(getEnv().DB);
+const { items: posts } = await listPublishedPosts(db, { locale, limit: 10 });
+
+const description = t(locale, "site.intro");
+---
+
+<Base
+	title={`${SITE.name} — ${t(locale, "site.tagline")}`}
+	description={description}
+	canonical="/id"
+	hreflangs={rootHreflangs("/")}
+	locale={locale}
+	heading={SITE.name}
+>
+	<p>{description}</p>
+	<section aria-labelledby="latest">
+		<h2 id="latest">{t(locale, "feed.title")}</h2>
+		{
+			posts.length === 0 ? (
+				<p>{t(locale, "feed.empty")}</p>
+			) : (
+				<ul>
+					{posts.map((p) => (
+						<li>
+							<a href={localizePath(`/writing/${p.slug}`, locale)}>{p.title}</a>{" "}
+							<time datetime={p.publishedAt !== null ? new Date(p.publishedAt).toISOString() : undefined}>
+								{p.publishedAt !== null ? formatPostDate(p.publishedAt, locale) : ""}
+							</time>
+						</li>
+					))}
+				</ul>
+			)
+		}
+	</section>
+</Base>

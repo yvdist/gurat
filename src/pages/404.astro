@@ -1,0 +1,21 @@
+---
+import { SITE } from "../config/site";
+import { detectLocaleFromPath, t } from "../i18n";
+import Base from "../layouts/Base.astro";
+
+// Single 404: locale comes from the URL prefix (`/id/...` → Indonesian,
+// anything else → English), so `<html lang>` stays correct.
+Astro.response.status = 404;
+const locale = detectLocaleFromPath(Astro.url.pathname);
+---
+
+<Base
+	title={`${t(locale, "notfound.title")} — ${SITE.name}`}
+	description={t(locale, "notfound.body")}
+	canonical={Astro.url.pathname}
+	hreflangs={[]}
+	locale={locale}
+	heading={t(locale, "notfound.title")}
+>
+	<p>{t(locale, "notfound.body")}</p>
+</Base>

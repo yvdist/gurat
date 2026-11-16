@@ -21,18 +21,19 @@ pnpm dev                         # workerd runtime + local D1 (dev/prod parity)
 
 ## Commands
 
-| Command                  | What                                                     |
-| ------------------------ | -------------------------------------------------------- |
-| `pnpm dev`               | `astro dev` on workerd with local D1                     |
-| `pnpm build`             | production build (`./dist`)                              |
-| `pnpm preview`           | serve the production build locally                       |
-| `pnpm check`             | `astro check` + `biome check .` + `vitest run`           |
-| `pnpm test`              | vitest, real local D1 via `@cloudflare/vitest-plugin`    |
-| `pnpm e2e`               | Playwright smoke (`/` returns 200, no design assertions) |
-| `pnpm db:generate`       | regenerate SQL from `src/server/db/schema.ts`            |
-| `pnpm db:migrate:local`  | apply to local D1                                        |
-| `pnpm db:migrate:remote` | apply to remote D1 (needs login)                         |
-| `pnpm db:seed:local`     | regenerate + apply seed SQL to local D1                  |
+| Command                  | What                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `pnpm dev`               | `astro dev` on workerd with local D1                                                                               |
+| `pnpm build`             | production build (`./dist`)                                                                                        |
+| `pnpm preview`           | serve the production build locally                                                                                 |
+| `pnpm check`             | `astro check` + `biome check .` + `vitest run`                                                                     |
+| `pnpm test`              | vitest, real local D1 via `@cloudflare/vitest-plugin`                                                              |
+| `pnpm e2e`               | Playwright reading journey on `preview` (needs seed + rerender first)                                              |
+| `pnpm db:generate`       | regenerate SQL from `src/server/db/schema.ts`                                                                      |
+| `pnpm db:migrate:local`  | apply to local D1                                                                                                  |
+| `pnpm db:migrate:remote` | apply to remote D1 (needs login)                                                                                   |
+| `pnpm db:seed:local`     | regenerate + apply seed SQL to local D1                                                                            |
+| `pnpm db:rerender`       | re-render `content_html`/`toc_json`/`reading_minutes` from `content_json` (idempotent; run after renderer changes) |
 
 ## Structure
 
