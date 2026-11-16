@@ -1,6 +1,17 @@
 {
 	"site.tagline": "Personal writing",
+	"site.intro": "Essays and notes, published from my own editor.",
 	"nav.home": "Home",
+	"nav.writing": "Writing",
+	"nav.tags": "Tags",
+	"nav.about": "About",
+	"post.readingMinutes": "{minutes} min read",
+	"post.translation": "Also in",
 	"feed.title": "Latest writing",
-	"feed.empty": "No posts yet."
+	"feed.empty": "No posts yet.",
+	"writing.title": "Writing",
+	"tags.title": "Tags",
+	"about.title": "About",
+	"notfound.title": "Not found",
+	"notfound.body": "This page does not exist, or the post is not published."
 }

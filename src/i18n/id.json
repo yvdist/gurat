@@ -1,6 +1,17 @@
 {
 	"site.tagline": "Tulisan pribadi",
+	"site.intro": "Esai dan catatan, diterbitkan dari editor saya sendiri.",
 	"nav.home": "Beranda",
+	"nav.writing": "Tulisan",
+	"nav.tags": "Tag",
+	"nav.about": "Tentang",
+	"post.readingMinutes": "{minutes} mnt baca",
+	"post.translation": "Juga dalam",
 	"feed.title": "Tulisan terbaru",
-	"feed.empty": "Belum ada tulisan."
+	"feed.empty": "Belum ada tulisan.",
+	"writing.title": "Tulisan",
+	"tags.title": "Tag",
+	"about.title": "Tentang",
+	"notfound.title": "Tidak ditemukan",
+	"notfound.body": "Halaman ini tidak ada, atau tulisannya belum diterbitkan."
 }

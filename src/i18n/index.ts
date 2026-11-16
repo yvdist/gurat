@@ -31,6 +31,15 @@ export function detectLocaleFromPath(path: string): Locale {
 	return SITE.defaultLocale;
 }
 
+// Post dates in the configured display timezone and the page locale
+// (medium date style, e.g. "Nov 6, 2026" / "6 Nov 2026").
+export function formatPostDate(epochMs: number, locale: Locale): string {
+	return new Intl.DateTimeFormat(locale, {
+		dateStyle: "medium",
+		timeZone: SITE.timezone,
+	}).format(new Date(epochMs));
+}
+
 export function alternatesFor(post: { locale: Locale; slug: string }): {
 	locale: Locale;
 	href: string;
