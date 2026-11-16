@@ -203,3 +203,72 @@ export async function getTranslations(
 			r.locale === "en" || r.locale === "id",
 	);
 }
+
+// Post numbering (Phase 3, plan step 6): reverse-chronological index per
+// locale over visible posts — the same ordering as the feed
+// (publishedAt DESC, id ASC). No. 001 is the newest visible post
+// (count of newer visible posts + 1); older posts count upward.
+// Zero-padded 3 at the call site (String(n).padStart(3, "0")).
+export async function getPostNo(
+	db: Db,
+	locale: Locale,
+	publishedAt: number | null,
+	id: string,
+	now: number = Date.now(),
+): Promise<number> {
+	const nos = await getPostNos(db, locale, [{ publishedAt, id }], now);
+	return nos.get(id) ?? 1;
+}
+
+// Batched numbering for card lists (never a per-card N+1): one query
+// returning id → number for the given post identities.
+export async function getPostNos(
+	db: Db,
+	locale: Locale,
+	identities: { publishedAt: number | null; id: string }[],
+	now: number = Date.now(),
+): Promise<Map<string, number>> {
+	const result = new Map<string, number>();
+	if (identities.length === 0) return result;
+	const visible = await db
+		.select({ id: posts.id, publishedAt: posts.publishedAt })
+		.from(posts)
+		.where(and(eq(posts.locale, locale), visibilityFilter(now)))
+		.orderBy(desc(posts.publishedAt), asc(posts.id));
+	visible.forEach((row, i) => result.set(row.id, i + 1));
+	return result;
+}
+
+// Adjacent posts for prev/next (spec §A4): same ordering as the feed.
+// Returns { prev, next } nullable — prev is the older post, next the newer.
+export async function getAdjacentPosts(
+	db: Db,
+	locale: Locale,
+	publishedAt: number | null,
+	id: string,
+	now: number = Date.now(),
+): Promise<{
+	prev: { slug: string; title: string } | null;
+	next: { slug: string; title: string } | null;
+}> {
+	const visible = await db
+		.select({
+			id: posts.id,
+			slug: posts.slug,
+			title: posts.title,
+			publishedAt: posts.publishedAt,
+		})
+		.from(posts)
+		.where(and(eq(posts.locale, locale), visibilityFilter(now)))
+		.orderBy(desc(posts.publishedAt), asc(posts.id));
+	const index = visible.findIndex((row) => row.id === id);
+	if (index === -1) return { prev: null, next: null };
+	const prev = index + 1 < visible.length ? visible[index + 1] : undefined;
+	const next = index - 1 >= 0 ? visible[index - 1] : undefined;
+	return {
+		prev:
+			prev === undefined ? null : { slug: prev.slug, title: prev.title },
+		next:
+			next === undefined ? null : { slug: next.slug, title: next.title },
+	};
+}

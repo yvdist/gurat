@@ -8,6 +8,7 @@ import type {
 	Inline,
 	ListItem,
 	Mark,
+	Sidenote,
 } from "./schema";
 
 // Pure renderer: Tiptap allowlist JSON → HTML + toc + plain text + reading
@@ -130,20 +131,47 @@ function renderInlineText(
 	);
 }
 
-function renderInline(inline: Inline, path: string): string {
+// Sidenote: inline span with an escaped label; numbering k is document order
+// (pre-order traversal). Wide screens float it into the sidenote column via
+// CSS; narrow screens show it as an inline marginal block. Inline footnote
+// references are sidenote spans whose content links `#fn-{k}` — the author
+// pairs them with the footnote blocks below; the renderer does not
+// cross-validate.
+function renderSidenote(
+	node: Sidenote,
+	state: BlockState,
+	path: string,
+): string {
+	const k = state.sidenoteCount + 1;
+	state.sidenoteCount = k;
+	const inner = renderInlines(node.content, state, `${path}.content`);
+	return `<span class="sidenote" id="sn-${k}"><span class="sidenote-label">${escapeHtml(node.attrs.label)}</span>${inner}</span>`;
+}
+
+function renderInline(
+	inline: Inline,
+	state: BlockState,
+	path: string,
+): string {
 	switch (inline.type) {
 		case "text":
 			return renderInlineText(inline.text, inline.marks, path);
 		case "hardBreak":
 			return "<br>";
+		case "sidenote":
+			return renderSidenote(inline, state, path);
 		default:
 			throw new RenderError(path, "unknown inline node");
 	}
 }
 
-function renderInlines(inlines: Inline[] | undefined, path: string): string {
+function renderInlines(
+	inlines: Inline[] | undefined,
+	state: BlockState,
+	path: string,
+): string {
 	if (inlines === undefined) return "";
-	return inlines.map((n, i) => renderInline(n, `${path}[${i}]`)).join("");
+	return inlines.map((n, i) => renderInline(n, state, `${path}[${i}]`)).join("");
 }
 
 function plainTextOf(inlines: Inline[] | undefined): string {
@@ -151,6 +179,7 @@ function plainTextOf(inlines: Inline[] | undefined): string {
 	return inlines
 		.map((n) => {
 			if (n.type === "text") return n.text;
+			if (n.type === "sidenote") return plainTextOf(n.content);
 			return "";
 		})
 		.join(" ");
@@ -185,9 +214,17 @@ function renderFigure(
 	};
 }
 
+interface FootnoteEntry {
+	k: number;
+	html: string;
+}
+
 interface BlockState {
 	toc: TocEntry[];
 	slugCounts: Map<string, number>;
+	sidenoteCount: number;
+	footnoteCount: number;
+	footnotes: FootnoteEntry[];
 }
 
 function renderHeading(
@@ -201,7 +238,7 @@ function renderHeading(
 	state.slugCounts.set(base, seen);
 	const id = seen === 1 ? base : `${base}-${seen}`;
 	state.toc.push({ id, text, level: node.attrs.level });
-	const inner = renderInlines(node.content, `${path}.content`);
+	const inner = renderInlines(node.content, state, `${path}.content`);
 	return {
 		html: `<h${node.attrs.level} id="${escapeHtml(id)}">${inner}</h${node.attrs.level}>`,
 		plain: text,
@@ -240,7 +277,7 @@ function renderBlock(
 	switch (node.type) {
 		case "paragraph":
 			return {
-				html: `<p>${renderInlines(node.content, `${path}.content`)}</p>`,
+				html: `<p>${renderInlines(node.content, state, `${path}.content`)}</p>`,
 				plain: plainTextOf(node.content),
 			};
 		case "heading":
@@ -253,6 +290,27 @@ function renderBlock(
 				html: `<blockquote>${parts.map((p) => p.html).join("")}</blockquote>`,
 				plain: parts.map((p) => p.plain).join("\n\n"),
 			};
+		}
+		case "pullquote": {
+			const parts = node.content.map((b, i) =>
+				renderBlock(b, ctx, state, `${path}.content[${i}]`),
+			);
+			return {
+				html: `<figure class="pullquote"><blockquote>${parts.map((p) => p.html).join("")}</blockquote></figure>`,
+				plain: parts.map((p) => p.plain).join("\n\n"),
+			};
+		}
+		case "footnote": {
+			const k = state.footnoteCount + 1;
+			state.footnoteCount = k;
+			const parts = node.content.map((b, i) =>
+				renderBlock(b, ctx, state, `${path}.content[${i}]`),
+			);
+			state.footnotes.push({
+				k,
+				html: parts.map((p) => p.html).join(""),
+			});
+			return { html: "", plain: parts.map((p) => p.plain).join("\n\n") };
 		}
 		case "bulletList":
 			return renderListItems(node.content, ctx, state, `${path}.content`, "ul");
@@ -284,11 +342,26 @@ function countWords(text: string, locale: Locale): number {
 }
 
 export function renderDoc(doc: Doc, ctx: RenderContext): RenderResult {
-	const state: BlockState = { toc: [], slugCounts: new Map() };
+	const state: BlockState = {
+		toc: [],
+		slugCounts: new Map(),
+		sidenoteCount: 0,
+		footnoteCount: 0,
+		footnotes: [],
+	};
 	const parts = doc.content.map((b, i) =>
 		renderBlock(b, ctx, state, `content[${i}]`),
 	);
-	const html = parts.map((p) => p.html).join("");
+	let html = parts.map((p) => p.html).join("");
+	if (state.footnotes.length > 0) {
+		const items = state.footnotes
+			.map(
+				(f) =>
+					`<li id="fn-${f.k}">${f.html} <a href="#fnref-${f.k}">↩</a></li>`,
+			)
+			.join("");
+		html += `<section class="footnotes"><ol>${items}</ol></section>`;
+	}
 	const plainText = parts.map((p) => p.plain).join("\n\n");
 	const readingMinutes = Math.max(
 		1,

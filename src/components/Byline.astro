@@ -1,0 +1,25 @@
+---
+// Byline box (spec §A4): avatar, Written by {name}, copy link + rss.
+import { type Locale, SITE } from "../config/site";
+import { t } from "../i18n";
+
+interface Props {
+	locale: Locale;
+	canonical: string;
+}
+
+const { locale, canonical } = Astro.props;
+---
+
+<div class="byline">
+	<div class="byline-who">
+		<span class="byline-avatar" aria-hidden="true">余</span>
+		<p>{t(locale, "post.writtenBy").replace("{name}", SITE.name)}</p>
+	</div>
+	<div class="byline-actions">
+		<button type="button" data-copy-link={canonical}>
+			{t(locale, "post.copyLink")}
+		</button>
+		<span class="mono rss-text" aria-live="polite">{t(locale, "footer.rss")}</span>
+	</div>
+</div>
