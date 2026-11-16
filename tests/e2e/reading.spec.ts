@@ -85,14 +85,17 @@ test("theme toggle persists and post numbers resolve", async ({ page }) => {
 	await expect(toggle.getByRole("button")).toHaveCount(3);
 	await toggle.getByRole("button", { name: "dark" }).click();
 	await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-	await expect(
-		toggle.getByRole("button", { name: "dark" }),
-	).toHaveAttribute("aria-pressed", "true");
+	await expect(toggle.getByRole("button", { name: "dark" })).toHaveAttribute(
+		"aria-pressed",
+		"true",
+	);
 	await page.reload();
 	await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 	// Post page: breadcrumb number + prev/next links resolve 200.
 	await page.goto("/writing/hello-world");
-	await expect(page.locator(".breadcrumb").getByText(/No\. \d{3}/)).toBeVisible();
+	await expect(
+		page.locator(".breadcrumb").getByText(/No\. \d{3}/),
+	).toBeVisible();
 	const prevNext = page.locator(".prevnext a");
 	if ((await prevNext.count()) > 0) {
 		const href = await prevNext.first().getAttribute("href");

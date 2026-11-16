@@ -8,7 +8,12 @@ import {
 } from "../../i18n";
 import Base from "../../layouts/Base.astro";
 import { getEnv } from "../../lib/env";
-import { createDb, getPostNos, listPublishedPosts, listTags } from "../../server/db";
+import {
+	createDb,
+	getPostNos,
+	listPublishedPosts,
+	listTags,
+} from "../../server/db";
 
 const locale: Locale = "en";
 const db = createDb(getEnv().DB);

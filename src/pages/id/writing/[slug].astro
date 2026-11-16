@@ -13,7 +13,14 @@ import {
 } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
 import { getEnv } from "../../../lib/env";
-import { createDb, getAdjacentPosts, getPostNo, getPostNos, getPublishedPostBySlug, getTranslations } from "../../../server/db";
+import {
+	createDb,
+	getAdjacentPosts,
+	getPostNo,
+	getPostNos,
+	getPublishedPostBySlug,
+	getTranslations,
+} from "../../../server/db";
 
 const locale: Locale = "id";
 const db = createDb(getEnv().DB);
