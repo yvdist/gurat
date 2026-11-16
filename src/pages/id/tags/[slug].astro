@@ -1,0 +1,71 @@
+---
+import Base from "../../../layouts/Base.astro";
+import { SITE, type Locale } from "../../../config/site";
+import { detectLocaleFromPath, formatPostDate, localizePath, t } from "../../../i18n";
+import { getEnv } from "../../../lib/env";
+import { createDb, listPublishedPosts, listTags } from "../../../server/db";
+
+const locale: Locale = "id";
+const db = createDb(getEnv().DB);
+const tagSlug = Astro.params.slug ?? "";
+const tags = await listTags(db, locale);
+const tag = tags.find((tg) => tg.slug === tagSlug) ?? null;
+
+// Unknown tag slug: 404 like an unknown post slug.
+if (tag === null) {
+	Astro.response.status = 404;
+}
+const notFoundLocale: Locale = detectLocaleFromPath(Astro.url.pathname);
+
+const cursor = Astro.url.searchParams.get("cursor") ?? undefined;
+const { items: posts, nextCursor } =
+	tag === null
+		? { items: [], nextCursor: null }
+		: await listPublishedPosts(db, { locale, tagSlug, limit: 20, cursor });
+const tagLabel = tag === null ? tagSlug : tag.labelId;
+const canonical = `/id/tags/${tagSlug}`;
+---
+
+{
+	tag === null ? (
+		<Base
+			title={`${t(notFoundLocale, "notfound.title")} — ${SITE.name}`}
+			description={t(notFoundLocale, "notfound.body")}
+			canonical={Astro.url.pathname}
+			hreflangs={[]}
+			locale={notFoundLocale}
+			heading={t(notFoundLocale, "notfound.title")}
+		>
+			<p>{t(notFoundLocale, "notfound.body")}</p>
+		</Base>
+	) : (
+		<Base
+			title={`${tagLabel} — ${t(locale, "tags.title")} — ${SITE.name}`}
+			description={t(locale, "site.intro")}
+			canonical={canonical}
+			hreflangs={[]}
+			locale={locale}
+			heading={tagLabel}
+		>
+			{posts.length === 0 ? (
+				<p>{t(locale, "feed.empty")}</p>
+			) : (
+				<ul>
+					{posts.map((p) => (
+						<li>
+							<a href={localizePath(`/writing/${p.slug}`, locale)}>{p.title}</a>{" "}
+							<time datetime={p.publishedAt !== null ? new Date(p.publishedAt).toISOString() : undefined}>
+								{p.publishedAt !== null ? formatPostDate(p.publishedAt, locale) : ""}
+							</time>
+						</li>
+					))}
+				</ul>
+			)}
+			{nextCursor !== null && (
+				<a href={`${canonical}?cursor=${encodeURIComponent(nextCursor)}`} rel="next">
+					{t(locale, "writing.next")}
+				</a>
+			)}
+		</Base>
+	)
+}

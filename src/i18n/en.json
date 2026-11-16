@@ -15,5 +15,6 @@
 	"notfound.title": "Not found",
 	"notfound.body": "This page does not exist, or the post is not published.",
 	"nav.skip": "Skip to content",
-	"nav.primary": "Primary"
+	"nav.primary": "Primary",
+	"writing.next": "Older posts"
 }

@@ -1,0 +1,57 @@
+---
+import Base from "../../../layouts/Base.astro";
+import { type Locale } from "../../../config/site";
+import { formatPostDate, localizePath, t } from "../../../i18n";
+import { groupByYear, rootHreflangs } from "../../../lib/archive";
+import { getEnv } from "../../../lib/env";
+import { createDb, listPublishedPosts } from "../../../server/db";
+
+const locale: Locale = "id";
+const db = createDb(getEnv().DB);
+const cursor = Astro.url.searchParams.get("cursor") ?? undefined;
+const { items: posts, nextCursor } = await listPublishedPosts(db, {
+	locale,
+	limit: 20,
+	cursor,
+});
+const groups = groupByYear(posts);
+const canonical = "/id/writing";
+---
+
+<Base
+	title={`${t(locale, "writing.title")} — Gurat`}
+	description={t(locale, "site.intro")}
+	canonical={canonical}
+	hreflangs={rootHreflangs(locale, canonical)}
+	locale={locale}
+	heading={t(locale, "writing.title")}
+>
+	{
+		posts.length === 0 ? (
+			<p>{t(locale, "feed.empty")}</p>
+		) : (
+			groups.map((g) => (
+				<section aria-label={g.year}>
+					<h2>{g.year}</h2>
+					<ul>
+						{g.posts.map((p) => (
+							<li>
+								<a href={localizePath(`/writing/${p.slug}`, locale)}>{p.title}</a>{" "}
+								<time datetime={p.publishedAt !== null ? new Date(p.publishedAt).toISOString() : undefined}>
+									{p.publishedAt !== null ? formatPostDate(p.publishedAt, locale) : ""}
+								</time>
+							</li>
+						))}
+					</ul>
+				</section>
+			))
+		)
+	}
+	{
+		nextCursor !== null && (
+			<a href={`${canonical}?cursor=${encodeURIComponent(nextCursor)}`} rel="next">
+				{t(locale, "writing.next")}
+			</a>
+		)
+	}
+</Base>

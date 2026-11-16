@@ -1,0 +1,20 @@
+---
+import Base from "../../layouts/Base.astro";
+import { type Locale } from "../../config/site";
+import { t } from "../../i18n";
+import { rootHreflangs } from "../../lib/archive";
+
+const locale: Locale = "id";
+const canonical = "/id/about";
+---
+
+<Base
+	title={`${t(locale, "about.title")} — Gurat`}
+	description={t(locale, "site.intro")}
+	canonical={canonical}
+	hreflangs={rootHreflangs(locale, canonical)}
+	locale={locale}
+	heading={t(locale, "about.title")}
+>
+	<p>{t(locale, "site.intro")}</p>
+</Base>

@@ -1,19 +1,44 @@
 ---
-// Phase 1 placeholder. Neutral semantic markup only; visual design lands in Phase 3.
-import { SITE } from "../config/site";
+import Base from "../layouts/Base.astro";
+import { SITE, type Locale } from "../config/site";
+import { formatPostDate, localizePath, t } from "../i18n";
+import { rootHreflangs } from "../lib/archive";
+import { getEnv } from "../lib/env";
+import { createDb, listPublishedPosts } from "../server/db";
+
+const locale: Locale = "en";
+const db = createDb(getEnv().DB);
+const { items: posts } = await listPublishedPosts(db, { locale, limit: 10 });
+
+const description = t(locale, "site.intro");
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>{SITE.name}</title>
-	</head>
-	<body>
-		<main>
-			<h1>{SITE.name}</h1>
-			<p>Personal writing site. Coming soon.</p>
-		</main>
-	</body>
-</html>
+<Base
+	title={`${SITE.name} — ${t(locale, "site.tagline")}`}
+	description={description}
+	canonical="/"
+	hreflangs={rootHreflangs(locale, "/")}
+	locale={locale}
+	heading={SITE.name}
+>
+	<p>{description}</p>
+	<section aria-labelledby="latest">
+		<h2 id="latest">{t(locale, "feed.title")}</h2>
+		{
+			posts.length === 0 ? (
+				<p>{t(locale, "feed.empty")}</p>
+			) : (
+				<ul>
+					{posts.map((p) => (
+						<li>
+							<a href={localizePath(`/writing/${p.slug}`, locale)}>{p.title}</a>{" "}
+							<time datetime={p.publishedAt !== null ? new Date(p.publishedAt).toISOString() : undefined}>
+								{p.publishedAt !== null ? formatPostDate(p.publishedAt, locale) : ""}
+							</time>
+						</li>
+					))}
+				</ul>
+			)
+		}
+	</section>
+</Base>

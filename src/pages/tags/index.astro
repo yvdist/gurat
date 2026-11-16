@@ -1,0 +1,38 @@
+---
+import Base from "../../layouts/Base.astro";
+import { type Locale } from "../../config/site";
+import { localizePath, t } from "../../i18n";
+import { rootHreflangs } from "../../lib/archive";
+import { getEnv } from "../../lib/env";
+import { createDb, listTags } from "../../server/db";
+
+const locale: Locale = "en";
+const db = createDb(getEnv().DB);
+const tags = await listTags(db, locale);
+const canonical = "/tags";
+---
+
+<Base
+	title={`${t(locale, "tags.title")} — Gurat`}
+	description={t(locale, "site.intro")}
+	canonical={canonical}
+	hreflangs={rootHreflangs(locale, canonical)}
+	locale={locale}
+	heading={t(locale, "tags.title")}
+>
+	{
+		tags.length === 0 ? (
+			<p>{t(locale, "feed.empty")}</p>
+		) : (
+			<ul>
+				{tags.map((tag) => (
+					<li>
+						<a href={localizePath(`/tags/${tag.slug}`, locale)}>
+							{tag.labelEn} ({tag.postCount})
+						</a>
+					</li>
+				))}
+			</ul>
+		)
+	}
+</Base>
