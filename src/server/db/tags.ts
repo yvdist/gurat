@@ -1,9 +1,9 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { postTags, posts, tags } from "./schema";
-import { visibilityFilter } from "./posts";
-import type { Db } from "./client";
-import type { Tag } from "./schema";
 import type { Locale } from "../../config/site";
+import type { Db } from "./client";
+import { visibilityFilter } from "./posts";
+import type { Tag } from "./schema";
+import { posts, postTags, tags } from "./schema";
 
 export interface TagWithCount extends Tag {
 	postCount: number;

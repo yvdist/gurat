@@ -1,16 +1,19 @@
 import { and, asc, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { postTags, posts, tags } from "./schema";
+import type { Locale } from "../../config/site";
 import type { Db } from "./client";
 import type { Post, Tag } from "./schema";
-import type { Locale } from "../../config/site";
+import { posts, postTags, tags } from "./schema";
 
 // Visibility rule — the single source of truth for public queries:
 // a post is public iff status = 'published' AND published_at <= now.
 // Scheduled publishing falls out for free (future published_at is invisible).
 // No caller outside src/server/db/ writes post-visibility SQL.
 export function visibilityFilter(now: number) {
-	return and(eq(posts.status, "published"), sql`${posts.publishedAt} <= ${now}`);
+	return and(
+		eq(posts.status, "published"),
+		sql`${posts.publishedAt} <= ${now}`,
+	);
 }
 
 export interface PublishedPost extends Post {
@@ -33,7 +36,10 @@ function encodeCursor(payload: CursorPayload): string {
 	const bytes = new TextEncoder().encode(JSON.stringify(payload));
 	let bin = "";
 	for (const b of bytes) bin += String.fromCharCode(b);
-	return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+	return btoa(bin)
+		.replaceAll("+", "-")
+		.replaceAll("/", "_")
+		.replaceAll("=", "");
 }
 
 function decodeCursor(cursor: string): CursorPayload | null {
@@ -65,7 +71,10 @@ function clampLimit(limit?: number): number {
 	return Math.min(Math.max(Math.floor(limit), 1), MAX_LIMIT);
 }
 
-async function tagsForPosts(db: Db, postIds: string[]): Promise<Map<string, Tag[]>> {
+async function tagsForPosts(
+	db: Db,
+	postIds: string[],
+): Promise<Map<string, Tag[]>> {
 	if (postIds.length === 0) return new Map();
 	const rows = await db
 		.select({ postId: postTags.postId, tag: tags })
@@ -90,12 +99,17 @@ export async function listPublishedPosts(
 	const conditions = [eq(posts.locale, options.locale), visibilityFilter(now)];
 
 	if (options.tagSlug !== undefined) {
-		const tagRows = await db.select().from(tags).where(eq(tags.slug, options.tagSlug)).limit(1);
-		if (tagRows.length === 0) return { items: [], nextCursor: null };
+		const tagRows = await db
+			.select()
+			.from(tags)
+			.where(eq(tags.slug, options.tagSlug))
+			.limit(1);
+		const [tag] = tagRows;
+		if (tag === undefined) return { items: [], nextCursor: null };
 		const tagged = await db
 			.select({ postId: postTags.postId })
 			.from(postTags)
-			.where(eq(postTags.tagId, tagRows[0].id));
+			.where(eq(postTags.tagId, tag.id));
 		const ids = tagged.map((r) => r.postId);
 		if (ids.length === 0) return { items: [], nextCursor: null };
 		conditions.push(inArray(posts.id, ids));
@@ -104,12 +118,11 @@ export async function listPublishedPosts(
 	if (options.cursor !== undefined) {
 		const cursor = decodeCursor(options.cursor);
 		if (cursor === null) throw new Error("Invalid pagination cursor");
-		conditions.push(
-			or(
-				lt(posts.publishedAt, cursor.publishedAt),
-				and(eq(posts.publishedAt, cursor.publishedAt), gt(posts.id, cursor.id)),
-			)!,
+		const cursorFilter = or(
+			lt(posts.publishedAt, cursor.publishedAt),
+			and(eq(posts.publishedAt, cursor.publishedAt), gt(posts.id, cursor.id)),
 		);
+		if (cursorFilter !== undefined) conditions.push(cursorFilter);
 	}
 
 	const rows = await db
@@ -146,12 +159,23 @@ export async function getPublishedPostBySlug(
 	const rows = await db
 		.select()
 		.from(posts)
-		.where(and(eq(posts.locale, locale), eq(posts.slug, slug), visibilityFilter(now)))
+		.where(
+			and(
+				eq(posts.locale, locale),
+				eq(posts.slug, slug),
+				visibilityFilter(now),
+			),
+		)
 		.limit(1);
 	const post = rows[0];
 	if (!post) return null;
 	const tagMap = await tagsForPosts(db, [post.id]);
-	const alternates = await getTranslations(db, post.translationGroupId, post.id, now);
+	const alternates = await getTranslations(
+		db,
+		post.translationGroupId,
+		post.id,
+		now,
+	);
 	return { ...post, tags: tagMap.get(post.id) ?? [], alternates };
 }
 
@@ -163,7 +187,10 @@ export async function getTranslations(
 	now: number = Date.now(),
 ): Promise<{ locale: Locale; slug: string }[]> {
 	if (groupId === null) return [];
-	const conditions = [eq(posts.translationGroupId, groupId), visibilityFilter(now)];
+	const conditions = [
+		eq(posts.translationGroupId, groupId),
+		visibilityFilter(now),
+	];
 	if (excludePostId !== undefined) {
 		conditions.push(ne(posts.id, excludePostId));
 	}
@@ -172,6 +199,7 @@ export async function getTranslations(
 		.from(posts)
 		.where(and(...conditions));
 	return rows.filter(
-		(r): r is { locale: Locale; slug: string } => r.locale === "en" || r.locale === "id",
+		(r): r is { locale: Locale; slug: string } =>
+			r.locale === "en" || r.locale === "id",
 	);
 }

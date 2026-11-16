@@ -1,5 +1,5 @@
-import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
+import { defineConfig } from "astro/config";
 
 // Docs: https://docs.astro.build/en/guides/integrations-guide/cloudflare/ (adapter v14.4.x)
 // Docs: https://docs.astro.build/en/guides/deploy/cloudflare/ (Workers + Static Assets)

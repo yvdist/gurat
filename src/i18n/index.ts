@@ -1,5 +1,5 @@
+import { type Locale, SITE } from "../config/site";
 import en from "./en.json";
-import { SITE, type Locale } from "../config/site";
 
 export type UIKey = keyof typeof en;
 
@@ -39,6 +39,9 @@ export function alternatesFor(post: { locale: Locale; slug: string }): {
 		.filter((l) => l !== post.locale)
 		.map((locale) => ({
 			locale,
-			href: locale === SITE.defaultLocale ? `/${post.slug}` : `/${locale}/${post.slug}`,
+			href:
+				locale === SITE.defaultLocale
+					? `/${post.slug}`
+					: `/${locale}/${post.slug}`,
 		}));
 }

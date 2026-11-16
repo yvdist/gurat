@@ -1,5 +1,13 @@
-import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import {
+	check,
+	index,
+	integer,
+	primaryKey,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 // Mirrors spec 01 §1.3 SQL exactly. Table creation order: media, tags, posts,
 // post_tags, post_media. All timestamps are UTC epoch milliseconds (INTEGER).

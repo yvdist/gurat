@@ -10,7 +10,11 @@ function tiptapDoc(title: string, body: string): string {
 	return JSON.stringify({
 		type: "doc",
 		content: [
-			{ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: title }] },
+			{
+				type: "heading",
+				attrs: { level: 1 },
+				content: [{ type: "text", text: title }],
+			},
 			{ type: "paragraph", content: [{ type: "text", text: body }] },
 		],
 	});
@@ -145,8 +149,9 @@ for (const p of POSTS) {
 	);
 }
 for (const [postId, tagId] of POST_TAGS) {
-	lines.push(`INSERT INTO post_tags (post_id, tag_id) VALUES (${esc(postId)}, ${esc(tagId)});`);
+	lines.push(
+		`INSERT INTO post_tags (post_id, tag_id) VALUES (${esc(postId)}, ${esc(tagId)});`,
+	);
 }
 
-// biome-ignore lint/suspicious/noConsole: seed script output
 console.log(lines.join("\n"));

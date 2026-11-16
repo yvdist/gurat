@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "gurat",
 	"main": "@astrojs/cloudflare/entrypoints/server",
-	"compatibility_date": "2026-11-16",
+	"compatibility_date": "2026-10-30",
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS"

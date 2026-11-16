@@ -51,23 +51,23 @@ Assets with local D1.
 
 ## Pinned versions (all stable, published ≤ 2026-11-01)
 
-| Package | Pinned | Published |
-|---|---|---|
-| `astro` | 7.4.4 | 2026-10-28 |
-| `@astrojs/cloudflare` | 14.4.3 | 2026-10-28 |
-| `typescript` | 5.9.3 | 2026-09-30 |
-| `@astrojs/check` | 0.9.12 | 2026-10-21 |
-| `vitest` | 4.1.12 | 2026-10-15 |
-| `@cloudflare/vitest-plugin` | 1.4.11 | 2026-10-29 |
-| `drizzle-orm` | 0.45.4 | 2026-10-08 |
-| `drizzle-kit` | 0.31.11 | 2026-09-21 |
-| `@biomejs/biome` | 2.6.4 | 2026-10-28 |
-| `wrangler` | 4.156.1 | 2026-11-01 |
-| `@playwright/test` | 1.64.1 | 2026-10-14 |
+| Package                     | Pinned       | Published  |
+| --------------------------- | ------------ | ---------- |
+| `astro`                     | 7.4.4        | 2026-10-28 |
+| `@astrojs/cloudflare`       | 14.4.3       | 2026-10-28 |
+| `typescript`                | 5.9.3        | 2026-09-30 |
+| `@astrojs/check`            | 0.9.12       | 2026-10-21 |
+| `vitest`                    | 4.1.12       | 2026-10-15 |
+| `@cloudflare/vitest-plugin` | 1.4.11       | 2026-10-29 |
+| `drizzle-orm`               | 0.45.4       | 2026-10-08 |
+| `drizzle-kit`               | 0.31.11      | 2026-09-21 |
+| `@biomejs/biome`            | 2.6.4        | 2026-10-28 |
+| `wrangler`                  | 4.156.1      | 2026-11-01 |
+| `@playwright/test`          | 1.64.1       | 2026-10-14 |
 | `@cloudflare/workers-types` | 5.20261101.1 | 2026-11-01 |
-| `@types/node` | 22.20.5 | 2026-10-01 |
-| `tsx` | 4.23.15 | 2026-09-20 |
-| `zod` | 4.6.7 | 2026-10-12 |
+| `@types/node`               | 22.20.5      | 2026-10-01 |
+| `tsx`                       | 4.23.15      | 2026-09-20 |
+| `zod`                       | 4.6.7        | 2026-10-12 |
 
 Node runtime: v26 LTS (`.nvmrc` = `26`). pnpm `12.14.0` via `packageManager`
 (released 2026-10-15). Remote D1 `gurat` id
