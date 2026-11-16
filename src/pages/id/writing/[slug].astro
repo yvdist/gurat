@@ -1,0 +1,102 @@
+---
+import ArticleBody from "../../../components/ArticleBody.astro";
+import { type Locale, SITE } from "../../../config/site";
+import {
+	detectLocaleFromPath,
+	formatPostDate,
+	localizePath,
+	t,
+} from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { getEnv } from "../../../lib/env";
+import {
+	createDb,
+	getPublishedPostBySlug,
+	getTranslations,
+} from "../../../server/db";
+
+const locale: Locale = "id";
+const db = createDb(getEnv().DB);
+const post = await getPublishedPostBySlug(db, locale, Astro.params.slug ?? "");
+
+// Non-public (draft, future-dated, wrong locale, unknown): 404, never
+// 403/redirect. The not-found fragment is rendered below with a 404 status.
+if (post === null) {
+	Astro.response.status = 404;
+}
+const notFoundLocale: Locale = detectLocaleFromPath(Astro.url.pathname);
+
+const description = post?.seoDescription ?? post?.excerpt ?? "";
+const translations =
+	post !== null
+		? await getTranslations(db, post.translationGroupId, post.id)
+		: [];
+const translation = translations.find((tr) => tr.locale !== locale);
+const otherLocale: Locale = "en";
+const translationHref =
+	translation !== undefined
+		? localizePath(`/writing/${translation.slug}`, translation.locale)
+		: localizePath("/", otherLocale);
+const minutes = post?.readingMinutes ?? 1;
+const readingLabel = t(locale, "post.readingMinutes").replace(
+	"{minutes}",
+	String(minutes),
+);
+---
+
+{
+	post === null ? (
+		<Base
+			title={`${t(notFoundLocale, "notfound.title")} — ${SITE.name}`}
+			description={t(notFoundLocale, "notfound.body")}
+			canonical={Astro.url.pathname}
+			hreflangs={[]}
+			locale={notFoundLocale}
+			heading={t(notFoundLocale, "notfound.title")}
+		>
+			<p>{t(notFoundLocale, "notfound.body")}</p>
+		</Base>
+	) : (
+		<Base
+			title={`${post.title} — ${SITE.name}`}
+			description={description}
+			canonical={`/id/writing/${post.slug}`}
+			hreflangs={translations.map((tr) => ({
+				locale: tr.locale,
+				href: localizePath(`/writing/${tr.slug}`, tr.locale),
+			}))}
+			locale={locale}
+			heading={post.title}
+		>
+			<p>
+				<time datetime={post.publishedAt !== null ? new Date(post.publishedAt).toISOString() : undefined}>
+					{post.publishedAt !== null ? formatPostDate(post.publishedAt, locale) : ""}
+				</time>
+				{" · "}
+				<span>{readingLabel}</span>
+			</p>
+			{post.tags.length > 0 && (
+				<ul>
+					{post.tags.map((tag) => (
+						<li>
+							<a href={localizePath(`/tags/${tag.slug}`, locale)}>
+								{tag.labelId}
+							</a>
+						</li>
+					))}
+				</ul>
+			)}
+			<ArticleBody html={post.contentHtml} />
+			<p>
+				{t(locale, "post.translation")}:{" "}
+				<a href={translationHref}>
+					{translation !== undefined
+						? translation.locale === "en"
+							? "English"
+							: "Bahasa Indonesia"
+						: t(otherLocale, "nav.home")}
+				</a>
+			</p>
+		</Base>
+	)
+}

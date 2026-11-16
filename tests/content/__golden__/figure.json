@@ -1,0 +1,11 @@
+[
+	{
+		"type": "figure",
+		"attrs": {
+			"mediaId": "media-1",
+			"alt": "",
+			"caption": "A caption",
+			"layout": "wide"
+		}
+	}
+]

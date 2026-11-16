@@ -1,0 +1,61 @@
+---
+import type { Locale } from "../config/site";
+import { SITE } from "../config/site";
+import { localizePath, t } from "../i18n";
+import "../styles/tokens.css";
+import "../styles/base.css";
+import "../styles/article.css";
+
+interface Hreflang {
+	locale: Locale;
+	href: string;
+}
+
+interface Props {
+	title: string;
+	description: string;
+	canonical: string;
+	hreflangs: Hreflang[];
+	locale: Locale;
+	heading: string;
+}
+
+const { title, description, canonical, hreflangs, locale, heading } =
+	Astro.props;
+const fullCanonical = `${SITE.url}${canonical}`;
+---
+
+<!doctype html>
+<html lang={locale}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={fullCanonical} />
+		{
+			hreflangs.map((h) => (
+				<link rel="alternate" hreflang={h.locale} href={`${SITE.url}${h.href}`} />
+			))
+		}
+		<link rel="alternate" hreflang="x-default" href={`${SITE.url}${hreflangs.find((h) => h.locale === SITE.defaultLocale)?.href ?? canonical}`} />
+	</head>
+	<body>
+		<a class="skip-link" href="#main">{t(locale, "nav.skip")}</a>
+		<header>
+			<nav aria-label={t(locale, "nav.primary")}>
+				<a href={localizePath("/", locale)}>{SITE.name}</a>
+				<a href={localizePath("/writing", locale)}>{t(locale, "nav.writing")}</a>
+				<a href={localizePath("/tags", locale)}>{t(locale, "nav.tags")}</a>
+				<a href={localizePath("/about", locale)}>{t(locale, "nav.about")}</a>
+			</nav>
+		</header>
+		<main id="main">
+			<h1>{heading}</h1>
+			<slot />
+		</main>
+		<footer>
+			<p>{SITE.name} — {t(locale, "site.tagline")}</p>
+		</footer>
+	</body>
+</html>

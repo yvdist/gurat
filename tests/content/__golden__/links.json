@@ -1,0 +1,37 @@
+[
+	{
+		"type": "paragraph",
+		"content": [
+			{
+				"type": "text",
+				"text": "External",
+				"marks": [
+					{ "type": "link", "attrs": { "href": "https://example.com" } }
+				]
+			},
+			{ "type": "text", "text": " " },
+			{
+				"type": "text",
+				"text": "mail",
+				"marks": [{ "type": "link", "attrs": { "href": "mailto:a@b.c" } }]
+			},
+			{ "type": "text", "text": " " },
+			{
+				"type": "text",
+				"text": "relative",
+				"marks": [{ "type": "link", "attrs": { "href": "/writing/x" } }]
+			},
+			{ "type": "text", "text": " " },
+			{
+				"type": "text",
+				"text": "titled",
+				"marks": [
+					{
+						"type": "link",
+						"attrs": { "href": "https://example.com/x", "title": "A title" }
+					}
+				]
+			}
+		]
+	}
+]
