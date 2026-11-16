@@ -162,6 +162,9 @@ img {
 }
 
 .site-nav .nav-links a {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--tap-min);
 	font-family: var(--font-mono);
 	font-size: var(--font-size-meta);
 	text-transform: uppercase;
@@ -183,6 +186,7 @@ img {
 }
 
 .seg button {
+	min-height: var(--tap-min);
 	font-family: var(--font-mono);
 	font-size: var(--font-size-meta);
 	text-transform: uppercase;
@@ -583,6 +587,9 @@ img {
 }
 /* biome-ignore lint/style/noDescendingSpecificity: unique selector — no other rule targets `.toc a`, so order carries no conflict */
 .toc a {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--tap-min);
 	font-family: var(--font-mono);
 	font-size: var(--font-size-meta);
 	color: var(--muted);

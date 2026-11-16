@@ -74,6 +74,7 @@
 	--disc-light: rgb(255 255 255 / 0.82);
 	--disc-dark: rgb(255 255 255 / 0.12);
 	--brand-mark: 2rem;
+	--tap-min: 1.5rem;
 	/* measure, page, radii, motion */
 	--measure: 68ch;
 	--page: 1090px;
