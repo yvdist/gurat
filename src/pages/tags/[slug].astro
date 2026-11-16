@@ -1,7 +1,12 @@
 ---
+import { type Locale, SITE } from "../../config/site";
+import {
+	detectLocaleFromPath,
+	formatPostDate,
+	localizePath,
+	t,
+} from "../../i18n";
 import Base from "../../layouts/Base.astro";
-import { SITE, type Locale } from "../../config/site";
-import { detectLocaleFromPath, formatPostDate, localizePath, t } from "../../i18n";
 import { getEnv } from "../../lib/env";
 import { createDb, listPublishedPosts, listTags } from "../../server/db";
 
@@ -22,7 +27,8 @@ const { items: posts, nextCursor } =
 	tag === null
 		? { items: [], nextCursor: null }
 		: await listPublishedPosts(db, { locale, tagSlug, limit: 20, cursor });
-const tagLabel = tag === null ? tagSlug : locale === "en" ? tag.labelEn : tag.labelId;
+const tagLabel =
+	tag === null ? tagSlug : locale === "en" ? tag.labelEn : tag.labelId;
 const canonical = `/tags/${tagSlug}`;
 ---
 

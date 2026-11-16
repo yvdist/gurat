@@ -26,7 +26,12 @@
 			"linter": {
 				"rules": {
 					"correctness": {
-						"noUnusedImports": "off"
+						// Biome can't see frontmatter use in Astro markup: both
+						// imports and frontmatter bindings consumed only by the
+						// template read as unused. Real dead code in .astro
+						// frontmatter is caught by astro check / review.
+						"noUnusedImports": "off",
+						"noUnusedVariables": "off"
 					}
 				}
 			},

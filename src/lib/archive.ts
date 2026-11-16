@@ -1,4 +1,4 @@
-import { SITE, type Locale } from "../config/site";
+import { type Locale, SITE } from "../config/site";
 import type { PublishedPost } from "../server/db";
 
 // Groups posts by publication year in the configured display timezone,
@@ -23,9 +23,9 @@ export function groupByYear(
 		.map(([year, yearPosts]) => ({ year, posts: yearPosts }));
 }
 
-// hreflang pairs for a locale-rooted page: the other locale's path plus self.
+// hreflang pairs for a locale-rooted path: the unprefixed path plus self.
+// Same list serves both locales (EN unprefixed, ID under /id).
 export function rootHreflangs(
-	locale: Locale,
 	path: string,
 ): { locale: Locale; href: string }[] {
 	return SITE.locales.map((l) => ({

@@ -54,8 +54,7 @@
 
 .article-body code {
 	font-family:
-		ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
-		monospace;
+		ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 	font-size: var(--font-size-small);
 }
 

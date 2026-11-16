@@ -1,5 +1,17 @@
 [
-	{ "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "Second level" }] },
-	{ "type": "heading", "attrs": { "level": 3 }, "content": [{ "type": "text", "text": "Third level" }] },
-	{ "type": "heading", "attrs": { "level": 4 }, "content": [{ "type": "text", "text": "Fourth level" }] }
+	{
+		"type": "heading",
+		"attrs": { "level": 2 },
+		"content": [{ "type": "text", "text": "Second level" }]
+	},
+	{
+		"type": "heading",
+		"attrs": { "level": 3 },
+		"content": [{ "type": "text", "text": "Third level" }]
+	},
+	{
+		"type": "heading",
+		"attrs": { "level": 4 },
+		"content": [{ "type": "text", "text": "Fourth level" }]
+	}
 ]

@@ -1,7 +1,7 @@
 ---
-import Base from "../../layouts/Base.astro";
-import { SITE, type Locale } from "../../config/site";
+import { type Locale, SITE } from "../../config/site";
 import { formatPostDate, localizePath, t } from "../../i18n";
+import Base from "../../layouts/Base.astro";
 import { rootHreflangs } from "../../lib/archive";
 import { getEnv } from "../../lib/env";
 import { createDb, listPublishedPosts } from "../../server/db";
@@ -17,7 +17,7 @@ const description = t(locale, "site.intro");
 	title={`${SITE.name} — ${t(locale, "site.tagline")}`}
 	description={description}
 	canonical="/id"
-	hreflangs={rootHreflangs(locale, "/")}
+	hreflangs={rootHreflangs("/")}
 	locale={locale}
 	heading={SITE.name}
 >

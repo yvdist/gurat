@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { SITE, type Locale } from "../src/config/site";
+import { type Locale, SITE } from "../src/config/site";
 import { detectLocaleFromPath, formatPostDate, t } from "../src/i18n";
 import { groupByYear, rootHreflangs } from "../src/lib/archive";
 import {
@@ -166,13 +166,22 @@ describe("reader routes (real local D1)", () => {
 		expect(alternates).toEqual([{ locale: "id", slug: "pair-id" }]);
 		const solo = await getPublishedPostBySlug(db, "en", "en-0", NOW);
 		expect(
-			await getTranslations(db, solo?.translationGroupId ?? null, solo?.id, NOW),
+			await getTranslations(
+				db,
+				solo?.translationGroupId ?? null,
+				solo?.id,
+				NOW,
+			),
 		).toEqual([]);
 	});
 
 	it("pages with ?cursor= across the full set without overlap", async () => {
 		const db = createDb(env.DB);
-		const first = await listPublishedPosts(db, { locale: "en", limit: 20 }, NOW);
+		const first = await listPublishedPosts(
+			db,
+			{ locale: "en", limit: 20 },
+			NOW,
+		);
 		expect(first.items).toHaveLength(20);
 		expect(first.nextCursor).not.toBeNull();
 		const second = await listPublishedPosts(
@@ -194,20 +203,20 @@ describe("reader routes (real local D1)", () => {
 		expect(notes?.postCount).toBe(0);
 		const essays = enTags.find((tag) => tag.slug === "essays");
 		expect(essays?.postCount).toBe(1);
-		const tagged = await listPublishedPosts(db, { locale: "en", tagSlug: "nope" }, NOW);
+		const tagged = await listPublishedPosts(
+			db,
+			{ locale: "en", tagSlug: "nope" },
+			NOW,
+		);
 		expect(tagged).toEqual({ items: [], nextCursor: null });
 	});
 
-	it("builds symmetric hreflangs between EN and ID roots", () => {
-		expect(rootHreflangs("en", "/")).toEqual([
+	it("builds symmetric hreflangs for a locale-rooted path", () => {
+		expect(rootHreflangs("/")).toEqual([
 			{ locale: "en", href: "/" },
 			{ locale: "id", href: "/id" },
 		]);
-		expect(rootHreflangs("id", "/")).toEqual([
-			{ locale: "en", href: "/" },
-			{ locale: "id", href: "/id" },
-		]);
-		expect(rootHreflangs("id", "/writing")).toEqual([
+		expect(rootHreflangs("/writing")).toEqual([
 			{ locale: "en", href: "/writing" },
 			{ locale: "id", href: "/id/writing" },
 		]);

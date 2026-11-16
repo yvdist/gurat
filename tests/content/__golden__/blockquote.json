@@ -1,6 +1,11 @@
 [
 	{
 		"type": "blockquote",
-		"content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Quoted words." }] }]
+		"content": [
+			{
+				"type": "paragraph",
+				"content": [{ "type": "text", "text": "Quoted words." }]
+			}
+		]
 	}
 ]

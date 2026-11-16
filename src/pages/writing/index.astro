@@ -1,7 +1,7 @@
 ---
-import Base from "../../layouts/Base.astro";
-import { type Locale } from "../../config/site";
+import type { Locale } from "../../config/site";
 import { formatPostDate, localizePath, t } from "../../i18n";
+import Base from "../../layouts/Base.astro";
 import { groupByYear, rootHreflangs } from "../../lib/archive";
 import { getEnv } from "../../lib/env";
 import { createDb, listPublishedPosts } from "../../server/db";
@@ -22,7 +22,7 @@ const canonical = "/writing";
 	title={`${t(locale, "writing.title")} — Gurat`}
 	description={t(locale, "site.intro")}
 	canonical={canonical}
-	hreflangs={rootHreflangs(locale, canonical)}
+	hreflangs={rootHreflangs(canonical)}
 	locale={locale}
 	heading={t(locale, "writing.title")}
 >

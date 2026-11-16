@@ -1,7 +1,12 @@
 ---
+import { type Locale, SITE } from "../../../config/site";
+import {
+	detectLocaleFromPath,
+	formatPostDate,
+	localizePath,
+	t,
+} from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
-import { SITE, type Locale } from "../../../config/site";
-import { detectLocaleFromPath, formatPostDate, localizePath, t } from "../../../i18n";
 import { getEnv } from "../../../lib/env";
 import { createDb, listPublishedPosts, listTags } from "../../../server/db";
 

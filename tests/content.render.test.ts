@@ -1,3 +1,8 @@
+import { describe, expect, it } from "vitest";
+import type { Locale } from "../src/config/site";
+import { RenderError, renderDoc } from "../src/lib/content/render";
+import { validateDoc } from "../src/lib/content/schema";
+import type { Media } from "../src/server/db/schema";
 import blockquoteHtml from "./content/__golden__/blockquote.html?raw";
 import blockquoteJson from "./content/__golden__/blockquote.json?raw";
 import codeHtml from "./content/__golden__/code.html?raw";
@@ -12,17 +17,12 @@ import listsHtml from "./content/__golden__/lists.html?raw";
 import listsJson from "./content/__golden__/lists.json?raw";
 import paragraphHtml from "./content/__golden__/paragraph.html?raw";
 import paragraphJson from "./content/__golden__/paragraph.json?raw";
-import { describe, expect, it } from "vitest";
-import type { Locale } from "../src/config/site";
-import { RenderError, renderDoc } from "../src/lib/content/render";
-import { validateDoc } from "../src/lib/content/schema";
-import type { Media } from "../src/server/db/schema";
 
 // Golden files in tests/content/__golden__/<name>.{json,html}: the JSON is a
 // `content` array (wrapped into a doc before validation), the HTML is the
 // exact expected `renderDoc(...).html` with locale en. The figure case uses
 // a synthetic media row (the seed carries none until Phase 5).
-function goldenHtml(name: string, json: string, locale: Locale = "en"): string {
+function goldenHtml(json: string, locale: Locale = "en"): string {
 	const content: unknown = JSON.parse(json);
 	const doc = validateDoc({ type: "doc", content });
 	return renderDoc(doc, { locale, media: new Map() }).html;
@@ -52,7 +52,7 @@ describe("renderer goldens", () => {
 	];
 	for (const c of cases) {
 		it(`renders ${c.name}`, () => {
-			expect(goldenHtml(c.name, c.json)).toBe(c.html);
+			expect(goldenHtml(c.json)).toBe(c.html);
 		});
 	}
 
@@ -116,7 +116,9 @@ describe("renderer XSS suite", () => {
 						{
 							type: "text",
 							text: "data",
-							marks: [{ type: "link", attrs: { href: "data:text/html,<b>x</b>" } }],
+							marks: [
+								{ type: "link", attrs: { href: "data:text/html,<b>x</b>" } },
+							],
 						},
 						{
 							type: "text",
@@ -207,7 +209,9 @@ describe("renderer XSS suite", () => {
 			content: [
 				{
 					type: "paragraph",
-					content: [{ type: "text", text: "x", marks: [{ type: "underline" }] }],
+					content: [
+						{ type: "text", text: "x", marks: [{ type: "underline" }] },
+					],
 				},
 			],
 		};
@@ -256,7 +260,9 @@ describe("renderer XSS suite", () => {
 		const words = Array.from({ length: 400 }, () => "kata").join(" ");
 		const doc = validateDoc({
 			type: "doc",
-			content: [{ type: "paragraph", content: [{ type: "text", text: words }] }],
+			content: [
+				{ type: "paragraph", content: [{ type: "text", text: words }] },
+			],
 		});
 		const en = renderDoc(doc, { locale: "en", media: new Map() });
 		const id = renderDoc(doc, { locale: "id", media: new Map() });
@@ -266,8 +272,8 @@ describe("renderer XSS suite", () => {
 			type: "doc",
 			content: [{ type: "paragraph", content: [{ type: "text", text: "hi" }] }],
 		});
-		expect(renderDoc(short, { locale: "en", media: new Map() }).readingMinutes).toBe(
-			1,
-		);
+		expect(
+			renderDoc(short, { locale: "en", media: new Map() }).readingMinutes,
+		).toBe(1);
 	});
 });

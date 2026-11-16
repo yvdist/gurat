@@ -73,7 +73,9 @@ img {
 	*,
 	*::before,
 	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: the reduced-motion kill-switch must override any author transition/animation */
 		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: the reduced-motion kill-switch must override any author transition/animation */
 		transition-duration: 0.01ms !important;
 	}
 }

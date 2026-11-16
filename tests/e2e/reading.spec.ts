@@ -11,7 +11,9 @@ test("home links to posts with one h1 and reader head tags", async ({
 	await expect(page.locator("script")).toHaveCount(0);
 	const canonical = page.locator('link[rel="canonical"]');
 	await expect(canonical).toHaveAttribute("href", /\/$/);
-	await expect(page.locator('link[rel="alternate"][hreflang="id"]')).toHaveCount(1);
+	await expect(
+		page.locator('link[rel="alternate"][hreflang="id"]'),
+	).toHaveCount(1);
 	await expect(
 		page.locator('link[rel="alternate"][hreflang="x-default"]'),
 	).toHaveCount(1);
@@ -37,9 +39,7 @@ test("post page shows translated content and switches locale", async ({
 	await expect(page.locator("h1")).toContainText("Halo, dunia");
 });
 
-test("tag page lists posts; unknown slugs 404 localized", async ({
-	page,
-}) => {
+test("tag page lists posts; unknown slugs 404 localized", async ({ page }) => {
 	await page.goto("/tags/essays");
 	await expect(page.locator("h1")).toHaveCount(1);
 	await expect(page.getByRole("link", { name: "Hello, world" })).toBeVisible();

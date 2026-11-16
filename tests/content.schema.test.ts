@@ -68,7 +68,9 @@ describe("content schema allowlist", () => {
 					content: [
 						{
 							type: "listItem",
-							content: [{ type: "paragraph", content: [{ type: "text", text: "one" }] }],
+							content: [
+								{ type: "paragraph", content: [{ type: "text", text: "one" }] },
+							],
 						},
 					],
 				},
@@ -78,7 +80,10 @@ describe("content schema allowlist", () => {
 						{
 							type: "listItem",
 							content: [
-								{ type: "paragraph", content: [{ type: "text", text: "first" }] },
+								{
+									type: "paragraph",
+									content: [{ type: "text", text: "first" }],
+								},
 							],
 						},
 					],
@@ -132,7 +137,9 @@ describe("content schema allowlist", () => {
 		expectPath(
 			{
 				type: "doc",
-				content: [{ type: "paragraph", attrs: { align: "center" }, content: [] }],
+				content: [
+					{ type: "paragraph", attrs: { align: "center" }, content: [] },
+				],
 			},
 			'"content",0',
 		);
@@ -146,7 +153,9 @@ describe("content schema allowlist", () => {
 							{
 								type: "text",
 								text: "x",
-								marks: [{ type: "link", attrs: { href: "/", target: "_blank" } }],
+								marks: [
+									{ type: "link", attrs: { href: "/", target: "_blank" } },
+								],
 							},
 						],
 					},
