@@ -1,5 +1,9 @@
 ---
 import ArticleBody from "../../../components/ArticleBody.astro";
+import Byline from "../../../components/Byline.astro";
+import PrevNext from "../../../components/PrevNext.astro";
+import TagPill from "../../../components/TagPill.astro";
+import Toc from "../../../components/Toc.astro";
 import { type Locale, SITE } from "../../../config/site";
 import {
 	detectLocaleFromPath,
@@ -9,11 +13,7 @@ import {
 } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
 import { getEnv } from "../../../lib/env";
-import {
-	createDb,
-	getPublishedPostBySlug,
-	getTranslations,
-} from "../../../server/db";
+import { createDb, getAdjacentPosts, getPostNo, getPostNos, getPublishedPostBySlug, getTranslations } from "../../../server/db";
 
 const locale: Locale = "id";
 const db = createDb(getEnv().DB);
@@ -42,6 +42,35 @@ const readingLabel = t(locale, "post.readingMinutes").replace(
 	"{minutes}",
 	String(minutes),
 );
+const primaryTag = post?.tags[0];
+const pad = (n: number): string => String(n).padStart(3, "0");
+const postNo =
+	post !== null
+		? pad(await getPostNo(db, locale, post.publishedAt, post.id))
+		: "000";
+const adjacent =
+	post !== null
+		? await getAdjacentPosts(db, locale, post.publishedAt, post.id)
+		: { prev: null, next: null };
+const toc: { id: string; text: string; level: number }[] =
+	post !== null
+		? (JSON.parse(post.tocJson) as {
+				id: string;
+				text: string;
+				level: number;
+			}[])
+		: [];
+const adjacentIds = [
+	...(adjacent.prev !== null ? [adjacent.prev.id] : []),
+	...(adjacent.next !== null ? [adjacent.next.id] : []),
+];
+const adjacentNos = await getPostNos(db, locale, adjacentIds);
+const prevNo =
+	adjacent.prev !== null ? pad(adjacentNos.get(adjacent.prev.id) ?? 1) : "";
+const nextNo =
+	adjacent.next !== null ? pad(adjacentNos.get(adjacent.next.id) ?? 1) : "";
+const canonical =
+	post !== null ? `/id/writing/${post.slug}` : Astro.url.pathname;
 ---
 
 {
@@ -53,6 +82,7 @@ const readingLabel = t(locale, "post.readingMinutes").replace(
 			hreflangs={[]}
 			locale={notFoundLocale}
 			heading={t(notFoundLocale, "notfound.title")}
+			path={Astro.url.pathname}
 		>
 			<p>{t(notFoundLocale, "notfound.body")}</p>
 		</Base>
@@ -60,43 +90,69 @@ const readingLabel = t(locale, "post.readingMinutes").replace(
 		<Base
 			title={`${post.title} — ${SITE.name}`}
 			description={description}
-			canonical={`/id/writing/${post.slug}`}
+			canonical={canonical}
 			hreflangs={translations.map((tr) => ({
 				locale: tr.locale,
 				href: localizePath(`/writing/${tr.slug}`, tr.locale),
 			}))}
 			locale={locale}
-			heading={post.title}
+			path={canonical}
 		>
-			<p>
-				<time datetime={post.publishedAt !== null ? new Date(post.publishedAt).toISOString() : undefined}>
-					{post.publishedAt !== null ? formatPostDate(post.publishedAt, locale) : ""}
-				</time>
-				{" · "}
-				<span>{readingLabel}</span>
-			</p>
-			{post.tags.length > 0 && (
-				<ul>
-					{post.tags.map((tag) => (
-						<li>
-							<a href={localizePath(`/tags/${tag.slug}`, locale)}>
-								{tag.labelId}
-							</a>
-						</li>
-					))}
-				</ul>
-			)}
-			<ArticleBody html={post.contentHtml} />
-			<p>
-				{t(locale, "post.translation")}:{" "}
-				<a href={translationHref}>
-					{translation !== undefined
-						? translation.locale === "en"
-							? "English"
-							: "Bahasa Indonesia"
-						: t(otherLocale, "nav.home")}
-				</a>
-			</p>
+			<div class="page">
+				<p class="mono breadcrumb">
+					<a href={localizePath("/writing", locale)}>writing</a>
+					{" / "}
+					{primaryTag !== undefined && (
+						<span>{primaryTag.labelId} / </span>
+					)}
+					<span class="crumb-no">No. {postNo}</span>
+				</p>
+				{post.tags.length > 0 && (
+					<div class="pill-row">
+						{post.tags.slice(0, 2).map((tag) => (
+							<TagPill
+								locale={locale}
+								slug={tag.slug}
+								label={tag.labelId}
+							/>
+						))}
+					</div>
+				)}
+				<h1>{post.title}</h1>
+				<p class="post-lede">{post.excerpt}</p>
+				<div class="post-meta">
+					<span class="mono">
+						<time datetime={post.publishedAt !== null ? new Date(post.publishedAt).toISOString() : undefined}>
+							{post.publishedAt !== null ? formatPostDate(post.publishedAt, locale) : ""}
+						</time>
+						{" · "}
+						<span>{readingLabel}</span>
+					</span>
+					<a class="mono" href={translationHref}>
+						{translation !== undefined
+							? translation.locale === "en"
+								? "English"
+								: "Bahasa Indonesia"
+							: t(otherLocale, "nav.home")}
+					</a>
+				</div>
+				<figure>
+					<div class="hero-panel" aria-hidden="true">
+						<div class="arc" />
+					</div>
+				</figure>
+				<div class="post-grid">
+					<Toc locale={locale} entries={toc} />
+					<ArticleBody html={post.contentHtml} />
+					<aside class="post-sidenotes" aria-hidden="true" />
+				</div>
+				<Byline locale={locale} canonical={`${SITE.url}${canonical}`} />
+				<PrevNext
+					locale={locale}
+					prev={adjacent.prev !== null ? { slug: adjacent.prev.slug, title: adjacent.prev.title, postNo: prevNo } : null}
+					next={adjacent.next !== null ? { slug: adjacent.next.slug, title: adjacent.next.title, postNo: nextNo } : null}
+				/>
+			</div>
 		</Base>
 	)
 }

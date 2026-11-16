@@ -61,17 +61,15 @@ describe("content schema phase-3 nodes", () => {
 				content: [
 					{
 						type: "paragraph",
-						content: [
-							{ type: "sidenote", attrs: { label: "1" }, content: [] },
-						],
+						content: [{ type: "sidenote", attrs: { label: "1" }, content: [] }],
 					},
-				]
+				],
 			},
-			'"content",0,"content",0,"content"'
+			'"content",0,"content",0,"content"',
 		);
 		expectPath(
 			{ type: "doc", content: [{ type: "footnote", content: [] }] },
-			'"content",0,"content"'
+			'"content",0,"content"',
 		);
 	});
 
@@ -82,11 +80,13 @@ describe("content schema phase-3 nodes", () => {
 				content: [
 					{
 						type: "paragraph",
-						content: [{ type: "sidenote", content: [{ type: "text", text: "x" }] }]
-					}
-				]
+						content: [
+							{ type: "sidenote", content: [{ type: "text", text: "x" }] },
+						],
+					},
+				],
 			},
-			'"content",0,"content",0'
+			'"content",0,"content",0',
 		);
 		expectPath(
 			{
@@ -98,13 +98,13 @@ describe("content schema phase-3 nodes", () => {
 							{
 								type: "sidenote",
 								attrs: { label: "1", side: "left" },
-								content: [{ type: "text", text: "x" }]
-							}
-						]
-					}
-				]
+								content: [{ type: "text", text: "x" }],
+							},
+						],
+					},
+				],
 			},
-			'"content",0,"content",0,"attrs"'
+			'"content",0,"content",0,"attrs"',
 		);
 		expectPath(
 			{
@@ -113,11 +113,11 @@ describe("content schema phase-3 nodes", () => {
 					{
 						type: "pullquote",
 						content: [{ type: "paragraph", content: [] }],
-						caption: "extra"
-					}
-				]
+						caption: "extra",
+					},
+				],
 			},
-			'"content",0'
+			'"content",0',
 		);
 	});
 });

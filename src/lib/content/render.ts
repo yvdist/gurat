@@ -148,11 +148,7 @@ function renderSidenote(
 	return `<span class="sidenote" id="sn-${k}"><span class="sidenote-label">${escapeHtml(node.attrs.label)}</span>${inner}</span>`;
 }
 
-function renderInline(
-	inline: Inline,
-	state: BlockState,
-	path: string,
-): string {
+function renderInline(inline: Inline, state: BlockState, path: string): string {
 	switch (inline.type) {
 		case "text":
 			return renderInlineText(inline.text, inline.marks, path);
@@ -171,7 +167,9 @@ function renderInlines(
 	path: string,
 ): string {
 	if (inlines === undefined) return "";
-	return inlines.map((n, i) => renderInline(n, state, `${path}[${i}]`)).join("");
+	return inlines
+		.map((n, i) => renderInline(n, state, `${path}[${i}]`))
+		.join("");
 }
 
 function plainTextOf(inlines: Inline[] | undefined): string {

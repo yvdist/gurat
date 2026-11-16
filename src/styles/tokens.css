@@ -44,8 +44,8 @@
 	--font-display: "Bodoni Moda", "Didot", "Bodoni MT", Georgia, serif;
 	--font-body: "Newsreader", Georgia, "Times New Roman", serif;
 	--font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-	--font-cjk: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP",
-		sans-serif;
+	--font-cjk:
+		"Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", sans-serif;
 	--font-size-base: 1.0625rem;
 	--font-size-small: 0.875rem;
 	--font-size-h1: clamp(2.75rem, 1.5rem + 5vw, 4.5rem);

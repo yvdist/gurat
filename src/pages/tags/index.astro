@@ -9,6 +9,12 @@ import { createDb, listTags } from "../../server/db";
 const locale: Locale = "en";
 const db = createDb(getEnv().DB);
 const tags = await listTags(db, locale);
+const TAG_KANJI: Record<string, string> = {
+	essays: "随筆",
+	notes: "技術",
+	tech: "映画",
+	journal: "音楽",
+};
 const canonical = "/tags";
 ---
 
@@ -19,20 +25,23 @@ const canonical = "/tags";
 	hreflangs={rootHreflangs(canonical)}
 	locale={locale}
 	heading={t(locale, "tags.title")}
+	path={canonical}
 >
-	{
-		tags.length === 0 ? (
-			<p>{t(locale, "feed.empty")}</p>
-		) : (
-			<ul>
-				{tags.map((tag) => (
-					<li>
-						<a href={localizePath(`/tags/${tag.slug}`, locale)}>
-							{tag.labelEn} ({tag.postCount})
+	<div class="page">
+		{
+			tags.length === 0 ? (
+				<p>{t(locale, "feed.empty")}</p>
+			) : (
+				<div class="topic-grid">
+					{tags.map((tag) => (
+						<a class="topic" href={localizePath(`/tags/${tag.slug}`, locale)}>
+							<p class="mono kanji">{TAG_KANJI[tag.slug] ?? tag.slug}</p>
+							<h3>{locale === "en" ? tag.labelEn : tag.labelId}</h3>
+							<p class="mono">{tag.postCount}</p>
 						</a>
-					</li>
-				))}
-			</ul>
-		)
-	}
+					))}
+				</div>
+			)
+		}
+	</div>
 </Base>

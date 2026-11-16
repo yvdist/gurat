@@ -212,30 +212,41 @@ export async function getTranslations(
 export async function getPostNo(
 	db: Db,
 	locale: Locale,
-	publishedAt: number | null,
+	// Kept for the plan's (publishedAt, id) cursor signature; ranking needs
+	// only the id (same convention as admin.ts `_publishedAt`).
+	_publishedAt: number | null,
 	id: string,
 	now: number = Date.now(),
 ): Promise<number> {
-	const nos = await getPostNos(db, locale, [{ publishedAt, id }], now);
-	return nos.get(id) ?? 1;
+	// No. 001 is the newest visible post (rank-by-index over the feed
+	// ordering); older posts count upward.
+	const rows = await db
+		.select({ id: posts.id })
+		.from(posts)
+		.where(and(eq(posts.locale, locale), visibilityFilter(now)))
+		.orderBy(desc(posts.publishedAt), asc(posts.id));
+	const index = rows.findIndex((row) => row.id === id);
+	return index === -1 ? 1 : index + 1;
 }
 
 // Batched numbering for card lists (never a per-card N+1): one query
-// returning id → number for the given post identities.
+// returning id → number for the given post ids.
 export async function getPostNos(
 	db: Db,
 	locale: Locale,
-	identities: { publishedAt: number | null; id: string }[],
+	ids: string[],
 	now: number = Date.now(),
 ): Promise<Map<string, number>> {
 	const result = new Map<string, number>();
-	if (identities.length === 0) return result;
+	if (ids.length === 0) return result;
 	const visible = await db
 		.select({ id: posts.id, publishedAt: posts.publishedAt })
 		.from(posts)
 		.where(and(eq(posts.locale, locale), visibilityFilter(now)))
 		.orderBy(desc(posts.publishedAt), asc(posts.id));
-	visible.forEach((row, i) => result.set(row.id, i + 1));
+	visible.forEach((row, i) => {
+		if (ids.includes(row.id)) result.set(row.id, i + 1);
+	});
 	return result;
 }
 
@@ -244,12 +255,13 @@ export async function getPostNos(
 export async function getAdjacentPosts(
 	db: Db,
 	locale: Locale,
-	publishedAt: number | null,
+	// Same cursor-signature convention as getPostNo above.
+	_publishedAt: number | null,
 	id: string,
 	now: number = Date.now(),
 ): Promise<{
-	prev: { slug: string; title: string } | null;
-	next: { slug: string; title: string } | null;
+	prev: { id: string; slug: string; title: string } | null;
+	next: { id: string; slug: string; title: string } | null;
 }> {
 	const visible = await db
 		.select({
@@ -267,8 +279,12 @@ export async function getAdjacentPosts(
 	const next = index - 1 >= 0 ? visible[index - 1] : undefined;
 	return {
 		prev:
-			prev === undefined ? null : { slug: prev.slug, title: prev.title },
+			prev === undefined
+				? null
+				: { id: prev.id, slug: prev.slug, title: prev.title },
 		next:
-			next === undefined ? null : { slug: next.slug, title: next.title },
+			next === undefined
+				? null
+				: { id: next.id, slug: next.slug, title: next.title },
 	};
 }
