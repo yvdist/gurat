@@ -1,0 +1,14 @@
+{
+	"extends": "astro/tsconfigs/strict",
+	"compilerOptions": {
+		"types": ["node", "@cloudflare/vitest-plugin/types"]
+	},
+	"include": [
+		"src",
+		"scripts",
+		"tests",
+		"drizzle.config.ts",
+		"vitest.config.ts",
+		"playwright.config.ts"
+	]
+}

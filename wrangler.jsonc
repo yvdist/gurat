@@ -1,0 +1,28 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "gurat",
+	"main": "@astrojs/cloudflare/entrypoints/server",
+	"compatibility_date": "2026-10-30",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "gurat",
+			"database_id": "d1ab1a16-5b6c-42bd-a03c-90962ec9d921",
+			"migrations_dir": "migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			// Declared now, unused until Phase 5 (media pipeline).
+			"binding": "MEDIA",
+			"bucket_name": "gurat-media"
+		}
+	],
+	"vars": {
+		"SITE_URL": "https://gurat.yvdist.com"
+	}
+}
