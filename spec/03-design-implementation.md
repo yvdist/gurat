@@ -5,6 +5,7 @@
 **Depends on:** Phase 2 and the design spec. **Read first:** `00-overview.md`.
 
 ## Expected inputs (from the owner)
+
 - Design tokens: color (light + dark), type scale, spacing scale, measure, radii, elevation, motion durations/easings.
 - Fonts (files + licenses) and the intended fallback stack; any Japanese/decorative label treatment.
 - Layouts for: home, archive, post, tag pages, about, 404, language switcher, theme toggle, footer/header.
@@ -15,6 +16,7 @@
 - Any new content nodes the design needs (e.g. sidenote, pullquote, callout, drop cap) — these require **schema + renderer + Tiptap parity** changes (coordinate with Phases 2 and 4).
 
 ## Rules for the agent
+
 1. Do not invent or "improve" the design. If something is ambiguous or missing, ask the owner; record the answer in `docs/design/decisions.md`.
 2. All colors, sizes, spacing and motion values live in `tokens.css`. Components consume tokens only — no magic numbers.
 3. Self-host fonts; subset them; `font-display: swap`; preload only the critical text face; avoid layout shift (size-adjust/fallback metrics). Heavy CJK fonts must not ship whole — follow the design spec's subsetting guidance.
@@ -24,6 +26,7 @@
 7. Syntax highlighting (if specified): perform at **save time** (renderer output stored in `content_html`), never per request; verify CPU/WASM impact and record an ADR. After any renderer change run `pnpm db:rerender`.
 
 ## Tasks
+
 1. Implement tokens, base styles and `article.css` exactly per spec.
 2. Build layout components and the pages listed above.
 3. Implement language switcher and theme toggle (accessible, keyboard operable).
@@ -32,6 +35,7 @@
 6. Verify states: empty archive, very long titles, missing cover, no translation available, 0 tags, ID vs EN text lengths, RTL not required.
 
 ## Acceptance criteria
+
 - [ ] Visual baselines match the design spec; owner signs off on screenshots.
 - [ ] Contrast meets WCAG AA in both themes; focus indicators visible everywhere; reduced motion honored.
 - [ ] Lighthouse mobile Performance ≥ 95 on home and post; CLS ≈ 0; public JS ≤ 3 KB.

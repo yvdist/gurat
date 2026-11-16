@@ -5,22 +5,26 @@
 **Depends on:** nothing. **Read first:** `00-overview.md`.
 
 ## Out of scope
+
 Rendering content, admin, editor, media upload, any visual design.
 
 ## Tasks
 
 ### 1.1 Scaffold
+
 - Create the Astro project (latest stable), `output: 'server'`, `@astrojs/cloudflare` adapter, TypeScript `strict`, pnpm, `.nvmrc` (Node LTS).
 - Install and configure: Vitest, Playwright (smoke only for now), one linter/formatter (Biome **or** ESLint + Prettier; record the choice in an ADR).
 - Scripts: `dev`, `build`, `preview`, `check` (= `astro check` + lint + unit tests), `db:migrate:local`, `db:migrate:remote`, `db:seed:local`, `test`, `e2e`.
 
 ### 1.2 Workers configuration
+
 - `wrangler.jsonc` for a **Worker with static assets** (not Pages). Compatibility date = the day you scaffold. Enable Node compat flags only if a dependency needs them (record why).
 - Declare bindings: D1 `DB`, R2 `MEDIA` (declared now, unused until Phase 5).
 - Create `src/lib/env.ts`: a single typed accessor for bindings/vars/secrets, implemented with whatever the **current** adapter documents. No other file touches adapter-specific env APIs.
 - Local dev must run inside the Workers runtime (dev/prod parity) with a local D1.
 
 ### 1.3 Schema and migrations
+
 Use Drizzle ORM (D1 driver) for schema + types; generate SQL migrations into `/migrations` and apply with Wrangler's D1 migrations. If this flow proves awkward, document an ADR and fall back to hand-written SQL migrations with typed prepared-statement helpers.
 
 Initial schema (create tables in this order: media, tags, posts, post_tags, post_media):
@@ -86,6 +90,7 @@ CREATE TABLE post_media (                    -- maintained on save; blocks delet
 a post is public iff `status = 'published' AND published_at <= now`. This also gives scheduled publishing for free, no cron needed.
 
 ### 1.4 Data layer (`src/server/db/`)
+
 Typed repository functions, each with unit/integration tests against a **real local D1** (prefer Cloudflare's Workers Vitest pool; verify current docs) rather than mocks:
 - `listPublishedPosts({ locale, tagSlug?, limit, cursor? })` — cursor pagination by `(published_at, id)`.
 - `getPublishedPostBySlug(locale, slug)` including tags and translation alternates.
@@ -94,20 +99,25 @@ Typed repository functions, each with unit/integration tests against a **real lo
 - Stubs/types for admin functions (implemented in Phase 4).
 
 ### 1.5 Seed
+
 `pnpm db:seed:local` inserts: 6 posts (3 EN, 3 ID; two linked translation pairs), 4 tags, 1 draft, 1 post scheduled in the future, 1 post with a very long title. `content_json` uses a minimal valid doc (paragraphs/headings); `content_html` may be a placeholder until Phase 2 adds `pnpm db:rerender`.
 
 ### 1.6 i18n core
+
 - `src/config/site.ts`: locales `['en','id']`, default `en` (no prefix), `id` at `/id`, timezone `Asia/Jakarta`.
 - Helpers: `localizePath(path, locale)`, `detectLocaleFromPath`, `alternatesFor(post)`.
 - UI string dictionaries `src/i18n/en.json`, `id.json` with a typed `t(key)`; a test fails if keys differ between files.
 
 ### 1.7 CI
+
 GitHub Actions: install (frozen lockfile), `pnpm check`, `pnpm build`. Cache pnpm store. Deployment is **not** automated yet.
 
 ### 1.8 README
+
 Setup, commands, how to run migrations/seed locally, project structure.
 
 ## Acceptance criteria
+
 - [ ] `pnpm install && pnpm dev` runs inside the Workers runtime with local D1.
 - [ ] Migrations apply from an empty database; re-running is a no-op.
 - [ ] `pnpm db:seed:local` works; repository tests prove: drafts and future-dated posts are never returned by public queries; cursor pagination is stable; unique constraints (`locale+slug`, translation group) are enforced.

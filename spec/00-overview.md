@@ -12,44 +12,46 @@
 A personal writing site where the owner writes and publishes essays through **their own admin and editor** (no static Markdown/JSON files as the content source). Public pages must be fast, nearly JavaScript-free and visually crafted. Visual design is **not** specified here; it is delivered later and implemented in Phase 3.
 
 ### Goals
+
 - Write → publish from a browser, content stored in a database.
 - Public reading experience: fast, accessible, typographically excellent, bilingual (EN default, ID under `/id`).
 - Runs entirely on Cloudflare **free tier**; no VPS; ongoing cost ≈ 0.
 - A craft project: clean architecture, tests, readable code, documented decisions.
 
 ### Non-goals (do not build)
+
 Comments, newsletters, user accounts for readers, multi-author, revision history/collaboration, a plugin system, redirects manager, paid/analytics-heavy features.
 
 ## 2. Locked decisions
 
 Do not change these silently. If a decision proves wrong, write `docs/decisions/NNN-title.md` (context, options, choice, consequences), flag it in your phase report, and continue only if the owner agrees.
 
-| Concern | Decision | Notes |
-|---|---|---|
-| Framework | **Astro** (latest stable at scaffold time), SSR | `@astrojs/cloudflare` adapter |
-| Hosting | **Cloudflare Workers with Static Assets** | NOT Cloudflare Pages (Cloudflare recommends Workers for new projects) |
-| Database | **Cloudflare D1** (SQLite) | Drizzle ORM + migrations |
-| Media | **Cloudflare R2** | Public bucket on a custom domain for derived images |
-| Admin UI | Astro pages + **Svelte island** for the editor | Tiptap core mounted directly, no wrapper dependency |
-| Content format | **ProseMirror/Tiptap JSON** (source) + server-rendered **HTML** (output) | Rendered once at save time, not per request |
-| Admin auth | **Cloudflare Access** in front of `/admin*` **plus** JWT verification inside the Worker | Defense in depth |
-| i18n | `en` unprefixed (default), `id` under `/id` | Mirrors the owner's portfolio |
-| Package manager / runtime | pnpm, Node LTS (`.nvmrc`) | |
-| Styling (Phases 1–2) | Plain CSS with custom properties | Tailwind yes/no is decided in Phase 3 |
-| Tests | Vitest (unit/integration), Playwright (e2e/a11y/visual) | |
-| IDs / time | `crypto.randomUUID()` text IDs; timestamps as UTC epoch **milliseconds** (INTEGER) | Display timezone configurable, default `Asia/Jakarta` |
+| Concern                   | Decision                                                                                | Notes                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Framework                 | **Astro** (latest stable at scaffold time), SSR                                         | `@astrojs/cloudflare` adapter                                         |
+| Hosting                   | **Cloudflare Workers with Static Assets**                                               | NOT Cloudflare Pages (Cloudflare recommends Workers for new projects) |
+| Database                  | **Cloudflare D1** (SQLite)                                                              | Drizzle ORM + migrations                                              |
+| Media                     | **Cloudflare R2**                                                                       | Public bucket on a custom domain for derived images                   |
+| Admin UI                  | Astro pages + **Svelte island** for the editor                                          | Tiptap core mounted directly, no wrapper dependency                   |
+| Content format            | **ProseMirror/Tiptap JSON** (source) + server-rendered **HTML** (output)                | Rendered once at save time, not per request                           |
+| Admin auth                | **Cloudflare Access** in front of `/admin*` **plus** JWT verification inside the Worker | Defense in depth                                                      |
+| i18n                      | `en` unprefixed (default), `id` under `/id`                                             | Mirrors the owner's portfolio                                         |
+| Package manager / runtime | pnpm, Node LTS (`.nvmrc`)                                                               |                                                                       |
+| Styling (Phases 1–2)      | Plain CSS with custom properties                                                        | Tailwind yes/no is decided in Phase 3                                 |
+| Tests                     | Vitest (unit/integration), Playwright (e2e/a11y/visual)                                 |                                                                       |
+| IDs / time                | `crypto.randomUUID()` text IDs; timestamps as UTC epoch **milliseconds** (INTEGER)      | Display timezone configurable, default `Asia/Jakarta`                 |
 
 ## 3. Phases
 
-| # | File | Outcome | Depends on |
-|---|---|---|---|
-| 1 | `01-foundation-and-data.md` | Scaffold, Workers config, D1 schema, migrations, seed, repositories, i18n core, CI | — |
-| 2 | `02-public-reading.md` | Content schema + renderer, public routes served from D1, semantic neutral markup | 1 |
-| 3 | `03-design-implementation.md` | **Blocked until the owner delivers the design spec.** Implements the visual design | 2 + design spec |
-| 4 | `04-admin-and-editor.md` | Secured admin, Tiptap editor, draft/publish flow | 2 (3 recommended before final admin polish) |
-| 5 | `05-media.md` | Upload pipeline, R2, responsive images, media picker | 4 |
-| 6 | `06-discovery-and-polish.md` | RSS, sitemap, SEO, OG images, reading UX extras | 2, 5 |
-| 7 | `07-hardening-and-ops.md` | CSP, optional caching, backups, perf/a11y gates, DNS + launch | all |
+| #   | File                          | Outcome                                                                            | Depends on                                  |
+| --- | ----------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------- |
+| 1   | `01-foundation-and-data.md`   | Scaffold, Workers config, D1 schema, migrations, seed, repositories, i18n core, CI | —                                           |
+| 2   | `02-public-reading.md`        | Content schema + renderer, public routes served from D1, semantic neutral markup   | 1                                           |
+| 3   | `03-design-implementation.md` | **Blocked until the owner delivers the design spec.** Implements the visual design | 2 + design spec                             |
+| 4   | `04-admin-and-editor.md`      | Secured admin, Tiptap editor, draft/publish flow                                   | 2 (3 recommended before final admin polish) |
+| 5   | `05-media.md`                 | Upload pipeline, R2, responsive images, media picker                               | 4                                           |
+| 6   | `06-discovery-and-polish.md`  | RSS, sitemap, SEO, OG images, reading UX extras                                    | 2, 5                                        |
+| 7   | `07-hardening-and-ops.md`     | CSP, optional caching, backups, perf/a11y gates, DNS + launch                      | all                                         |
 
 Phases 4 and 3 may run in either order after Phase 2. Do not start a phase before the previous required phase's acceptance criteria pass.
 
@@ -81,7 +83,7 @@ Phases 4 and 3 may run in either order after Phase 2. Do not start a phase befor
 ## 5. Cross-cutting conventions
 
 - **TypeScript strict.** No `any` without a comment. Validate all external input with `zod`.
-- **Verify, don't recall.** Cloudflare and Astro APIs change quickly. Before using any API (bindings access, adapter config, Access, R2 public buckets, Images), read the *current official documentation*. Pin exact dependency versions; prefer releases at least two weeks old; never use `latest` in `package.json`.
+- **Verify, don't recall.** Cloudflare and Astro APIs change quickly. Before using any API (bindings access, adapter config, Access, R2 public buckets, Images), read the _current official documentation_. Pin exact dependency versions; prefer releases at least two weeks old; never use `latest` in `package.json`.
 - **SQL:** prepared statements with bound parameters only. No string interpolation.
 - **Security:** escape by construction; no `set:html` with unsanitized input; admin never reachable without a verified identity.
 - **Accessibility:** semantic HTML, visible focus, AA contrast, `prefers-reduced-motion`, correct `lang` on every page.
@@ -92,16 +94,16 @@ Phases 4 and 3 may run in either order after Phase 2. Do not start a phase befor
 
 ## 6. Environment and bindings
 
-| Name | Type | Used in | Notes |
-|---|---|---|---|
-| `DB` | D1 binding | all | |
-| `MEDIA` | R2 binding | Phase 5 | derived images bucket |
-| `MEDIA_BASE_URL` | var | Phase 5 | public base URL, e.g. `https://media.<domain>` |
-| `SITE_URL` | var | all | canonical absolute URL |
-| `ACCESS_TEAM_DOMAIN` | var | Phase 4 | `<team>.cloudflareaccess.com` |
-| `ACCESS_AUD` | var/secret | Phase 4 | Access application AUD tag |
-| `ADMIN_EMAILS` | var | Phase 4 | comma-separated allowlist |
-| `CF_API_TOKEN`, `CF_ZONE_ID` | secrets | Phase 7 (only if cache purge adopted) | least privilege |
+| Name                         | Type       | Used in                               | Notes                                          |
+| ---------------------------- | ---------- | ------------------------------------- | ---------------------------------------------- |
+| `DB`                         | D1 binding | all                                   |                                                |
+| `MEDIA`                      | R2 binding | Phase 5                               | derived images bucket                          |
+| `MEDIA_BASE_URL`             | var        | Phase 5                               | public base URL, e.g. `https://media.<domain>` |
+| `SITE_URL`                   | var        | all                                   | canonical absolute URL                         |
+| `ACCESS_TEAM_DOMAIN`         | var        | Phase 4                               | `<team>.cloudflareaccess.com`                  |
+| `ACCESS_AUD`                 | var/secret | Phase 4                               | Access application AUD tag                     |
+| `ADMIN_EMAILS`               | var        | Phase 4                               | comma-separated allowlist                      |
+| `CF_API_TOKEN`, `CF_ZONE_ID` | secrets    | Phase 7 (only if cache purge adopted) | least privilege                                |
 
 Local secrets go in `.dev.vars` (gitignored). Provide `.dev.vars.example`.
 
