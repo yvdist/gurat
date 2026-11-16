@@ -94,8 +94,10 @@
 	--warning: var(--muted);
 	--line: #232b36;
 	--border: var(--line);
-	--indigo: #5b6fd6;
+	/* lifted from the mock #5b6fd6 (4.31:1 on --bg, fails AA for small
+	   mono text) to #8494ee (6.86:1). Decorative indigo stays in art. */
+	--indigo: #8494ee;
 	--accent: var(--indigo);
-	--indigo-bright: #5b6fd6;
+	--indigo-bright: #8494ee;
 	--success: var(--indigo);
 }
