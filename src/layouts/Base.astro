@@ -78,6 +78,8 @@ const fullCanonical = `${SITE.url}${canonical}`;
 			))
 		}
 		<link rel="alternate" hreflang="x-default" href={`${SITE.url}${hreflangs.find((h) => h.locale === SITE.defaultLocale)?.href ?? canonical}`} />
+		<link rel="alternate" type="application/rss+xml" hreflang="en" href={`${SITE.url}/feed.xml`} title={`${SITE.name} (en)`} />
+		<link rel="alternate" type="application/rss+xml" hreflang="id" href={`${SITE.url}/id/feed.xml`} title={`${SITE.name} (id)`} />
 		<link
 			rel="preload"
 			href={bodoni400}

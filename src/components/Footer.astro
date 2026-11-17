@@ -1,9 +1,8 @@
 ---
 // Site footer (spec §A2): hairline, mono © {year} {name}, center 余白,
-// rss as plain text until Phase 6 (placeholder to /rss.xml href "#" —
-// render as text, not a dead link).
+// rss links to the locale feed (Phase 6).
 import { type Locale, SITE } from "../config/site";
-import { t } from "../i18n";
+import { localizePath, t } from "../i18n";
 
 interface Props {
 	locale: Locale;
@@ -17,6 +16,6 @@ const year = new Date().getFullYear();
 	<div class="page">
 		<p class="rights">{t(locale, "footer.rights").replace("{year}", String(year)).replace("{name}", SITE.name)}</p>
 		<p class="accent" aria-hidden="true">余白</p>
-		<p class="rss">{t(locale, "footer.rss")}</p>
+		<p class="rss"><a href={localizePath("/feed.xml", locale)} type="application/rss+xml">{t(locale, "footer.rss")}</a></p>
 	</div>
 </footer>
