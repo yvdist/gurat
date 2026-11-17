@@ -1,6 +1,7 @@
 ---
 import ArticleBody from "../../components/ArticleBody.astro";
 import Byline from "../../components/Byline.astro";
+import CoverImg from "../../components/CoverImg.astro";
 import PrevNext from "../../components/PrevNext.astro";
 import TagPill from "../../components/TagPill.astro";
 import Toc from "../../components/Toc.astro";
@@ -16,6 +17,7 @@ import { getEnv } from "../../lib/env";
 import {
 	createDb,
 	getAdjacentPosts,
+	getMediaById,
 	getPostNo,
 	getPostNos,
 	getPublishedPostBySlug,
@@ -38,6 +40,10 @@ const translations =
 	post !== null
 		? await getTranslations(db, post.translationGroupId, post.id)
 		: [];
+const cover =
+	post?.coverMediaId !== null && post?.coverMediaId !== undefined
+		? await getMediaById(db, post.coverMediaId)
+		: null;
 const translation = translations.find((tr) => tr.locale !== locale);
 const otherLocale: Locale = "id";
 const translationHref =
@@ -125,6 +131,7 @@ const canonical = post !== null ? `/writing/${post.slug}` : Astro.url.pathname;
 						))}
 					</div>
 				)}
+				{cover !== null && <CoverImg media={cover} baseUrl={getEnv().MEDIA_BASE_URL} />}
 				<h1>{post.title}</h1>
 				<p class="post-lede">{post.excerpt}</p>
 				<div class="post-meta">
