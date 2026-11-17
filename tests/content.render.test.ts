@@ -268,7 +268,7 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
 		expect(html).not.toContain("<script");
 		expect(html).toContain("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;");
 		expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
@@ -302,7 +302,7 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
 		expect(html).toBe("<p>evildataproto</p>");
 		expect(html).not.toContain("<a");
 	});
@@ -333,7 +333,7 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
 		expect(html).not.toContain('" onmouseover');
 		expect(html).toContain("&quot; onmouseover=&quot;alert(1)");
 		expect(html).toContain("<pre><code>y</code></pre>");
@@ -358,7 +358,7 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
 		expect(html).toBe(
 			'<p><strong><a href="https://example.com" rel="noopener noreferrer">both</a></strong></p>',
 		);
@@ -390,7 +390,7 @@ describe("renderer XSS suite", () => {
 		};
 		for (const raw of [unknownNode, unknownMark]) {
 			try {
-				renderDoc(raw as never, { locale: "en", media: new Map() });
+				renderDoc(raw as never, { locale: "en", media: new Map(), baseUrl: "" });
 				expect.unreachable("unknown input must throw");
 			} catch (error) {
 				expect(error).toBeInstanceOf(RenderError);
@@ -420,7 +420,11 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html, toc } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html, toc } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(toc.map((e) => e.id)).toEqual([
 			"getting-started",
 			"getting-started-2",
@@ -437,8 +441,8 @@ describe("renderer XSS suite", () => {
 				{ type: "paragraph", content: [{ type: "text", text: words }] },
 			],
 		});
-		const en = renderDoc(doc, { locale: "en", media: new Map() });
-		const id = renderDoc(doc, { locale: "id", media: new Map() });
+		const en = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
+		const id = renderDoc(doc, { locale: "id", media: new Map(), baseUrl: "" });
 		expect(en.readingMinutes).toBe(2);
 		expect(id.readingMinutes).toBe(2);
 		const short = validateDoc({
@@ -446,7 +450,8 @@ describe("renderer XSS suite", () => {
 			content: [{ type: "paragraph", content: [{ type: "text", text: "hi" }] }],
 		});
 		expect(
-			renderDoc(short, { locale: "en", media: new Map() }).readingMinutes,
+			renderDoc(short, { locale: "en", media: new Map(), baseUrl: "" })
+				.readingMinutes,
 		).toBe(1);
 	});
 });

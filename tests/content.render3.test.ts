@@ -13,7 +13,7 @@ import sidenoteJson from "./content/__golden__/sidenote.json?raw";
 function goldenHtml(json: string): string {
 	const content: unknown = JSON.parse(json);
 	const doc = validateDoc({ type: "doc", content });
-	return renderDoc(doc, { locale: "en", media: new Map() }).html;
+	return renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" }).html;
 }
 
 describe("renderer phase-3 goldens", () => {
@@ -61,7 +61,7 @@ describe("renderer phase-3 goldens", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
 		expect(html).toContain('id="sn-1"');
 		expect(html).toContain('id="sn-2"');
 		expect(html).toContain('id="fn-1"');
@@ -72,8 +72,8 @@ describe("renderer phase-3 goldens", () => {
 		for (const json of [pullquoteJson, sidenoteJson, footnoteJson]) {
 			const content: unknown = JSON.parse(json);
 			const doc = validateDoc({ type: "doc", content });
-			const en = renderDoc(doc, { locale: "en", media: new Map() }).html;
-			const idHtml = renderDoc(doc, { locale: "id", media: new Map() }).html;
+			const en = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" }).html;
+			const idHtml = renderDoc(doc, { locale: "id", media: new Map(), baseUrl: "" }).html;
 			expect(idHtml).toBe(en);
 		}
 	});
@@ -103,7 +103,7 @@ describe("renderer phase-3 goldens", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
 		expect(html).not.toContain("<script");
 		expect(html).toContain("&lt;script&gt;");
 		expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");

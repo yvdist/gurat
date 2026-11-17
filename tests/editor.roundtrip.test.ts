@@ -138,6 +138,7 @@ describe("editor round-trip", () => {
 					},
 				],
 			]),
+			baseUrl: "",
 		});
 		expect(rendered.html).toContain("<h2");
 		expect(rendered.html).toContain("<em>italic</em>");
