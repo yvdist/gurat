@@ -1,9 +1,13 @@
 import { eq } from "drizzle-orm";
 import type { Env } from "../../lib/env";
+import type { ServiceError, ServiceResult } from "../admin/service";
 import type { Db } from "../db";
 import { media, postMedia } from "../db/schema";
-import type { ServiceError, ServiceResult } from "../admin/service";
-import { checkVariants, type MediaCheckError, parseMediaMeta } from "./validate";
+import {
+	checkVariants,
+	type MediaCheckError,
+	parseMediaMeta,
+} from "./validate";
 
 // Media library service (spec 05 §5.2). Thin Astro endpoints call these;
 // tests call them directly. R2 writes use immutable cache headers; any throw
@@ -46,7 +50,10 @@ export function parseVariantsJson(raw: string): MediaVariant[] | null {
 	return out;
 }
 
-const CHECK_STATUS: Record<MediaCheckError, { code: ServiceError["code"]; status: number }> = {
+const CHECK_STATUS: Record<
+	MediaCheckError,
+	{ code: ServiceError["code"]; status: number }
+> = {
 	"bad-mimetype": { code: "bad-request", status: 400 },
 	"too-large": { code: "too-large", status: 422 },
 	"too-many": { code: "too-many", status: 422 },
@@ -79,24 +86,36 @@ export async function uploadMediaService(
 ): Promise<ServiceResult<UploadedMedia>> {
 	const metaRaw = formData.get("meta");
 	if (typeof metaRaw !== "string") {
-		return { ok: false, err: { code: "bad-request", status: 400, detail: "meta" } };
+		return {
+			ok: false,
+			err: { code: "bad-request", status: 400, detail: "meta" },
+		};
 	}
 	let metaJson: unknown;
 	try {
 		metaJson = JSON.parse(metaRaw);
 	} catch {
-		return { ok: false, err: { code: "bad-request", status: 400, detail: "meta" } };
+		return {
+			ok: false,
+			err: { code: "bad-request", status: 400, detail: "meta" },
+		};
 	}
 	const meta = parseMediaMeta(metaJson);
 	if (meta === null) {
-		return { ok: false, err: { code: "bad-request", status: 400, detail: "meta" } };
+		return {
+			ok: false,
+			err: { code: "bad-request", status: 400, detail: "meta" },
+		};
 	}
 	// Collect every part except `meta`; each filename must be `<w>.webp`.
 	const parts: { w: number; bytes: Uint8Array }[] = [];
 	for (const [name, value] of formData.entries()) {
 		if (name === "meta") continue;
 		if (!(value instanceof File)) {
-			return { ok: false, err: { code: "bad-request", status: 400, detail: name } };
+			return {
+				ok: false,
+				err: { code: "bad-request", status: 400, detail: name },
+			};
 		}
 		const m = FILE_RE.exec(value.name);
 		if (m === null || m[1] === undefined) {
@@ -244,7 +263,10 @@ export async function deleteMediaService(
 	env: Env,
 	id: string,
 ): Promise<ServiceResult<{ deleted: true }>> {
-	const refs = await db.select().from(postMedia).where(eq(postMedia.mediaId, id));
+	const refs = await db
+		.select()
+		.from(postMedia)
+		.where(eq(postMedia.mediaId, id));
 	if (refs.length > 0) {
 		return {
 			ok: false,

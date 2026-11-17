@@ -1,14 +1,20 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Env } from "../src/lib/env";
+import { createDb } from "../src/server/db/client";
+import {
+	media,
+	postMedia,
+	posts,
+	postTags,
+	tags,
+} from "../src/server/db/schema";
 import {
 	deleteMediaService,
 	listMediaService,
 	renameMediaService,
 	uploadMediaService,
 } from "../src/server/media/service";
-import { createDb } from "../src/server/db/client";
-import { media, postMedia, posts, postTags, tags } from "../src/server/db/schema";
 
 // In-memory R2 stand-in: records put options (cacheControl assertion) and
 // supports get/delete. The real bucket binding exists in wrangler.jsonc, but
@@ -54,9 +60,36 @@ function testEnv(bucket: Env["MEDIA"]): Env {
 /** Minimal lossy WebP with 14-bit w/h header. */
 function webp(w: number, h: number): Uint8Array {
 	return new Uint8Array([
-		0x52, 0x49, 0x46, 0x46, 0x1a, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
-		0x56, 0x50, 0x38, 0x20, 0x0e, 0, 0, 0, 0x10, 0x20, 0x00,
-		0x9d, 0x01, 0x2a, w & 0xff, ((w >> 8) & 0x3f), h & 0xff, ((h >> 8) & 0x3f),
+		0x52,
+		0x49,
+		0x46,
+		0x46,
+		0x1a,
+		0,
+		0,
+		0,
+		0x57,
+		0x45,
+		0x42,
+		0x50,
+		0x56,
+		0x50,
+		0x38,
+		0x20,
+		0x0e,
+		0,
+		0,
+		0,
+		0x10,
+		0x20,
+		0x00,
+		0x9d,
+		0x01,
+		0x2a,
+		w & 0xff,
+		(w >> 8) & 0x3f,
+		h & 0xff,
+		(h >> 8) & 0x3f,
 	]);
 }
 
@@ -67,9 +100,12 @@ function form(
 	const fd = new FormData();
 	fd.set("meta", JSON.stringify(meta));
 	for (const f of files) {
-		fd.set(f.name, new File([f.bytes as unknown as BlobPart], f.name, {
-			type: f.type ?? "image/webp",
-		}));
+		fd.set(
+			f.name,
+			new File([f.bytes as unknown as BlobPart], f.name, {
+				type: f.type ?? "image/webp",
+			}),
+		);
 	}
 	return fd;
 }
@@ -166,7 +202,9 @@ describe("media api", () => {
 		const id = up.value.id;
 
 		const renamed = await renameMediaService(db, id, { altDefault: "New alt" });
-		expect(renamed.ok && renamed.ok ? renamed.value.altDefault : null).toBe("New alt");
+		expect(renamed.ok && renamed.ok ? renamed.value.altDefault : null).toBe(
+			"New alt",
+		);
 
 		// Reference it from a post.
 		await db.insert(posts).values({
