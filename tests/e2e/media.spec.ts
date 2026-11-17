@@ -154,6 +154,7 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 		expect(mediaId).not.toBe("");
 
 		// 2. Variants exist, sniff as WebP, carry no EXIF, never exceed source.
+		const sizes: string[] = [];
 		for (const w of [480, 960, 1600]) {
 			const res = await request.get(`/media/${mediaId}/${w}.webp`);
 			expect(res.status()).toBe(200);
@@ -161,7 +162,9 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 			const buf = Buffer.from(await res.body());
 			expect(buf.includes(Buffer.from("Exif\0\0", "latin1"))).toBe(false);
 			expect(buf.length).toBeLessThanOrEqual(3 * 1024 * 1024);
+			sizes.push(`${w}=${buf.length}`);
 		}
+		console.log(`E2E variants ${mediaId} bytes: ${sizes.join(" ")}`);
 
 		// 3. New post → picker: Insert disabled until alt is provided.
 		await page.goto("/admin/posts/new");
@@ -236,6 +239,7 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 					}, 2500);
 				}),
 		);
+		console.log(`E2E CLS: ${cls}`);
 		expect(cls).toBeLessThan(0.05);
 
 		// 7. Cleanup: unpublish, delete post, delete (now unreferenced) media.
@@ -243,11 +247,16 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 		await page.getByRole("button", { name: "Unpublish", exact: true }).click();
 		await page.waitForURL("/admin", { timeout: 15000 });
 		expect((await request.get(`/writing/${SLUG}`)).status()).toBe(404);
+		// APIRequestContext sends no Origin; the CSRF guard needs it.
+		const csrf = { Origin: "http://localhost:4322" };
 		const delPost = await request.delete(`/admin/api/posts/${postId}`, {
+			headers: csrf,
 			data: {},
 		});
 		expect(delPost.status()).toBe(200);
-		const delMedia = await request.delete(`/admin/api/media/${mediaId}`);
+		const delMedia = await request.delete(`/admin/api/media/${mediaId}`, {
+			headers: csrf,
+		});
 		expect(delMedia.status()).toBe(200);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
