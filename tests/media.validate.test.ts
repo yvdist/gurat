@@ -229,6 +229,44 @@ describe("parseDimensions", () => {
 		expect(parseDimensions("png", minimalPng(9000, 10))).toBeNull();
 		expect(parseDimensions("jpeg", minimalJpeg(0, 10))).toBeNull();
 	});
+	it("skips APP1 EXIF segments when scanning JPEG dimensions", () => {
+		// Source with EXIF: SOI + APP1("Exif\\0\\0…") + SOF. The dimension
+		// scanner must skip the APPn segment by length, not choke on it.
+		const exif = new TextEncoder().encode("Exif\0\0GPS-DATA");
+		const app1 = new Uint8Array([0xff, 0xe1, 0x00, exif.length + 2, ...exif]);
+		const sof = minimalJpeg(6000, 4000);
+		const withExif = new Uint8Array([
+			...sof.slice(0, 2),
+			...app1,
+			...sof.slice(2),
+		]);
+		expect(sniffImageKind(withExif)).toBe("jpeg");
+		expect(parseDimensions("jpeg", withExif)).toEqual({
+			width: 6000,
+			height: 4000,
+		});
+	});
+
+	it("re-encoded variants carry no EXIF marker (browser contract)", () => {
+		// The browser pipeline re-encodes through canvas: the uploaded variant
+		// bytes must never contain the EXIF header, even for EXIF sources.
+		const variant = minimalWebp(1600, 800);
+		const marker = new TextEncoder().encode("Exif\0\0");
+		const hasMarker = (bytes: Uint8Array): boolean => {
+			for (let i = 0; i + marker.length <= bytes.length; i++) {
+				let match = true;
+				for (let j = 0; j < marker.length; j++) {
+					if (bytes[i + j] !== marker[j]) {
+						match = false;
+						break;
+					}
+				}
+				if (match) return true;
+			}
+			return false;
+		};
+		expect(hasMarker(variant)).toBe(false);
+	});
 });
 
 describe("parseMediaMeta", () => {
