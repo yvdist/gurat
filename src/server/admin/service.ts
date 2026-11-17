@@ -37,6 +37,12 @@ export type ServiceErrorCode =
 	| "validation"
 	| "tag-in-use"
 	| "media-unavailable"
+	| "media-in-use"
+	| "too-large"
+	| "too-many"
+	| "bad-dimensions"
+	| "width-mismatch"
+	| "aspect-mismatch"
 	| "not-found";
 
 export interface ServiceError {
