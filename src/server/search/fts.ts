@@ -1,9 +1,10 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Locale } from "../../config/site";
 import { renderDoc } from "../../lib/content/render";
 import { validateDoc } from "../../lib/content/schema";
 import type { Db } from "../db/client";
-import { media } from "../db/schema";
+import { visibilityFilter } from "../db/posts";
+import { media, posts } from "../db/schema";
 
 // Search index (spec 06 §6.6): FTS5 virtual table, raw SQL (drizzle-kit
 // cannot model virtual tables, so no schema.ts entry — same bound-parameter
@@ -157,12 +158,12 @@ export async function searchPosts(
 		excerpt: string;
 		published_at: number | null;
 	}>(sql`
-		SELECT p.id AS id, p.slug AS slug, p.title AS title, p.excerpt AS excerpt, p.published_at AS published_at
-		FROM posts_fts JOIN posts p ON p.id = posts_fts.post_id
+		SELECT posts.id AS id, posts.slug AS slug, posts.title AS title, posts.excerpt AS excerpt, posts.published_at AS published_at
+		FROM posts_fts JOIN posts ON posts.id = posts_fts.post_id
 		WHERE posts_fts MATCH ${input.match}
-		AND p.locale = ${input.locale}
-		AND p.status = 'published' AND p.published_at <= ${input.now}
-		ORDER BY p.published_at DESC, p.id ASC
+		AND ${eq(posts.locale, input.locale)}
+		AND ${visibilityFilter(input.now)}
+		ORDER BY posts.published_at DESC, posts.id ASC
 		LIMIT ${limit}`);
 	return rows.map((r) => ({
 		id: r.id,
