@@ -20,7 +20,9 @@ export const POST: APIRoute = async ({ request }) => {
 	const g = await guard(request, { mutating: true });
 	if (g instanceof Response) return g;
 	return serviceResponse(
-		await createPostService(g.db, await readJson(request)),
+		await createPostService(g.db, await readJson(request), {
+			baseUrl: g.env.MEDIA_BASE_URL,
+		}),
 		"post",
 		201,
 	);

@@ -64,6 +64,8 @@ export interface NewPostInput {
 	translationGroupId?: string | null;
 	tagIds?: string[];
 	coverMediaId?: string | null;
+	/** Full post_media id set (figures ∪ cover); inserted in the same batch. */
+	mediaIds?: string[];
 }
 
 export interface SavePostPatch {
@@ -79,6 +81,8 @@ export interface SavePostPatch {
 	translationGroupId?: string | null;
 	tagIds?: string[];
 	coverMediaId?: string | null;
+	/** Full post_media id set; when defined, replaces existing links in-batch. */
+	mediaIds?: string[];
 	seoDescription?: string | null;
 }
 
@@ -171,6 +175,15 @@ export async function createPost(
 							.values(input.tagIds.map((tagId) => ({ postId: id, tagId }))),
 					]
 				: []),
+			...(input.mediaIds && input.mediaIds.length > 0
+				? [
+						db
+							.insert(postMedia)
+							.values(
+								input.mediaIds.map((mediaId) => ({ postId: id, mediaId })),
+							),
+					]
+				: []),
 		]);
 	} catch (err) {
 		if (isUniqueViolation(err)) throw new SlugConflictError();
@@ -249,8 +262,22 @@ export async function savePost(
 							: []),
 					]
 				: []),
-			// Phase 4 has no media rows: clear stale links, insert none.
-			db.delete(postMedia).where(eq(postMedia.postId, id)),
+			// Media sync: when the save resolved a fresh id set, replace links.
+			...(patch.mediaIds !== undefined
+				? [
+						db.delete(postMedia).where(eq(postMedia.postId, id)),
+						...(patch.mediaIds.length > 0
+							? [
+									db.insert(postMedia).values(
+										patch.mediaIds.map((mediaId) => ({
+											postId: id,
+											mediaId,
+										})),
+									),
+								]
+							: []),
+					]
+				: []),
 		]);
 	} catch (err) {
 		if (isUniqueViolation(err)) throw new SlugConflictError();

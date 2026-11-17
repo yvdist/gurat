@@ -13,7 +13,9 @@ export const PUT: APIRoute = async ({ request, params }) => {
 	const id = params.id;
 	if (!id) return adminJson({ error: "bad-request" }, 400);
 	return serviceResponse(
-		await savePostService(g.db, id, await readJson(request)),
+		await savePostService(g.db, id, await readJson(request), {
+			baseUrl: g.env.MEDIA_BASE_URL,
+		}),
 		"post",
 	);
 };
