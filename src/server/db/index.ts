@@ -18,8 +18,8 @@ export {
 	TagInUseError,
 	unpublishPost,
 } from "./admin";
-export type { Db } from "./client";
-export { createDb } from "./client";
+export { createDb, type Db } from "./client";
+export { getMediaById } from "./media";
 export type { ListPostsOptions, PostWithTags, PublishedPost } from "./posts";
 export {
 	getAdjacentPosts,

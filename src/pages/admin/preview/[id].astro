@@ -1,6 +1,7 @@
 ---
 import ArticleBody from "../../../components/ArticleBody.astro";
 import Byline from "../../../components/Byline.astro";
+import CoverImg from "../../../components/CoverImg.astro";
 import TagPill from "../../../components/TagPill.astro";
 import Toc from "../../../components/Toc.astro";
 import { SITE } from "../../../config/site";
@@ -8,7 +9,7 @@ import { formatPostDate, localizePath } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
 import { getEnv } from "../../../lib/env";
 import { requireAdminPage } from "../../../server/auth/access";
-import { createDb, getPostById } from "../../../server/db";
+import { createDb, getMediaById, getPostById } from "../../../server/db";
 
 export const prerender = false;
 
@@ -43,6 +44,10 @@ const toc =
 			}[])
 		: [];
 const minutes = post?.readingMinutes ?? 1;
+const cover =
+	post?.coverMediaId !== null && post?.coverMediaId !== undefined
+		? await getMediaById(db, post.coverMediaId)
+		: null;
 ---
 
 {post === null ? (
@@ -82,6 +87,7 @@ const minutes = post?.readingMinutes ?? 1;
 						))}
 					</div>
 				)}
+				{cover !== null && <CoverImg media={cover} baseUrl={env.MEDIA_BASE_URL} />}
 				<h1>{post.title || "(untitled)"}</h1>
 				<p class="post-lede">{post.excerpt}</p>
 				<div class="post-meta">
