@@ -1,15 +1,15 @@
 ---
 import Admin from "../../layouts/Admin.astro";
-import { getEnv } from "../../lib/env";
 import { smallestVariantUrl } from "../../lib/content/render";
+import { getEnv } from "../../lib/env";
+import type { AccessIdentity } from "../../server/auth/access";
+import { requireAdminPage } from "../../server/auth/access";
+import { createDb } from "../../server/db";
 import {
 	deleteMediaService,
 	listMediaService,
 	renameMediaService,
 } from "../../server/media/service";
-import type { AccessIdentity } from "../../server/auth/access";
-import { requireAdminPage } from "../../server/auth/access";
-import { createDb } from "../../server/db";
 
 export const prerender = false;
 

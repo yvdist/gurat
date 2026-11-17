@@ -1,6 +1,6 @@
 ---
-import type { Media } from "../server/db/schema";
 import { largestVariantUrl, srcsetFor } from "../lib/content/render";
+import type { Media } from "../server/db/schema";
 
 // Public + preview cover slot: same srcset/sizes/dimensions output as the
 // figure renderer, always eager (above the fold).
@@ -13,7 +13,8 @@ const { media, baseUrl } = Astro.props;
 const src = largestVariantUrl(media, baseUrl);
 const srcset = srcsetFor(media, baseUrl);
 const style =
-	typeof media.dominantColor === "string" && /^#[0-9a-f]{6}$/i.test(media.dominantColor)
+	typeof media.dominantColor === "string" &&
+	/^#[0-9a-f]{6}$/i.test(media.dominantColor)
 		? `background-color:${media.dominantColor}`
 		: undefined;
 ---

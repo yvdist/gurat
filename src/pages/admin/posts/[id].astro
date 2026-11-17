@@ -2,7 +2,8 @@
 import EditorIsland from "../../../islands/Editor.svelte";
 import Admin from "../../../layouts/Admin.astro";
 import { getEnv } from "../../../lib/env";
-import { listAllTagsService, listMediaService } from "../../../server/admin/service";
+import { listAllTagsService } from "../../../server/admin/service";
+import { listMediaService } from "../../../server/media/service";
 import type { AccessIdentity } from "../../../server/auth/access";
 import { requireAdminPage } from "../../../server/auth/access";
 import { createDb, getPostById, listAdminPosts } from "../../../server/db";

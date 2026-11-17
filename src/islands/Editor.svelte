@@ -6,10 +6,11 @@ import { onDestroy, onMount } from "svelte";
 import "../styles/tokens.css";
 import "../styles/article.css";
 import "../styles/admin.css";
-import { docToTiptap, tiptapToDoc } from "./editorDoc";
-import { fileToVariants, uploadMedia } from "./mediaClient";
 import { smallestVariantUrl } from "../lib/content/render";
 import type { Media } from "../server/db/schema";
+import { docToTiptap, tiptapToDoc } from "./editorDoc";
+import { fileToVariants, uploadMedia } from "./mediaClient";
+
 // Browser-only editor island (spec 04 §4.3). Mounted `client:only` from
 // the post pages; Tiptap core is mounted directly in this component
 // (no wrapper dep). Extension list derives from `schema.ts` via
