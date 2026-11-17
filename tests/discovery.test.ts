@@ -278,3 +278,87 @@ describe("search match builder", () => {
 		expect(long?.length).toBeLessThanOrEqual(32);
 	});
 });
+
+describe("og upload service (real local D1, fake R2)", () => {
+	function png(width: number, height: number): Uint8Array {
+		const bytes = new Uint8Array(33);
+		bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+		bytes.set([0x49, 0x48, 0x44, 0x52], 12);
+		new DataView(bytes.buffer).setUint32(16, width);
+		new DataView(bytes.buffer).setUint32(20, height);
+		return bytes;
+	}
+
+	function fakeBucket() {
+		const store = new Map<string, Uint8Array>();
+		const bucket = {
+			put: async (key: string, value: Uint8Array) => {
+				store.set(key, value.slice());
+			},
+			get: async (key: string) => store.get(key) ?? null,
+			delete: async (key: string) => {
+				store.delete(key);
+			},
+		} as unknown as import("../src/lib/env").Env["MEDIA"];
+		return { store, bucket };
+	}
+
+	it("writes og/<postId>.png, records the key, rejects the rest", async () => {
+		const { env } = await import("cloudflare:workers");
+		const { createDb } = await import("../src/server/db/client");
+		const { posts } = await import("../src/server/db/schema");
+		const { uploadOgImageService } = await import(
+			"../src/server/media/service"
+		);
+		const db = createDb(env.DB);
+		await db.insert(posts).values({
+			id: "og-post",
+			locale: "en",
+			translationGroupId: null,
+			slug: "og-post",
+			title: "OG",
+			status: "draft",
+			publishedAt: null,
+			contentJson: '{"type":"doc","content":[]}',
+			createdAt: 1,
+			updatedAt: 1,
+		});
+		const { store, bucket } = fakeBucket();
+		const fakeEnv = {
+			MEDIA: bucket,
+		} as unknown as import("../src/lib/env").Env;
+
+		const ok = await uploadOgImageService(
+			db,
+			fakeEnv,
+			"og-post",
+			png(1200, 630),
+		);
+		expect(ok).toEqual({ ok: true, value: { key: "og/og-post.png" } });
+		expect(store.get("og/og-post.png")?.length).toBe(33);
+		const rows = await db.select().from(posts);
+		expect(rows[0]?.ogImageKey).toBe("og/og-post.png");
+		expect(rows[0]?.updatedAt).toBe(1);
+
+		const bad = await uploadOgImageService(
+			db,
+			fakeEnv,
+			"og-post",
+			png(800, 600),
+		);
+		expect(bad).toEqual({
+			ok: false,
+			err: { code: "bad-dimensions", status: 422 },
+		});
+		const missing = await uploadOgImageService(
+			db,
+			fakeEnv,
+			"nope",
+			png(1200, 630),
+		);
+		expect(missing).toEqual({
+			ok: false,
+			err: { code: "not-found", status: 404 },
+		});
+	});
+});

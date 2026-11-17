@@ -124,3 +124,65 @@ test("two-tab conflict shows UI, never silently overwrites", async ({
 	expect(await preview.text()).not.toContain("First version");
 	await tab2.close();
 });
+
+test("share image upload sets the public og:image URL", async ({ request }) => {
+	const slug = `e2e-og-${Date.now().toString(36)}`;
+	const created = await request.post("/admin/api/posts", {
+		headers: { Origin: "http://localhost:4322" },
+		data: {
+			locale: "en",
+			slug,
+			title: "E2E OG Post",
+			excerpt: "OG excerpt",
+			contentJson: JSON.stringify({
+				type: "doc",
+				content: [
+					{
+						type: "heading",
+						attrs: { level: 2 },
+						content: [{ type: "text", text: "OG body" }],
+					},
+					{
+						type: "paragraph",
+						content: [{ type: "text", text: "Body." }],
+					},
+				],
+			}),
+			tagIds: [],
+		},
+	});
+	expect(created.status()).toBe(201);
+	const { post } = (await created.json()) as { post: { id: string } };
+
+	// Reuse the valid 1200×630 fallback PNG as the upload payload.
+	const png = await request.get("/og-default.png");
+	expect(png.status()).toBe(200);
+	const uploaded = await request.put(`/admin/api/posts/${post.id}/og`, {
+		headers: { Origin: "http://localhost:4322" },
+		multipart: {
+			image: {
+				name: "og.png",
+				mimeType: "image/png",
+				buffer: await png.body(),
+			},
+		},
+	});
+	expect(uploaded.status()).toBe(200);
+	expect(await uploaded.json()).toEqual({ og: { key: `og/${post.id}.png` } });
+
+	const pub = await request.post(`/admin/api/posts/${post.id}/publish`, {
+		headers: { Origin: "http://localhost:4322" },
+		data: { publishedAt: Date.now() - 1000 },
+	});
+	expect(pub.status()).toBe(200);
+	const pageRes = await request.get(`/writing/${slug}`);
+	expect(pageRes.status()).toBe(200);
+	const html = await pageRes.text();
+	expect(html).toContain(`og/${post.id}.png`);
+
+	const gone = await request.delete(`/admin/api/posts/${post.id}`, {
+		headers: { Origin: "http://localhost:4322" },
+		data: {},
+	});
+	expect(gone.status()).toBe(200);
+});
