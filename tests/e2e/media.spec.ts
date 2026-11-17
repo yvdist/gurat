@@ -168,7 +168,7 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 		await page.locator("#meta-slug").fill(SLUG);
 		await page.locator("#meta-title").fill("E2E Media Post");
 		await page.locator("#meta-excerpt").fill("E2E media excerpt");
-		await page.getByRole("button", { name: "image", exact: true }).click();
+		await page.getByRole("button", { name: "Insert image" }).click();
 		const dialog = page.getByRole("dialog", { name: "Insert image" });
 		await expect(dialog).toBeVisible();
 		await expect(dialog.locator(`option[value="${mediaId}"]`)).toBeAttached({
