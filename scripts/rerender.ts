@@ -8,14 +8,16 @@ import { renderDoc } from "../src/lib/content/render";
 import { validateDoc } from "../src/lib/content/schema";
 
 // Re-renders every post's derived HTML from `content_json`. Needed whenever
-// the renderer or the allowlist changes. Pure transform in this process
-// (tsx, no DB driver): dumps rows via `wrangler d1 execute --json`, runs
-// validateDoc + renderDoc with an empty media map (seed carries no figures),
-// then applies UPDATEs through `wrangler d1 execute --file`.
+// the renderer, the allowlist, or `MEDIA_BASE_URL` changes. Pure transform in
+// this process (tsx, no DB driver): dumps posts + media rows via
+// `wrangler d1 execute --json`, runs validateDoc + renderDoc with the real
+// media map, then applies UPDATEs through `wrangler d1 execute --file`.
 //
 // Updates content_html, toc_json, and reading_minutes only — excerpt/seo_*
 // and timestamps are never touched — so re-running on unchanged
 // content_json is a byte-identical no-op.
+//
+// `MEDIA_BASE_URL` is read from the environment (empty = same-origin).
 
 // The pinned local wrangler CLI, spawned via node directly so the script
 // never depends on PATH (bare `wrangler` is not resolvable from child
@@ -42,8 +44,34 @@ interface DumpRow {
 	content_json: string;
 }
 
-interface ExecuteJsonResult {
-	results?: DumpRow[];
+interface MediaRow {
+	id: string;
+	r2_key_prefix: string;
+	mime: string;
+	width: number;
+	height: number;
+	bytes: number;
+	alt_default: string;
+	dominant_color: string | null;
+	variants_json: string;
+	created_at: number;
+}
+
+interface MediaMapValue {
+	id: string;
+	r2KeyPrefix: string;
+	mime: string;
+	width: number;
+	height: number;
+	bytes: number;
+	altDefault: string;
+	dominantColor: string | null;
+	variantsJson: string;
+	createdAt: number;
+}
+
+interface ExecuteJsonResult<T = DumpRow> {
+	results?: T[];
 }
 
 function quote(s: string): string {
@@ -54,42 +82,65 @@ function isLocale(value: string): value is Locale {
 	return value === "en" || value === "id";
 }
 
-function dumpRows(): DumpRow[] {
+function dump<T>(command: string): T[] {
 	const out = runWrangler(
-		[
-			"d1",
-			"execute",
-			"gurat",
-			"--local",
-			"--json",
-			"--command",
-			"SELECT id, locale, content_json FROM posts",
-		],
+		["d1", "execute", "gurat", "--local", "--json", "--command", command],
 		false,
 	);
 	const parsed: unknown = JSON.parse(out);
 	const batches = (Array.isArray(parsed) ? parsed : [parsed]) as (
-		| ExecuteJsonResult
-		| { results: DumpRow[] }[]
+		| ExecuteJsonResult<T>
+		| { results: T[] }[]
 	)[];
-	const rows: DumpRow[] = [];
+	const rows: T[] = [];
 	for (const batch of batches) {
 		const results = Array.isArray(batch)
-			? (batch[0] as ExecuteJsonResult | undefined)?.results
-			: (batch as ExecuteJsonResult).results;
+			? (batch[0] as ExecuteJsonResult<T> | undefined)?.results
+			: (batch as ExecuteJsonResult<T>).results;
 		if (results !== undefined) rows.push(...results);
 	}
 	return rows;
 }
 
-function renderRow(row: DumpRow): {
+function dumpRows(): DumpRow[] {
+	return dump<DumpRow>("SELECT id, locale, content_json FROM posts");
+}
+
+function loadMediaMap(): Map<string, MediaMapValue> {
+	const rows = dump<MediaRow>(
+		"SELECT id, r2_key_prefix, mime, width, height, bytes, alt_default, dominant_color, variants_json, created_at FROM media",
+	);
+	return new Map(
+		rows.map((r) => [
+			r.id,
+			{
+				id: r.id,
+				r2KeyPrefix: r.r2_key_prefix,
+				mime: r.mime,
+				width: r.width,
+				height: r.height,
+				bytes: r.bytes,
+				altDefault: r.alt_default,
+				dominantColor: r.dominant_color,
+				variantsJson: r.variants_json,
+				createdAt: r.created_at,
+			},
+		]),
+	);
+}
+
+function renderRow(
+	row: DumpRow,
+	media: Map<string, MediaMapValue>,
+	baseUrl: string,
+): {
 	html: string;
 	toc: string;
 	minutes: number;
 } {
 	const locale: Locale = isLocale(row.locale) ? row.locale : "en";
 	const doc = validateDoc(JSON.parse(row.content_json));
-	const rendered = renderDoc(doc, { locale, media: new Map(), baseUrl: "" });
+	const rendered = renderDoc(doc, { locale, media, baseUrl });
 	return {
 		html: rendered.html,
 		toc: JSON.stringify(rendered.toc),
@@ -98,8 +149,10 @@ function renderRow(row: DumpRow): {
 }
 
 const rows = dumpRows();
+const media = loadMediaMap();
+const baseUrl = process.env.MEDIA_BASE_URL ?? "";
 const updates = rows.map((row) => {
-	const { html, toc, minutes } = renderRow(row);
+	const { html, toc, minutes } = renderRow(row, media, baseUrl);
 	return `UPDATE posts SET content_html = ${quote(html)}, toc_json = ${quote(toc)}, reading_minutes = ${minutes} WHERE id = ${quote(row.id)};`;
 });
 
