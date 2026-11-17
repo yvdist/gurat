@@ -178,3 +178,61 @@ describe("sitemap builder", () => {
 		expect(xml).toContain("<loc>https://example.com/</loc>");
 	});
 });
+
+describe("hreflang symmetry", () => {
+	it("post alternates link back to each other", async () => {
+		const { postHreflangs } = await import("../src/lib/archive");
+		const enLinks = postHreflangs("en", "hello", [
+			{ locale: "id", slug: "halo" },
+		]);
+		const idLinks = postHreflangs("id", "halo", [
+			{ locale: "en", slug: "hello" },
+		]);
+		expect(enLinks).toHaveLength(2);
+		expect(enLinks[0]).toEqual({ locale: "en", href: "/writing/hello" });
+		// Every EN href appears in the ID page's list and vice versa.
+		for (const l of enLinks) {
+			expect(idLinks.map((m) => m.href)).toContain(l.href);
+		}
+		for (const l of idLinks) {
+			expect(enLinks.map((m) => m.href)).toContain(l.href);
+		}
+	});
+
+	it("tag alternates form an EN/ID pair over one slug", async () => {
+		const { tagHreflangs } = await import("../src/lib/archive");
+		expect(tagHreflangs("film")).toEqual([
+			{ locale: "en", href: "/tags/film" },
+			{ locale: "id", href: "/id/tags/film" },
+		]);
+	});
+});
+
+describe("blogposting JSON-LD", () => {
+	it("matches the expected shape", async () => {
+		const { buildBlogPosting } = await import("../src/server/discovery/meta");
+		const jsonLd = buildBlogPosting({
+			siteName: "Gurat",
+			locale: "id",
+			headline: "Halo",
+			description: "Desc",
+			canonicalUrl: "https://example.com/id/writing/halo",
+			ogImage: "https://example.com/og-default.png",
+			publishedAt: 1_769_000_000_000,
+			updatedAt: 1_769_000_100_000,
+		});
+		const doc = JSON.parse(jsonLd) as Record<string, unknown>;
+		expect(doc).toMatchObject({
+			"@context": "https://schema.org",
+			"@type": "BlogPosting",
+			headline: "Halo",
+			inLanguage: "id",
+			author: { "@type": "Person", name: "Gurat" },
+			image: ["https://example.com/og-default.png"],
+			mainEntityOfPage: "https://example.com/id/writing/halo",
+			url: "https://example.com/id/writing/halo",
+		});
+		expect(doc.datePublished).toBe(new Date(1_769_000_000_000).toISOString());
+		expect(doc.dateModified).toBe(new Date(1_769_000_100_000).toISOString());
+	});
+});

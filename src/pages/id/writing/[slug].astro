@@ -13,6 +13,7 @@ import {
 	t,
 } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
+import { postHreflangs } from "../../../lib/archive";
 import { getEnv } from "../../../lib/env";
 import {
 	createDb,
@@ -23,6 +24,7 @@ import {
 	getPublishedPostBySlug,
 	getTranslations,
 } from "../../../server/db";
+import { buildBlogPosting } from "../../../server/discovery/meta";
 
 const locale: Locale = "id";
 const db = createDb(getEnv().DB);
@@ -84,6 +86,24 @@ const nextNo =
 	adjacent.next !== null ? pad(adjacentNos.get(adjacent.next.id) ?? 1) : "";
 const canonical =
 	post !== null ? `/id/writing/${post.slug}` : Astro.url.pathname;
+// og:image resolution: per-post key (step 4 column) else static fallback.
+// Column not yet migrated — fallback only until then.
+const ogImage = `${SITE.url}/og-default.png`;
+const hreflangLinks =
+	post !== null ? postHreflangs(locale, post.slug, translations) : [];
+const jsonLd =
+	post !== null && post.publishedAt !== null
+		? buildBlogPosting({
+				siteName: SITE.name,
+				locale,
+				headline: post.title,
+				description,
+				canonicalUrl: `${SITE.url}${canonical}`,
+				ogImage,
+				publishedAt: post.publishedAt,
+				updatedAt: post.updatedAt,
+			})
+		: undefined;
 ---
 
 {
@@ -104,12 +124,14 @@ const canonical =
 			title={`${post.title} — ${SITE.name}`}
 			description={description}
 			canonical={canonical}
-			hreflangs={translations.map((tr) => ({
-				locale: tr.locale,
-				href: localizePath(`/writing/${tr.slug}`, tr.locale),
-			}))}
+			hreflangs={hreflangLinks}
 			locale={locale}
 			path={canonical}
+			ogImage={ogImage}
+			ogType="article"
+			publishedAt={post.publishedAt ?? undefined}
+			updatedAt={post.updatedAt}
+			jsonLd={jsonLd}
 		>
 			<div class="page">
 				<p class="mono breadcrumb">
