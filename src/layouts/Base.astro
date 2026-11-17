@@ -21,10 +21,17 @@ import "@fontsource/newsreader/latin-ext-400-italic.css";
 import "@fontsource/newsreader/latin-ext-500.css";
 import "@fontsource/ibm-plex-mono/latin-400.css";
 import "@fontsource/ibm-plex-mono/latin-500.css";
-// Preload display + body 400 woff2 (LCP headline + article text; the body
-// face swap reflows the first paragraphs, so it is CLS-critical too).
+
+// Preload the faces first paint actually uses: display 400 + 500 (h1–h4
+// render weight 500), body latin 400 + latin-ext 400 (ID glyphs arrive in
+// the ext file; late swap reflows above-fold text — measured ID-post CLS
+// 0.17 without it), mono 400 (inline <code>). All same-origin, no CSP
+// change.
 import bodoni400 from "@fontsource/bodoni-moda/files/bodoni-moda-latin-400-normal.woff2?url";
 import newsreader400 from "@fontsource/newsreader/files/newsreader-latin-400-normal.woff2?url";
+import plexmono400 from "@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url";
+import bodoni500 from "@fontsource/bodoni-moda/files/bodoni-moda-latin-500-normal.woff2?url";
+import newsreaderExt400 from "@fontsource/newsreader/files/newsreader-latin-ext-400-normal.woff2?url";
 
 interface Hreflang {
 	locale: Locale;
@@ -78,6 +85,27 @@ const fullCanonical = `${SITE.url}${canonical}`;
 		<link
 			rel="preload"
 			href={newsreader400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={plexmono400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={bodoni500}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={newsreaderExt400}
 			as="font"
 			type="font/woff2"
 			crossorigin

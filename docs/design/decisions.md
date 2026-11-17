@@ -23,12 +23,21 @@ exact strings per tag. Kept branch implementation EXACTLY:
   `--bg #0b0e13` (fails AA 4.5 for small mono text); lifted value is 6.86:1.
   Decorative indigo in artwork unchanged. Light indigo `#2b3fa3` unchanged
   (8.96:1).
-- **Dual font preload.** Plan said display face only; branch preloads both
-  `bodoni-moda-latin-400-normal.woff2` and
-  `newsreader-latin-400-normal.woff2`. Justified: body-face swap reflows the
-  first article paragraphs (measured CLS 0.178 on post before the fix, ≤0.05
-  after). Same origin `/_astro/`, no new CSP host.
+- **Five-face font preload.** Plan said display face only; final set
+  preloads `bodoni-moda` 400 + 500, `newsreader` latin 400 + latin-ext 400,
+  `ibm-plex-mono` 400 (all `latin-*-normal.woff2`). Justified: h1–h4 render
+  weight 500, ID glyphs arrive in the ext file, inline `<code>` needs mono
+  — late swaps reflowed above-fold text (ID-post CLS 0.14–0.17 before,
+  ≤0.036 after). Same origin `/_astro/`, no new CSP host.
 
+## 5. Audit fix detail: preload gap (see §3)
+
+Lab evidence on `/id/writing/halo-dunia` (Lighthouse mobile, 3 runs):
+CLS 0.14–0.17, perf 0.93–0.94, with `layout-shifts` naming inline
+`<code>` shifting under late Newsreader latin-ext 400 + Bodoni 500 loads.
+Fix: two further preloads on top of the accepted dual set (§3). After:
+perf 1/1/1, CLS 0.0001/0.036/0.036; EN home/post and ID home all perf 1,
+a11y 1, SEO 1, CLS ≈ 0.
 ## 4. Updated-date rule (spec §A4 gap, owner delegated)
 
 Spec §A4 meta shows `updated 14 nov` but never states when it appears. Rule:
