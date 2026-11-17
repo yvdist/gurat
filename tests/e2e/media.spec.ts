@@ -186,9 +186,9 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 
 		// 4. Cover via the metadata panel, then wait for autosave to persist.
 		await page.locator("#meta-cover").selectOption(mediaId);
-		const editor = page.locator(
-			".article-body .tiptap, .article-body [contenteditable]",
-		);
+		// `.tiptap` only: inserted figure atoms carry contenteditable=false,
+		// which the shared admin-spec selector would also match.
+		const editor = page.locator(".article-body .tiptap");
 		await editor.click();
 		await editor.pressSequentially("Body text for the media post.", {
 			delay: 10,
