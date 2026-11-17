@@ -286,6 +286,10 @@ describe("getRelatedPosts (real local D1)", () => {
 		);
 		// "second" (fixture, NOW-1d) also shares t-essays; id ASC breaks the
 		// NOW-1d tie ahead of extra-1.
-		expect(related.map((r) => r.slug)).toEqual(["extra-0", "second", "extra-1"]);
+		expect(related.map((r) => r.slug)).toEqual([
+			"extra-0",
+			"second",
+			"extra-1",
+		]);
 	});
 });
