@@ -3,6 +3,7 @@ import ArticleBody from "../../components/ArticleBody.astro";
 import Byline from "../../components/Byline.astro";
 import CoverImg from "../../components/CoverImg.astro";
 import PrevNext from "../../components/PrevNext.astro";
+import RelatedPosts from "../../components/RelatedPosts.astro";
 import TagPill from "../../components/TagPill.astro";
 import Toc from "../../components/Toc.astro";
 import { type Locale, SITE } from "../../config/site";
@@ -22,6 +23,7 @@ import {
 	getPostNo,
 	getPostNos,
 	getPublishedPostBySlug,
+	getRelatedPosts,
 	getTranslations,
 } from "../../server/db";
 import { buildBlogPosting } from "../../server/discovery/meta";
@@ -85,6 +87,14 @@ const prevNo =
 	adjacent.prev !== null ? pad(adjacentNos.get(adjacent.prev.id) ?? 1) : "";
 const nextNo =
 	adjacent.next !== null ? pad(adjacentNos.get(adjacent.next.id) ?? 1) : "";
+const related =
+	post !== null
+		? await getRelatedPosts(db, {
+				locale,
+				postId: post.id,
+				tagIds: post.tags.map((tag) => tag.id),
+			})
+		: [];
 const canonical = post !== null ? `/writing/${post.slug}` : Astro.url.pathname;
 // og:image resolution (exact): per-post generated key else static fallback.
 const ogBase = getEnv().MEDIA_BASE_URL || SITE.url;
@@ -197,6 +207,7 @@ const jsonLd =
 					prev={adjacent.prev !== null ? { slug: adjacent.prev.slug, title: adjacent.prev.title, postNo: prevNo } : null}
 					next={adjacent.next !== null ? { slug: adjacent.next.slug, title: adjacent.next.title, postNo: nextNo } : null}
 				/>
+				<RelatedPosts locale={locale} related={related} />
 			</div>
 		</Base>
 	)

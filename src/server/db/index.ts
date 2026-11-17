@@ -26,6 +26,7 @@ export {
 	getPostNo,
 	getPostNos,
 	getPublishedPostBySlug,
+	getRelatedPosts,
 	getTranslations,
 	listPublishedPosts,
 	visibilityFilter,
