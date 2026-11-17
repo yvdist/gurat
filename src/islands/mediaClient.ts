@@ -43,11 +43,14 @@ async function drawScaled(
 
 export async function fileToVariants(file: File): Promise<PreparedImage> {
 	const bitmap = await createImageBitmap(file);
-	const targets = WIDTHS.filter((w) => w <= bitmap.width);
-	const widths = targets.length > 0 ? targets : [bitmap.width];
+	// Read dimensions BEFORE close(): a closed bitmap reports 0×0.
+	const sourceWidth = bitmap.width;
+	const sourceHeight = bitmap.height;
+	const targets = WIDTHS.filter((w) => w <= sourceWidth);
+	const widths = targets.length > 0 ? targets : [sourceWidth];
 	const variants: PreparedVariant[] = [];
 	for (const w of widths) {
-		const h = Math.max(1, Math.round((bitmap.height * w) / bitmap.width));
+		const h = Math.max(1, Math.round((sourceHeight * w) / sourceWidth));
 		const canvas = await drawScaled(bitmap, w, h);
 		const blob = await canvasToWebP(canvas);
 		if (!blob) throw new Error("WebP encode failed");
@@ -74,8 +77,8 @@ export async function fileToVariants(file: File): Promise<PreparedImage> {
 	const dominant = `#${hex(r)}${hex(g)}${hex(b)}`;
 	bitmap.close();
 	return {
-		sourceWidth: bitmap.width,
-		sourceHeight: bitmap.height,
+		sourceWidth,
+		sourceHeight,
 		sourceBytes: file.size,
 		sourceMime: file.type,
 		variants,
