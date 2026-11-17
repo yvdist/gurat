@@ -1,9 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-// Phase-7 accessibility gate (spec 07 §7.4b): zero serious-or-worse findings
-// on the core reading surface, both locales, both themes. Reuses the seeded
-// preview server; known-needs-review rules stay visible in the report.
+// Phase-7 accessibility gate (spec 07 §7.4b): zero serious-or-worse
+// findings on home, archive, post, tag, 404 × both locales × both themes.
+// Reuses the seeded preview server; known-needs-review rules stay visible.
 const PAGES = [
 	"/",
 	"/writing",
@@ -11,7 +11,10 @@ const PAGES = [
 	"/tags/essays",
 	"/writing/no-such-post",
 	"/id/",
+	"/id/writing",
 	"/id/writing/halo-dunia",
+	"/id/tags/essays",
+	"/id/writing/halaman-tidak-ada",
 ] as const;
 
 for (const theme of ["light", "dark"] as const) {
