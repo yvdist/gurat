@@ -1,0 +1,59 @@
+---
+import { detectLocaleFromPath, localizePath } from "../i18n";
+import "../styles/tokens.css";
+
+// Standalone by design: MUST NOT import `Base` — this page renders when the
+// layout pipeline itself is broken. Minimal `tokens.css` only (no fonts, no
+// scripts: the public CSP's hash-only `script-src` stays satisfied with zero
+// inline scripts here). Copy is inline EN/ID (two short strings per locale,
+// no new i18n keys — avoids key-drift churn for an error page).
+Astro.response.status = 500;
+const locale = detectLocaleFromPath(Astro.url.pathname);
+const copy =
+	locale === "id"
+		? {
+				title: "Ada yang rusak",
+				body: "Terjadi kesalahan di server. Coba lagi sebentar lagi.",
+				home: "Kembali ke beranda",
+			}
+		: {
+				title: "Something broke",
+				body: "The server hit an error. Try again in a moment.",
+				home: "Back to home",
+			};
+---
+
+<!doctype html>
+<html lang={locale}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>{copy.title} — Gurat</title>
+		<style>
+			body {
+				font-family: system-ui, sans-serif;
+				background: var(--bg);
+				color: var(--ink);
+				margin: 0;
+				display: grid;
+				place-items: center;
+				min-height: 100vh;
+			}
+			main {
+				text-align: center;
+				padding: 2rem;
+			}
+			a {
+				color: var(--indigo);
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>{copy.title}</h1>
+			<p>{copy.body}</p>
+			<p><a href={localizePath("/", locale)}>{copy.home}</a></p>
+		</main>
+	</body>
+</html>
