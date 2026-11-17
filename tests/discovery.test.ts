@@ -236,3 +236,31 @@ describe("blogposting JSON-LD", () => {
 		expect(doc.dateModified).toBe(new Date(1_769_000_100_000).toISOString());
 	});
 });
+
+describe("og upload validation", () => {
+	function png(width: number, height: number): Uint8Array {
+		const bytes = new Uint8Array(33);
+		bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+		bytes.set([0x49, 0x48, 0x44, 0x52], 12);
+		new DataView(bytes.buffer).setUint32(16, width);
+		new DataView(bytes.buffer).setUint32(20, height);
+		return bytes;
+	}
+
+	it("accepts 1200x630 PNG magic, rejects the rest", async () => {
+		const { parsePngDimensions, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } =
+			await import("../src/server/media/service");
+		expect(OG_IMAGE_WIDTH).toBe(1200);
+		expect(OG_IMAGE_HEIGHT).toBe(630);
+		expect(parsePngDimensions(png(1200, 630))).toEqual({
+			width: 1200,
+			height: 630,
+		});
+		expect(parsePngDimensions(png(800, 600))).toEqual({
+			width: 800,
+			height: 600,
+		});
+		expect(parsePngDimensions(new Uint8Array(100))).toBeNull();
+		expect(parsePngDimensions(new Uint8Array(10))).toBeNull();
+	});
+});

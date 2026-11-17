@@ -111,6 +111,8 @@ const ogLocaleAlternate = locale === "id" ? "en_US" : "id_ID";
 		{/* Server-serialized JSON-LD from validated post fields (JSON.stringify,
 		    never author HTML) — safe the same way ArticleBody's set:html is. */}
 		{jsonLd !== undefined && <script type="application/ld+json" set:html={jsonLd} />}
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="manifest" href="/site.webmanifest" />
 		<link
 			rel="preload"
 			href={bodoni400}

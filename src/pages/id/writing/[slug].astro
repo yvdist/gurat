@@ -86,9 +86,12 @@ const nextNo =
 	adjacent.next !== null ? pad(adjacentNos.get(adjacent.next.id) ?? 1) : "";
 const canonical =
 	post !== null ? `/id/writing/${post.slug}` : Astro.url.pathname;
-// og:image resolution: per-post key (step 4 column) else static fallback.
-// Column not yet migrated — fallback only until then.
-const ogImage = `${SITE.url}/og-default.png`;
+// og:image resolution (exact): per-post generated key else static fallback.
+const ogBase = getEnv().MEDIA_BASE_URL || SITE.url;
+const ogImage =
+	post?.ogImageKey !== null && post?.ogImageKey !== undefined
+		? `${ogBase}/${post.ogImageKey}`
+		: `${SITE.url}/og-default.png`;
 const hreflangLinks =
 	post !== null ? postHreflangs(locale, post.slug, translations) : [];
 const jsonLd =
