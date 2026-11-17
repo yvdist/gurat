@@ -136,3 +136,45 @@ describe("conditional GET helper", () => {
 		).toBe(false);
 	});
 });
+
+describe("sitemap builder", () => {
+	it("renders valid namespaces, alternates only for translated pairs", async () => {
+		const { buildSitemapEntries, renderSitemapXml } = await import(
+			"../src/server/discovery/sitemap"
+		);
+		const postHrefs = new Map<string, { en: string | null; id: string | null }>(
+			[["g1", { en: "/writing/a-en", id: "/id/writing/a-id" }]],
+		);
+		const entries = buildSitemapEntries({
+			locale: "en",
+			staticPaths: ["/", "/writing"],
+			tags: [{ slug: "film", lastModified: 1000 }],
+			posts: [
+				{ slug: "a-en", updatedAt: 2000, locale: "en", groupId: "g1" },
+				{ slug: "solo", updatedAt: 1500, locale: "en", groupId: null },
+			],
+			postHrefs,
+		});
+		const xml = renderSitemapXml("https://example.com", entries);
+		expect(xml).toContain(
+			'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+		);
+		expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
+		// Translated pair carries en + id + x-default.
+		expect(xml).toContain(
+			'hreflang="id" href="https://example.com/id/writing/a-id"',
+		);
+		expect(xml).toContain(
+			'hreflang="x-default" href="https://example.com/writing/a-en"',
+		);
+		// Untranslated post carries only self, no x-default.
+		const solo =
+			xml.split("<url>").find((u) => u.includes("/writing/solo")) ?? "";
+		expect(solo).toContain('hreflang="en"');
+		expect(solo).not.toContain('hreflang="id"');
+		expect(solo).not.toContain("x-default");
+		// Tag lastmod shape, static without lastmod.
+		expect(xml).toContain("<loc>https://example.com/tags/film</loc><lastmod>");
+		expect(xml).toContain("<loc>https://example.com/</loc>");
+	});
+});
