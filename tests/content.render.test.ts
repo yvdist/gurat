@@ -102,7 +102,9 @@ describe("renderer goldens", () => {
 });
 
 describe("renderer figure output", () => {
-	function figureDoc(attrs: Record<string, string>): ReturnType<typeof validateDoc> {
+	function figureDoc(
+		attrs: Record<string, string>,
+	): ReturnType<typeof validateDoc> {
 		return validateDoc({
 			type: "doc",
 			content: [{ type: "figure", attrs }],
@@ -134,8 +136,24 @@ describe("renderer figure output", () => {
 		const doc = validateDoc({
 			type: "doc",
 			content: [
-				{ type: "figure", attrs: { mediaId: "media-1", alt: "a", caption: "", layout: "inline" } },
-				{ type: "figure", attrs: { mediaId: "media-1", alt: "b", caption: "", layout: "inline" } },
+				{
+					type: "figure",
+					attrs: {
+						mediaId: "media-1",
+						alt: "a",
+						caption: "",
+						layout: "inline",
+					},
+				},
+				{
+					type: "figure",
+					attrs: {
+						mediaId: "media-1",
+						alt: "b",
+						caption: "",
+						layout: "inline",
+					},
+				},
 			],
 		});
 		const html = renderDoc(doc, ctx(figureMedia)).html;
@@ -151,19 +169,25 @@ describe("renderer figure output", () => {
 		const doc = validateDoc({
 			type: "doc",
 			content: [
-				{ type: "figure", attrs: { mediaId: "other", alt: "", caption: "", layout: "inline" } },
-				{ type: "figure", attrs: { mediaId: "media-1", alt: "", caption: "", layout: "inline" } },
+				{
+					type: "figure",
+					attrs: { mediaId: "other", alt: "", caption: "", layout: "inline" },
+				},
+				{
+					type: "figure",
+					attrs: { mediaId: "media-1", alt: "", caption: "", layout: "inline" },
+				},
 			],
 		});
-		const html = renderDoc(
-			doc,
-			{
-				locale: "en",
-				media: new Map([[figureMedia.id, figureMedia], [other.id, other]]),
-				baseUrl: "",
-				coverMediaId: "media-1",
-			},
-		).html;
+		const html = renderDoc(doc, {
+			locale: "en",
+			media: new Map([
+				[figureMedia.id, figureMedia],
+				[other.id, other],
+			]),
+			baseUrl: "",
+			coverMediaId: "media-1",
+		}).html;
 		// Both eager: first by position, second by cover match.
 		expect(html.match(/loading="eager"/g)).toHaveLength(2);
 	});
@@ -190,14 +214,41 @@ describe("renderer figure output", () => {
 
 	it("omits dominant style when absent or malformed; absolute baseUrl prefixes", () => {
 		const noColor: Media = { ...figureMedia, dominantColor: null };
-		expect(renderDoc(figureDoc({ mediaId: "media-1", alt: "a", caption: "", layout: "inline" }), ctx(noColor)).html).not.toContain("style=");
+		expect(
+			renderDoc(
+				figureDoc({
+					mediaId: "media-1",
+					alt: "a",
+					caption: "",
+					layout: "inline",
+				}),
+				ctx(noColor),
+			).html,
+		).not.toContain("style=");
 		const badColor: Media = { ...figureMedia, dominantColor: "red" };
-		expect(renderDoc(figureDoc({ mediaId: "media-1", alt: "a", caption: "", layout: "inline" }), ctx(badColor)).html).not.toContain("style=");
+		expect(
+			renderDoc(
+				figureDoc({
+					mediaId: "media-1",
+					alt: "a",
+					caption: "",
+					layout: "inline",
+				}),
+				ctx(badColor),
+			).html,
+		).not.toContain("style=");
 		const absolute = renderDoc(
-			figureDoc({ mediaId: "media-1", alt: "a", caption: "", layout: "inline" }),
+			figureDoc({
+				mediaId: "media-1",
+				alt: "a",
+				caption: "",
+				layout: "inline",
+			}),
 			ctx(figureMedia, { baseUrl: "https://media.example/" }),
 		).html;
-		expect(absolute).toContain('src="https://media.example/media/media-1/1600.webp"');
+		expect(absolute).toContain(
+			'src="https://media.example/media/media-1/1600.webp"',
+		);
 	});
 });
 

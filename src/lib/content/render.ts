@@ -94,7 +94,11 @@ function slugify(text: string): string {
 
 // Single URL rule (spec 05 §5.4): `baseUrl` (MEDIA_BASE_URL) + `/media/<id>/<w>.webp`.
 // Empty base = same-origin (local dev route); absolute origin = public R2.
-export function variantUrl(mediaRow: Media, width: number, baseUrl: string): string {
+export function variantUrl(
+	mediaRow: Media,
+	width: number,
+	baseUrl: string,
+): string {
 	const prefix = baseUrl.replace(/\/+$/, "");
 	return `${prefix}/media/${mediaRow.id}/${width}.webp`;
 }
@@ -118,7 +122,9 @@ export function srcsetFor(mediaRow: Media, baseUrl: string): string {
 		widths = null;
 	}
 	const list = widths ?? [mediaRow.width];
-	return list.map((w) => `${variantUrl(mediaRow, w, baseUrl)} ${w}w`).join(", ");
+	return list
+		.map((w) => `${variantUrl(mediaRow, w, baseUrl)} ${w}w`)
+		.join(", ");
 }
 
 /** Largest variant URL (src fallback); falls back to the single stored width. */
