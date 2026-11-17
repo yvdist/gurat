@@ -17,6 +17,10 @@ export interface Env {
 	ADMIN_EMAILS: string;
 	/** Local-only bypass flag; honored only when `import.meta.env.DEV`. */
 	ADMIN_DEV_BYPASS?: string;
+	/** Public origin serving R2 media (custom domain). Empty = same-origin `/media/...` (local dev). */
+	MEDIA_BASE_URL: string;
+	/** Original uploads stored (separate private bucket). Default `"false"`; media pipeline only. */
+	KEEP_ORIGINALS?: string;
 	[k: string]: unknown;
 }
 

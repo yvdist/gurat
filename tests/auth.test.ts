@@ -22,6 +22,7 @@ function testEnv(overrides: Partial<Env> = {}): Env {
 		ACCESS_TEAM_DOMAIN: TEAM,
 		ACCESS_AUD: AUD,
 		ADMIN_EMAILS: EMAIL,
+		MEDIA_BASE_URL: "",
 		...overrides,
 	};
 }

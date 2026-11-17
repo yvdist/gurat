@@ -67,3 +67,33 @@ Setup (owner, in the Cloudflare dashboard):
 Local dev: copy `.dev.vars.example` to `.dev.vars` and set
 `ADMIN_DEV_BYPASS=1` (works only with `astro dev`, never in production
 builds — asserted by `tests/auth.test.ts`).
+
+## Media (R2)
+
+Owner uploads images from the editor; the browser pre-generates 480/960/1600px
+WebP variants (never upscale, EXIF-free) and the Worker stores them in public
+R2 at `media/<id>/<width>.webp` (immutable, `Cache-Control: public,
+max-age=31536000, immutable`). Public HTML points at `MEDIA_BASE_URL` — no
+Worker invocation per image.
+
+Setup (owner, once):
+
+1. `wrangler r2 bucket create gurat-media` (binding `MEDIA` already declared
+   in `wrangler.jsonc`).
+2. R2 → bucket → Settings → Custom Domains → connect `media.<domain>`
+   (public access; disables Worker-free direct serving otherwise).
+3. Worker vars (dashboard, never commit): `MEDIA_BASE_URL=https://media.<domain>`.
+   Local dev keeps `MEDIA_BASE_URL=` empty (same-origin `/media/...` served by
+   the dev-only route).
+4. No CORS setup needed: uploads POST to same-origin `/admin/api/media`;
+   images are served off-origin.
+
+Per-env `MEDIA_BASE_URL`:
+
+| Env   | Value                    | Served by               |
+| ----- | ------------------------ | ----------------------- |
+| local | empty (same-origin)      | dev-only Worker route   |
+| prod  | `https://media.<domain>` | public R2 custom domain |
+
+`pnpm media:orphans` lists media rows unreferenced for > 7 days (no writes).
+After variant or `MEDIA_BASE_URL` changes, run `pnpm db:rerender`.
