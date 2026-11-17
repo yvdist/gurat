@@ -221,11 +221,12 @@ export function assertSameOrigin(request: Request, env: Env): void {
 }
 
 /**
- * CSRF guard for the multipart upload endpoint (spec 05 §5.1): same Origin
- * + `Sec-Fetch-Site` checks as {@link assertSameOrigin}, but without the
- * JSON `Content-Type` requirement (multipart boundaries are never JSON).
+ * CSRF guard for endpoints whose legitimate requests never carry JSON
+ * (multipart uploads, empty-body DELETEs — spec 05 §5.1): same `Origin` +
+ * `Sec-Fetch-Site` checks as {@link assertSameOrigin}, but without the JSON
+ * `Content-Type` requirement.
  */
-export function assertSameOriginMultipart(request: Request, env: Env): void {
+export function assertSameOriginNoJson(request: Request, env: Env): void {
 	if ((request.headers.get("Origin") ?? "") !== env.SITE_URL) {
 		throw new AccessError(403, "csrf");
 	}

@@ -19,7 +19,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
-	const g = await guard(request, { mutating: true });
+	const g = await guard(request, { mutating: true, nonJson: true });
 	if (g instanceof Response) return g;
 	const id = params.id ?? "";
 	const result = await deleteMediaService(g.db, g.env, id);

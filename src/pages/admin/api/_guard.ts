@@ -7,7 +7,7 @@ import type {
 import {
 	AccessError,
 	assertSameOrigin,
-	assertSameOriginMultipart,
+	assertSameOriginNoJson,
 	requireAdminApi,
 } from "../../../server/auth/access";
 import type { Db } from "../../../server/db";
@@ -22,16 +22,21 @@ export interface Guarded {
 	db: Db;
 }
 
-/** Auth guard; returns a `Response` to send on failure, else the env+db. */
+/**
+ * Auth guard; returns a `Response` to send on failure, else the env+db.
+ * `nonJson` skips the JSON `Content-Type` requirement for endpoints whose
+ * legitimate requests never carry JSON (multipart uploads, empty-body
+ * DELETEs); the `Origin` check remains the CSRF protection in both modes.
+ */
 export async function guard(
 	request: Request,
-	opts: { mutating: boolean; multipart?: boolean },
+	opts: { mutating: boolean; nonJson?: boolean },
 ): Promise<Guarded | Response> {
 	const env = getEnv();
 	try {
 		await requireAdminApi(request, env, { isDev: import.meta.env.DEV });
 		if (opts.mutating)
-			(opts.multipart === true ? assertSameOriginMultipart : assertSameOrigin)(
+			(opts.nonJson === true ? assertSameOriginNoJson : assertSameOrigin)(
 				request,
 				env,
 			);
