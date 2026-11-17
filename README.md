@@ -97,3 +97,18 @@ Per-env `MEDIA_BASE_URL`:
 
 `pnpm media:orphans` lists media rows unreferenced for > 7 days (no writes).
 After variant or `MEDIA_BASE_URL` changes, run `pnpm db:rerender`.
+
+## Deploy & backup
+
+Full owner runbook: [`DEPLOYMENTS.md`](DEPLOYMENTS.md) (Bahasa Indonesia —
+DNS order, Access, migrate-then-deploy, post-deploy curl checks, launch
+checklists) and [`docs/runbook.md`](docs/runbook.md) (English — weekly
+backup, tested restore steps, rollback).
+
+Short version: `pnpm db:migrate:remote` first (additive only), then GitHub
+Actions → `deploy` → Run workflow (`workflow_dispatch`, runs
+`wrangler deploy`). Rollback: `wrangler versions list` →
+`wrangler rollback <version-id>` (never roll back a migration). Weekly D1
+exports go to the private `gurat-backups` R2 bucket
+(`.github/workflows/backup.yml`); local restore proof: 9 posts / 4 tags /
+10 media rows round-tripped 2026-11-17.
