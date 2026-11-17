@@ -2,7 +2,7 @@
 import EditorIsland from "../../../islands/Editor.svelte";
 import Admin from "../../../layouts/Admin.astro";
 import { getEnv } from "../../../lib/env";
-import { listAllTagsService } from "../../../server/admin/service";
+import { listAllTagsService, listMediaService } from "../../../server/admin/service";
 import type { AccessIdentity } from "../../../server/auth/access";
 import { requireAdminPage } from "../../../server/auth/access";
 import { createDb, getPostById, listAdminPosts } from "../../../server/db";
@@ -35,6 +35,7 @@ if (post === null) {
 }
 const tags = await listAllTagsService(db);
 const recent = await listAdminPosts(db, { limit: 50 });
+const mediaItems = await listMediaService(db);
 const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
 const publishedValue =
 	post?.publishedAt !== null && post?.publishedAt !== undefined
@@ -88,6 +89,15 @@ const publishedValue =
 				</select>
 			</div>
 			<div class="admin-field">
+				<span>Cover image</span>
+				<select id="meta-cover">
+					<option value="">—</option>
+					{mediaItems.map((m) => (
+						<option value={m.id} selected={post.coverMediaId === m.id}>{m.id} ({m.width}×{m.height})</option>
+					))}
+				</select>
+			</div>
+			<div class="admin-field">
 				<span>Published at (future = scheduled)</span>
 				<input id="meta-published" type="datetime-local" value={publishedValue} />
 			</div>
@@ -109,6 +119,7 @@ const publishedValue =
 						groupId: r.translationGroupId,
 						updatedAt: r.updatedAt,
 					}))}
+				mediaBaseUrl={env.MEDIA_BASE_URL}
 			/>
 		</Admin>
 	)

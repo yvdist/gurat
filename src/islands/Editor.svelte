@@ -7,7 +7,9 @@ import "../styles/tokens.css";
 import "../styles/article.css";
 import "../styles/admin.css";
 import { docToTiptap, tiptapToDoc } from "./editorDoc";
-
+import { fileToVariants, uploadMedia } from "./mediaClient";
+import { smallestVariantUrl } from "../lib/content/render";
+import type { Media } from "../server/db/schema";
 // Browser-only editor island (spec 04 §4.3). Mounted `client:only` from
 // the post pages; Tiptap core is mounted directly in this component
 // (no wrapper dep). Extension list derives from `schema.ts` via
@@ -29,6 +31,8 @@ interface Props {
 	locale: "en" | "id";
 	groupId?: string | null;
 	candidates?: TranslationCandidate[];
+	/** Public media origin (MEDIA_BASE_URL); empty = same-origin. */
+	mediaBaseUrl?: string;
 }
 
 const {
@@ -38,6 +42,7 @@ const {
 	locale,
 	groupId: initialGroupId = null,
 	candidates = [],
+	mediaBaseUrl = "",
 }: Props = $props();
 
 // Custom nodes — names match the schema `type` values 1:1 so stored
@@ -93,8 +98,17 @@ const Pullquote = Node.create({
 	},
 });
 
-// Phase 5 owns media: insert is DISABLED (no toolbar button). Existing
-// figure nodes render read-only and round-trip byte-identical.
+// mediaId → smallest-variant preview URL (populated from the library before
+// the editor mounts; uploads add entries synchronously before insertion).
+const previewUrls = new Map<string, string>();
+
+function previewUrl(mediaId: string): string {
+	const known = previewUrls.get(mediaId);
+	if (known) return known;
+	const prefix = mediaBaseUrl.replace(/\/+$/, "");
+	return `${prefix}/media/${mediaId}/preview`;
+}
+
 const FigureView = Node.create({
 	name: "figure",
 	group: "block",
@@ -119,7 +133,7 @@ const FigureView = Node.create({
 			[
 				"img",
 				{
-					src: `/media/${attrs.mediaId ?? ""}/placeholder`,
+					src: previewUrl(attrs.mediaId ?? ""),
 					alt: attrs.alt ?? "",
 				},
 			],
@@ -152,6 +166,26 @@ let groupId: string | null = $state(initialGroupId);
 let linkTarget = $state("");
 let translationBusy = $state(false);
 let translationError: string | null = $state(null);
+interface LibraryItem {
+	id: string;
+	altDefault: string;
+	width: number;
+	height: number;
+	variantsJson: string;
+	useCount: number;
+}
+
+let imageDialog: HTMLDialogElement | null = $state(null);
+let library: LibraryItem[] = $state([]);
+let libraryError: string | null = $state(null);
+let pickerMediaId = $state("");
+let pickerAlt = $state("");
+let pickerAltTouched = $state(false);
+let pickerDecorative = $state(false);
+let pickerCaption = $state("");
+let pickerLayout = $state("inline");
+let pickerBusy = $state(false);
+let pickerError: string | null = $state(null);
 
 function fieldValue(id: string): string {
 	const el = document.getElementById(id) as HTMLInputElement | null;
@@ -210,12 +244,17 @@ async function save(overwrite: boolean): Promise<boolean> {
 		return false;
 	}
 	saveState = "saving";
+	// Cover selector lives in the page metadata panel (`#meta-cover`); the
+	// dead `#meta-published` display input is intentionally not sent (its
+	// scheduling behavior is out of scope for the media phase).
+	const coverValue = fieldValue("meta-cover");
 	const body = {
 		locale: fieldValue("meta-locale") || locale,
 		slug: fieldValue("meta-slug"),
 		title: fieldValue("meta-title"),
 		excerpt: fieldValue("meta-excerpt"),
 		seoDescription: fieldValue("meta-seo") || null,
+		coverMediaId: coverValue === "" ? null : coverValue,
 		translationGroupId: groupId,
 		tagIds: fieldMultiValues("meta-tags"),
 		contentJson: currentDocJson(),
@@ -234,6 +273,7 @@ async function save(overwrite: boolean): Promise<boolean> {
 					excerpt: body.excerpt,
 					contentJson: body.contentJson,
 					seoDescription: body.seoDescription,
+					coverMediaId: body.coverMediaId,
 					translationGroupId: body.translationGroupId,
 					tagIds: body.tagIds,
 				}),
@@ -495,8 +535,141 @@ function insertFootnote() {
 function beforeUnload(e: BeforeUnloadEvent) {
 	if (dirty) e.preventDefault();
 }
+interface MediaListResponse {
+	media?: (Media & { useCount?: number })[];
+}
 
-onMount(() => {
+/** Fetch the library; populate preview URLs + picker list. */
+async function refreshLibrary(): Promise<void> {
+	libraryError = null;
+	try {
+		const res = await fetch("/admin/api/media");
+		if (!res.ok) throw new Error(`library failed (${res.status})`);
+		const data = (await res.json()) as MediaListResponse;
+		const items = (data.media ?? []).map((m) => ({
+			id: m.id,
+			altDefault: m.altDefault,
+			width: m.width,
+			height: m.height,
+			variantsJson: m.variantsJson,
+			useCount: m.useCount ?? 0,
+		}));
+		library = items;
+		for (const m of data.media ?? []) {
+			previewUrls.set(m.id, smallestVariantUrl(m, mediaBaseUrl));
+		}
+	} catch (err) {
+		libraryError = err instanceof Error ? err.message : "library failed";
+	}
+}
+
+function openImageDialog(): void {
+	pickerMediaId = "";
+	pickerAlt = "";
+	pickerAltTouched = false;
+	pickerDecorative = false;
+	pickerCaption = "";
+	pickerLayout = "inline";
+	pickerError = null;
+	imageDialog?.showModal();
+	void refreshLibrary();
+}
+
+function insertFigureAt(
+	mediaId: string,
+	alt: string,
+	caption: string,
+	layout: string,
+): void {
+	if (!editor) return;
+	editor
+		.chain()
+		.focus()
+		.insertContent({
+			type: "figure",
+			attrs: { mediaId, alt, caption, layout },
+		})
+		.run();
+	markDirty();
+}
+
+function insertFromPicker(): void {
+	// Alt is required: free text (touched) or explicit decorative (`alt=""`).
+	if (pickerMediaId === "") {
+		pickerError = "Choose an image first.";
+		return;
+	}
+	if (!pickerAltTouched && !pickerDecorative) {
+		pickerError = "Alt text is required (or tick decorative).";
+		return;
+	}
+	const alt = pickerDecorative ? "" : pickerAlt.trim();
+	insertFigureAt(pickerMediaId, alt, pickerCaption.trim(), pickerLayout);
+	imageDialog?.close();
+}
+
+async function pickerUpload(file: File): Promise<void> {
+	pickerBusy = true;
+	pickerError = null;
+	try {
+		const prepared = await fileToVariants(file);
+		const { id } = await uploadMedia(prepared, pickerAlt.trim());
+		await refreshLibrary();
+		pickerMediaId = id;
+		markDirty();
+	} catch (err) {
+		pickerError = err instanceof Error ? err.message : "upload failed";
+	} finally {
+		pickerBusy = false;
+	}
+}
+
+/** Pipeline for dropped/pasted files: variants → upload → insert at cursor. */
+async function filesToFigures(files: File[]): Promise<void> {
+	const images = files.filter((f) => f.type.startsWith("image/"));
+	if (images.length === 0 || !editor) return;
+	for (const file of images) {
+		try {
+			const prepared = await fileToVariants(file);
+			const { id } = await uploadMedia(prepared, "");
+			previewUrls.set(
+				id,
+				smallestVariantUrl(
+					{
+						id,
+						r2KeyPrefix: `media/${id}/`,
+						mime: "image/webp",
+						width: prepared.sourceWidth,
+						height: prepared.sourceHeight,
+						bytes: prepared.sourceBytes,
+						altDefault: "",
+						dominantColor: prepared.dominant,
+						variantsJson: JSON.stringify(
+							prepared.variants.map((v) => ({
+								w: v.w,
+								key: `media/${id}/${v.w}.webp`,
+								bytes: v.blob.size,
+								mime: "image/webp",
+							})),
+						),
+						createdAt: Date.now(),
+					} as Media,
+					mediaBaseUrl,
+				),
+			);
+			// Dropped/pasted images carry no author alt yet: insert with an
+			// empty alt so the save renders the default until edited.
+			insertFigureAt(id, "", "", "inline");
+		} catch {
+			saveState = "saved";
+		}
+	}
+}
+
+onMount(async () => {
+	// Library first so figure previews resolve to real variant URLs on the
+	// initial render (same prefix rule as the server renderer).
+	await refreshLibrary();
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(initialDoc);
@@ -522,6 +695,24 @@ onMount(() => {
 		content: docToTiptap(tiptapToDoc(parsed)),
 		editorProps: {
 			transformPastedHTML: (html) => stripLinkAttrs(html),
+			handleDrop: (_view, event) => {
+				const files = event.dataTransfer?.files;
+				if (!files || files.length === 0) return false;
+				const images = [...files].filter((f) => f.type.startsWith("image/"));
+				if (images.length === 0) return false;
+				event.preventDefault();
+				void filesToFigures(images);
+				return true;
+			},
+			handlePaste: (_view, event) => {
+				const files = event.clipboardData?.files;
+				if (!files || files.length === 0) return false;
+				const images = [...files].filter((f) => f.type.startsWith("image/"));
+				if (images.length === 0) return false;
+				event.preventDefault();
+				void filesToFigures(images);
+				return true;
+			},
 		},
 		onUpdate: () => {
 			refreshStats();
@@ -597,6 +788,7 @@ onDestroy(() => {
 		<button type="button" onclick={() => pullquoteDialog?.showModal()} aria-label="Insert pullquote">pullquote</button>
 		<button type="button" onclick={() => sidenoteDialog?.showModal()} aria-label="Insert sidenote">sidenote</button>
 		<button type="button" onclick={insertFootnote} aria-label="Insert footnote">footnote</button>
+		<button type="button" onclick={openImageDialog} aria-label="Insert image">image</button>
 		<button type="button" onclick={() => editor?.chain().focus().undo().run()} aria-label="Undo">undo</button>
 		<button type="button" onclick={() => editor?.chain().focus().redo().run()} aria-label="Redo">redo</button>
 		<button type="button" onclick={() => { focusMode = !focusMode; }} aria-pressed={focusMode} aria-label="Focus mode">focus</button>
@@ -686,6 +878,60 @@ onDestroy(() => {
 		<form method="dialog">
 			<p>Inserts a pullquote block at the cursor.</p>
 			<button type="button" onclick={insertPullquote}>Insert</button>
+			<button type="submit">Cancel</button>
+		</form>
+	</dialog>
+	<dialog bind:this={imageDialog} aria-label="Insert image">
+		<form method="dialog">
+			<h2>Insert image</h2>
+			{#if libraryError}<p class="admin-error">{libraryError}</p>{/if}
+			<label>Choose from library
+				<select bind:value={pickerMediaId} aria-label="Choose image from library">
+					<option value="">—</option>
+					{#each library as item (item.id)}
+						<option value={item.id}>{item.id} ({item.width}×{item.height})</option>
+					{/each}
+				</select>
+			</label>
+			<label>Upload new
+				<input
+					type="file"
+					accept="image/jpeg,image/png,image/webp"
+					aria-label="Upload new image"
+					onchange={(e) => {
+						const f = (e.target as HTMLInputElement).files?.[0];
+						if (f) void pickerUpload(f);
+					}}
+				/>
+			</label>
+			{#if pickerBusy}<p class="admin-status">Uploading…</p>{/if}
+			<label>Alt text (required)
+				<input
+					bind:value={pickerAlt}
+					aria-label="Image alt text"
+					oninput={() => { pickerAltTouched = true; }}
+				/>
+			</label>
+			<label>
+				<input type="checkbox" bind:checked={pickerDecorative} aria-label="Decorative image" />
+				Decorative (empty alt)
+			</label>
+			<label>Caption (optional)
+				<input bind:value={pickerCaption} aria-label="Image caption" />
+			</label>
+			<label>Layout
+				<select bind:value={pickerLayout} aria-label="Image layout">
+					<option value="inline">inline</option>
+					<option value="wide">wide</option>
+					<option value="full">full</option>
+				</select>
+			</label>
+			{#if pickerError}<p class="admin-error">{pickerError}</p>{/if}
+			<button
+				type="button"
+				onclick={insertFromPicker}
+				disabled={pickerMediaId === "" || (!pickerAltTouched && !pickerDecorative)}
+			>Insert</button>
 			<button type="submit">Cancel</button>
 		</form>
 	</dialog>
