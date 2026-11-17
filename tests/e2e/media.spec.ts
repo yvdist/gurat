@@ -1,7 +1,13 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import {
+	type APIRequestContext,
+	expect,
+	type Page,
+	test,
+} from "@playwright/test";
+
 // Media journey: EXIF-bearing 6000px JPEG → dropzone upload → picker insert
 // (alt enforced) → publish → responsive public image with zero layout shift.
 // Runs in the `admin` project (DEV bypass on :4322); CLS is measured against
@@ -84,7 +90,9 @@ function exifApp1WithGps(): Buffer {
 }
 
 /** Render a 6000px JPEG in the browser, splice EXIF+GPS after SOI in Node. */
-async function exifJpegFile(page: Page): Promise<{ path: string; dir: string }> {
+async function exifJpegFile(
+	page: Page,
+): Promise<{ path: string; dir: string }> {
 	const bytes: number[] = await page.evaluate(async () => {
 		const canvas = document.createElement("canvas");
 		canvas.width = 6000;
@@ -139,9 +147,9 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 		const cards = await page.locator(".admin-media-card").count();
 		expect(cards).toBeGreaterThan(before);
 
-		const listed = (await request.get("/admin/api/media").then((r) =>
-			r.json(),
-		)) as { media?: { id: string }[] };
+		const listed = (await request
+			.get("/admin/api/media")
+			.then((r) => r.json())) as { media?: { id: string }[] };
 		mediaId = listed.media?.[listed.media.length - 1]?.id ?? "";
 		expect(mediaId).not.toBe("");
 
@@ -163,11 +171,14 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 		await page.getByRole("button", { name: "image", exact: true }).click();
 		const dialog = page.getByRole("dialog", { name: "Insert image" });
 		await expect(dialog).toBeVisible();
-		await expect(
-			dialog.locator(`option[value="${mediaId}"]`),
-		).toBeAttached({ timeout: 15000 });
+		await expect(dialog.locator(`option[value="${mediaId}"]`)).toBeAttached({
+			timeout: 15000,
+		});
 		await dialog.locator("select").first().selectOption(mediaId);
-		const insertBtn = dialog.getByRole("button", { name: "Insert", exact: true });
+		const insertBtn = dialog.getByRole("button", {
+			name: "Insert",
+			exact: true,
+		});
 		await expect(insertBtn).toBeDisabled();
 		await dialog.getByLabel("Image alt text").fill("A wide test photo");
 		await expect(insertBtn).toBeEnabled();
