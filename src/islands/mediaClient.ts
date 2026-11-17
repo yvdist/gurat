@@ -48,6 +48,7 @@ export async function fileToVariants(file: File): Promise<PreparedImage> {
 	const sourceHeight = bitmap.height;
 	const targets = WIDTHS.filter((w) => w <= sourceWidth);
 	const widths = targets.length > 0 ? targets : [sourceWidth];
+	const variants: PreparedVariant[] = [];
 	for (const w of widths) {
 		const h = Math.max(1, Math.round((sourceHeight * w) / sourceWidth));
 		const canvas = await drawScaled(bitmap, w, h);
