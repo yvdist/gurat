@@ -153,6 +153,7 @@ export async function createPost(
 		readingMinutes: input.readingMinutes ?? 1,
 		coverMediaId: input.coverMediaId ?? null,
 		seoDescription: input.seoDescription ?? null,
+		ogImageKey: null,
 		createdAt: now,
 		updatedAt: now,
 	};
