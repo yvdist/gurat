@@ -60,7 +60,9 @@ function u24le(bytes: Uint8Array, off: number): number {
 }
 
 /** JPEG: scan markers for a Start-Of-Frame segment (baseline/progressive). */
-function jpegDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+function jpegDimensions(
+	bytes: Uint8Array,
+): { width: number; height: number } | null {
 	// Skip SOI (FF D8).
 	let off = 2;
 	while (off + 3 < bytes.length) {
@@ -74,7 +76,7 @@ function jpegDimensions(bytes: Uint8Array): { width: number; height: number } | 
 		if (len < 2 || off + len > bytes.length) return null;
 		// SOF0/1/2/3/5/6/7/9/10/11/13/14/15 (not DHT/DAC arithmetic).
 		const isSof =
-			(marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xcc);
+			marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xcc;
 		if (isSof) {
 			if (len < 8) return null;
 			const height = u16be(bytes, off + 3);
@@ -87,7 +89,9 @@ function jpegDimensions(bytes: Uint8Array): { width: number; height: number } | 
 }
 
 /** PNG: IHDR is the first chunk after the 8-byte signature. */
-function pngDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+function pngDimensions(
+	bytes: Uint8Array,
+): { width: number; height: number } | null {
 	if (bytes.length < 24) return null;
 	// Width/height are big-endian u32 at offsets 16/20.
 	const width =
@@ -98,7 +102,9 @@ function pngDimensions(bytes: Uint8Array): { width: number; height: number } | n
 }
 
 /** WebP: VP8 (lossy), VP8L (lossless), VP8X (extended) inner headers. */
-function webpDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+function webpDimensions(
+	bytes: Uint8Array,
+): { width: number; height: number } | null {
 	// RIFF(0-3) size(4-7) WEBP(8-11) FourCC(12-15) chunkSize(16-19) payload(20+).
 	if (bytes.length < 12 + 8) return null;
 	const fourcc = String.fromCharCode(
@@ -150,7 +156,8 @@ export function parseDimensions(
 				: webpDimensions(bytes);
 	if (dims === null) return null;
 	// Reject absurd sizes (spec §5.1 "dimension sanity checks").
-	if (!Number.isInteger(dims.width) || !Number.isInteger(dims.height)) return null;
+	if (!Number.isInteger(dims.width) || !Number.isInteger(dims.height))
+		return null;
 	if (dims.width < 1 || dims.height < 1) return null;
 	if (dims.width > 8000 || dims.height > 8000) return null;
 	if (dims.width * dims.height > 64_000_000) return null;
@@ -211,14 +218,20 @@ export interface VariantCheck {
 export function checkVariants(
 	meta: MediaMeta,
 	variants: VariantInput[],
-): { ok: true; heights: VariantCheck[] } | { ok: false; code: MediaCheckError } {
+):
+	| { ok: true; heights: VariantCheck[] }
+	| { ok: false; code: MediaCheckError } {
 	if (variants.length === 0 || variants.length > MAX_VARIANTS) {
 		return { ok: false, code: "too-many" };
 	}
 	const seen = new Set<number>();
 	const heights: VariantCheck[] = [];
 	for (const v of variants) {
-		if (!Number.isInteger(v.width) || v.width < 1 || v.width > meta.sourceWidth) {
+		if (
+			!Number.isInteger(v.width) ||
+			v.width < 1 ||
+			v.width > meta.sourceWidth
+		) {
 			return { ok: false, code: "width-mismatch" };
 		}
 		if (seen.has(v.width)) return { ok: false, code: "width-mismatch" };

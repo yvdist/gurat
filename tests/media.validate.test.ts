@@ -13,10 +13,21 @@ import {
 function minimalJpeg(width: number, height: number): Uint8Array {
 	// SOI + SOF0 segment only (enough for the SOF scanner).
 	const out = [
-		0xff, 0xd8, 0xff, 0xc0, 0x00, 0x0b, 0x08,
-		(height >> 8) & 0xff, height & 0xff,
-		(width >> 8) & 0xff, width & 0xff,
-		0x01, 0x01, 0x11, 0x00,
+		0xff,
+		0xd8,
+		0xff,
+		0xc0,
+		0x00,
+		0x0b,
+		0x08,
+		(height >> 8) & 0xff,
+		height & 0xff,
+		(width >> 8) & 0xff,
+		width & 0xff,
+		0x01,
+		0x01,
+		0x11,
+		0x00,
 	];
 	return new Uint8Array(out);
 }
@@ -24,11 +35,27 @@ function minimalJpeg(width: number, height: number): Uint8Array {
 function minimalPng(width: number, height: number): Uint8Array {
 	const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 	const ihdr = [
-		0, 0, 0, 13,
-		0x49, 0x48, 0x44, 0x52,
-		(width >>> 24) & 0xff, (width >>> 16) & 0xff, (width >>> 8) & 0xff, width & 0xff,
-		(height >>> 24) & 0xff, (height >>> 16) & 0xff, (height >>> 8) & 0xff, height & 0xff,
-		8, 2, 0, 0, 0,
+		0,
+		0,
+		0,
+		13,
+		0x49,
+		0x48,
+		0x44,
+		0x52,
+		(width >>> 24) & 0xff,
+		(width >>> 16) & 0xff,
+		(width >>> 8) & 0xff,
+		width & 0xff,
+		(height >>> 24) & 0xff,
+		(height >>> 16) & 0xff,
+		(height >>> 8) & 0xff,
+		height & 0xff,
+		8,
+		2,
+		0,
+		0,
+		0,
 	];
 	return new Uint8Array([...sig, ...ihdr]);
 }
@@ -36,15 +63,36 @@ function minimalPng(width: number, height: number): Uint8Array {
 /** Minimal lossy WebP (VP8) with a 14-bit w/h header at payload+6/8. */
 function minimalWebp(width: number, height: number): Uint8Array {
 	const header = [
-		0x52, 0x49, 0x46, 0x46, // RIFF
-		0x1a, 0, 0, 0, // size (ignored)
-		0x57, 0x45, 0x42, 0x50, // WEBP
-		0x56, 0x50, 0x38, 0x20, // VP8<space>
-		0x0e, 0, 0, 0, // chunk size
-		0x10, 0x20, 0x00, // frame tag (3B)
-		0x9d, 0x01, 0x2a, // start code
-		width & 0xff, ((width >> 8) & 0x3f) | 0x00,
-		height & 0xff, ((height >> 8) & 0x3f) | 0x00,
+		0x52,
+		0x49,
+		0x46,
+		0x46, // RIFF
+		0x1a,
+		0,
+		0,
+		0, // size (ignored)
+		0x57,
+		0x45,
+		0x42,
+		0x50, // WEBP
+		0x56,
+		0x50,
+		0x38,
+		0x20, // VP8<space>
+		0x0e,
+		0,
+		0,
+		0, // chunk size
+		0x10,
+		0x20,
+		0x00, // frame tag (3B)
+		0x9d,
+		0x01,
+		0x2a, // start code
+		width & 0xff,
+		((width >> 8) & 0x3f) | 0x00,
+		height & 0xff,
+		((height >> 8) & 0x3f) | 0x00,
 	];
 	return new Uint8Array(header);
 }
@@ -57,13 +105,30 @@ function minimalWebpLossless(width: number, height: number): Uint8Array {
 		0x2f,
 		w & 0xff,
 		((w >> 8) & 0x3f) | ((h & 0x03) << 6),
-		((h >> 2) & 0xff),
-		((h >> 10) & 0x0f),
+		(h >> 2) & 0xff,
+		(h >> 10) & 0x0f,
 	];
 	return new Uint8Array([
-		0x52, 0x49, 0x46, 0x46, 0x10, 0, 0, 0,
-		0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x4c,
-		0x05, 0, 0, 0,
+		0x52,
+		0x49,
+		0x46,
+		0x46,
+		0x10,
+		0,
+		0,
+		0,
+		0x57,
+		0x45,
+		0x42,
+		0x50,
+		0x56,
+		0x50,
+		0x38,
+		0x4c,
+		0x05,
+		0,
+		0,
+		0,
 		...payload,
 	]);
 }
@@ -73,12 +138,36 @@ function minimalWebpExtended(width: number, height: number): Uint8Array {
 	const w = width - 1;
 	const h = height - 1;
 	return new Uint8Array([
-		0x52, 0x49, 0x46, 0x46, 0x12, 0, 0, 0,
-		0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x58,
-		0x0a, 0, 0, 0,
-		0x00, 0x00, 0x00, 0x00, // flags + reserved
-		w & 0xff, (w >> 8) & 0xff, (w >> 16) & 0xff,
-		h & 0xff, (h >> 8) & 0xff, (h >> 16) & 0xff,
+		0x52,
+		0x49,
+		0x46,
+		0x46,
+		0x12,
+		0,
+		0,
+		0,
+		0x57,
+		0x45,
+		0x42,
+		0x50,
+		0x56,
+		0x50,
+		0x38,
+		0x58,
+		0x0a,
+		0,
+		0,
+		0,
+		0x00,
+		0x00,
+		0x00,
+		0x00, // flags + reserved
+		w & 0xff,
+		(w >> 8) & 0xff,
+		(w >> 16) & 0xff,
+		h & 0xff,
+		(h >> 8) & 0xff,
+		(h >> 16) & 0xff,
 	]);
 }
 
@@ -94,10 +183,14 @@ describe("sniffImageKind", () => {
 		// MZ header (Windows executable).
 		expect(sniffImageKind(new Uint8Array([0x4d, 0x5a, 0x90, 0x00]))).toBeNull();
 		// SVG text.
-		const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg">');
+		const svg = new TextEncoder().encode(
+			'<svg xmlns="http://www.w3.org/2000/svg">',
+		);
 		expect(sniffImageKind(svg)).toBeNull();
 		// GIF89a + trailing EXE bytes (polyglot).
-		const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x4d, 0x5a]);
+		const gif = new Uint8Array([
+			0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x4d, 0x5a,
+		]);
 		expect(sniffImageKind(gif)).toBeNull();
 		expect(sniffImageKind(new Uint8Array([]))).toBeNull();
 	});
@@ -105,9 +198,18 @@ describe("sniffImageKind", () => {
 
 describe("parseDimensions", () => {
 	it("parses 1x1-equivalent fixtures per format", () => {
-		expect(parseDimensions("jpeg", minimalJpeg(1, 1))).toEqual({ width: 1, height: 1 });
-		expect(parseDimensions("png", minimalPng(1, 1))).toEqual({ width: 1, height: 1 });
-		expect(parseDimensions("webp", minimalWebp(1, 1))).toEqual({ width: 1, height: 1 });
+		expect(parseDimensions("jpeg", minimalJpeg(1, 1))).toEqual({
+			width: 1,
+			height: 1,
+		});
+		expect(parseDimensions("png", minimalPng(1, 1))).toEqual({
+			width: 1,
+			height: 1,
+		});
+		expect(parseDimensions("webp", minimalWebp(1, 1))).toEqual({
+			width: 1,
+			height: 1,
+		});
 		expect(parseDimensions("webp", minimalWebpLossless(1, 1))).toEqual({
 			width: 1,
 			height: 1,
@@ -205,7 +307,9 @@ describe("checkVariants", () => {
 		).toEqual({ ok: false, code: "width-mismatch" });
 	});
 	it("rejects non-WebP variant bytes", () => {
-		expect(checkVariants(meta, [{ width: 480, bytes: minimalPng(480, 240) }])).toEqual({
+		expect(
+			checkVariants(meta, [{ width: 480, bytes: minimalPng(480, 240) }]),
+		).toEqual({
 			ok: false,
 			code: "bad-mimetype",
 		});
