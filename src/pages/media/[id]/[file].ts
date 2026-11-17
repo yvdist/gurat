@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ params }) => {
 	const env = getEnv();
 	const obj = await env.MEDIA.get(`media/${id}/${file}`);
 	if (obj === null) return new Response("Not Found", { status: 404 });
-	return new Response(obj.body, {
+	return new Response(obj.body as unknown as ReadableStream<Uint8Array>, {
 		headers: {
 			"Content-Type": "image/webp",
 			"Cache-Control": "public, max-age=31536000, immutable",
