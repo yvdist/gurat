@@ -30,12 +30,12 @@ export default defineConfig({
 		{
 			name: "chromium",
 			use: { ...devices["Desktop Chrome"] },
-			testIgnore: "**/admin.spec.ts",
+			testIgnore: ["**/admin*.spec.ts", "**/media.spec.ts"],
 		},
 		{
 			name: "admin",
 			use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:4322" },
-			testMatch: ["**/admin.spec.ts", "**/media.spec.ts"],
+			testMatch: ["**/admin*.spec.ts", "**/media.spec.ts"],
 		},
 	],
 });
