@@ -179,7 +179,9 @@ export async function createPost(
 				? [
 						db
 							.insert(postMedia)
-							.values(input.mediaIds.map((mediaId) => ({ postId: id, mediaId }))),
+							.values(
+								input.mediaIds.map((mediaId) => ({ postId: id, mediaId })),
+							),
 					]
 				: []),
 		]);
@@ -266,11 +268,12 @@ export async function savePost(
 						db.delete(postMedia).where(eq(postMedia.postId, id)),
 						...(patch.mediaIds.length > 0
 							? [
-									db
-										.insert(postMedia)
-										.values(
-											patch.mediaIds.map((mediaId) => ({ postId: id, mediaId })),
-										),
+									db.insert(postMedia).values(
+										patch.mediaIds.map((mediaId) => ({
+											postId: id,
+											mediaId,
+										})),
+									),
 								]
 							: []),
 					]

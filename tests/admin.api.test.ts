@@ -13,7 +13,13 @@ import {
 } from "../src/server/admin/service";
 import { getPublishedPostBySlug } from "../src/server/db";
 import { createDb } from "../src/server/db/client";
-import { media, postMedia, posts, postTags, tags } from "../src/server/db/schema";
+import {
+	media,
+	postMedia,
+	posts,
+	postTags,
+	tags,
+} from "../src/server/db/schema";
 
 function doc(title = "Hello"): string {
 	return JSON.stringify({
@@ -191,7 +197,12 @@ describe("admin service", () => {
 			content: [
 				{
 					type: "figure",
-					attrs: { mediaId: "m-missing", alt: "a", caption: "", layout: "inline" },
+					attrs: {
+						mediaId: "m-missing",
+						alt: "a",
+						caption: "",
+						layout: "inline",
+					},
 				},
 			],
 		});
