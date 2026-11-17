@@ -61,7 +61,11 @@ describe("renderer phase-3 goldens", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
+		const { html } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(html).toContain('id="sn-1"');
 		expect(html).toContain('id="sn-2"');
 		expect(html).toContain('id="fn-1"');
@@ -72,8 +76,16 @@ describe("renderer phase-3 goldens", () => {
 		for (const json of [pullquoteJson, sidenoteJson, footnoteJson]) {
 			const content: unknown = JSON.parse(json);
 			const doc = validateDoc({ type: "doc", content });
-			const en = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" }).html;
-			const idHtml = renderDoc(doc, { locale: "id", media: new Map(), baseUrl: "" }).html;
+			const en = renderDoc(doc, {
+				locale: "en",
+				media: new Map(),
+				baseUrl: "",
+			}).html;
+			const idHtml = renderDoc(doc, {
+				locale: "id",
+				media: new Map(),
+				baseUrl: "",
+			}).html;
 			expect(idHtml).toBe(en);
 		}
 	});
@@ -103,7 +115,11 @@ describe("renderer phase-3 goldens", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
+		const { html } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(html).not.toContain("<script");
 		expect(html).toContain("&lt;script&gt;");
 		expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
