@@ -26,6 +26,8 @@
 		"SITE_URL": "https://gurat.yvdist.com",
 		"ACCESS_TEAM_DOMAIN": "",
 		"ACCESS_AUD": "",
-		"ADMIN_EMAILS": ""
+		"ADMIN_EMAILS": "",
+		"MEDIA_BASE_URL": "",
+		"KEEP_ORIGINALS": "false"
 	}
 }
