@@ -35,7 +35,7 @@ export default defineConfig({
 		{
 			name: "admin",
 			use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:4322" },
-			testMatch: ["**/admin.spec.ts", "**/media.spec.ts", "**/zz2.spec.ts"],
+			testMatch: ["**/admin.spec.ts", "**/media.spec.ts"],
 		},
 	],
 });
