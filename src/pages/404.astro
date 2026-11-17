@@ -1,6 +1,6 @@
 ---
 import { SITE } from "../config/site";
-import { detectLocaleFromPath, t } from "../i18n";
+import { detectLocaleFromPath, localizePath, t } from "../i18n";
 import Base from "../layouts/Base.astro";
 
 // Single 404: locale comes from the URL prefix (`/id/...` → Indonesian,
@@ -15,7 +15,15 @@ const locale = detectLocaleFromPath(Astro.url.pathname);
 	canonical={Astro.url.pathname}
 	hreflangs={[]}
 	locale={locale}
-	heading={t(locale, "notfound.title")}
+	path={Astro.url.pathname}
 >
-	<p>{t(locale, "notfound.body")}</p>
+	<div class="page">
+		<div class="center-page">
+			<h1>{t(locale, "notfound.title")}</h1>
+			<p>{t(locale, "notfound.body")}</p>
+			<p>
+				<a href={localizePath("/", locale)}>{t(locale, "nav.home")}</a>
+			</p>
+		</div>
+	</div>
 </Base>

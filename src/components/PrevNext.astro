@@ -1,0 +1,42 @@
+---
+// Prev/next cards (spec §A4): figure, mono ← previous · No. {n}, serif titles.
+import type { Locale } from "../config/site";
+import { localizePath, t } from "../i18n";
+
+export interface AdjacentPost {
+	slug: string;
+	title: string;
+	postNo: string;
+}
+
+interface Props {
+	locale: Locale;
+	prev: AdjacentPost | null;
+	next: AdjacentPost | null;
+}
+
+const { locale, prev, next } = Astro.props;
+---
+
+{
+	(prev !== null || next !== null) && (
+		<nav class="prevnext" aria-label={t(locale, "post.contents")}>
+			{prev !== null && (
+				<a class="prevnext-card" href={localizePath(`/writing/${prev.slug}`, locale)}>
+					<p class="mono">
+						{t(locale, "post.prev")} · No. {prev.postNo}
+					</p>
+					<p class="prevnext-title">{prev.title}</p>
+				</a>
+			)}
+			{next !== null && (
+				<a class="prevnext-card" href={localizePath(`/writing/${next.slug}`, locale)}>
+					<p class="mono">
+						{t(locale, "post.next")} · No. {next.postNo}
+					</p>
+					<p class="prevnext-title">{next.title}</p>
+				</a>
+			)}
+		</nav>
+	)
+}

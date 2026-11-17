@@ -8,7 +8,12 @@ import {
 } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
 import { getEnv } from "../../../lib/env";
-import { createDb, listPublishedPosts, listTags } from "../../../server/db";
+import {
+	createDb,
+	getPostNos,
+	listPublishedPosts,
+	listTags,
+} from "../../../server/db";
 
 const locale: Locale = "id";
 const db = createDb(getEnv().DB);
@@ -27,6 +32,12 @@ const { items: posts, nextCursor } =
 	tag === null
 		? { items: [], nextCursor: null }
 		: await listPublishedPosts(db, { locale, tagSlug, limit: 20, cursor });
+const nos = await getPostNos(
+	db,
+	locale,
+	posts.map((p) => p.id),
+);
+const pad = (n: number): string => String(n).padStart(3, "0");
 const tagLabel = tag === null ? tagSlug : tag.labelId;
 const canonical = `/id/tags/${tagSlug}`;
 ---
@@ -40,6 +51,7 @@ const canonical = `/id/tags/${tagSlug}`;
 			hreflangs={[]}
 			locale={notFoundLocale}
 			heading={t(notFoundLocale, "notfound.title")}
+			path={Astro.url.pathname}
 		>
 			<p>{t(notFoundLocale, "notfound.body")}</p>
 		</Base>
@@ -51,26 +63,35 @@ const canonical = `/id/tags/${tagSlug}`;
 			hreflangs={[]}
 			locale={locale}
 			heading={tagLabel}
+			path={canonical}
 		>
-			{posts.length === 0 ? (
-				<p>{t(locale, "feed.empty")}</p>
-			) : (
-				<ul>
-					{posts.map((p) => (
-						<li>
-							<a href={localizePath(`/writing/${p.slug}`, locale)}>{p.title}</a>{" "}
-							<time datetime={p.publishedAt !== null ? new Date(p.publishedAt).toISOString() : undefined}>
+			<div class="page">
+				{posts.length === 0 ? (
+					<p>{t(locale, "feed.empty")}</p>
+				) : (
+					posts.map((p) => (
+						<div class="archive-row">
+							<span class="mono row-no">No. {pad(nos.get(p.id) ?? 1)}</span>
+							<a href={localizePath(`/writing/${p.slug}`, locale)}>{p.title}</a>
+							<time
+								class="mono"
+								datetime={
+									p.publishedAt !== null
+										? new Date(p.publishedAt).toISOString()
+										: undefined
+								}
+							>
 								{p.publishedAt !== null ? formatPostDate(p.publishedAt, locale) : ""}
 							</time>
-						</li>
-					))}
-				</ul>
-			)}
-			{nextCursor !== null && (
-				<a href={`${canonical}?cursor=${encodeURIComponent(nextCursor)}`} rel="next">
-					{t(locale, "writing.next")}
-				</a>
-			)}
+						</div>
+					))
+				)}
+				{nextCursor !== null && (
+					<a href={`${canonical}?cursor=${encodeURIComponent(nextCursor)}`} rel="next">
+						{t(locale, "writing.next")}
+					</a>
+				)}
+			</div>
 		</Base>
 	)
 }

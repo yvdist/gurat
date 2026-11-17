@@ -24,6 +24,8 @@ interface SeedInline {
 	type: string;
 	text?: string;
 	marks?: SeedMark[];
+	attrs?: SeedAttrs;
+	content?: SeedInline[];
 }
 
 interface SeedNode {
@@ -87,6 +89,18 @@ function rule(): SeedNode {
 	return { type: "horizontalRule" };
 }
 
+function sidenote(label: string, ...content: SeedInline[]): SeedInline {
+	return { type: "sidenote", attrs: { label }, content };
+}
+
+function pullquote(...content: SeedNode[]): SeedNode {
+	return { type: "pullquote", content };
+}
+
+function footnote(...content: SeedNode[]): SeedNode {
+	return { type: "footnote", content };
+}
+
 function doc(...content: SeedNode[]): string {
 	return JSON.stringify({ type: "doc", content });
 }
@@ -138,7 +152,17 @@ const EN_DOC = doc(
 	codeBlock("ts", 'const greeting = "hello";\nconsole.log(greeting);'),
 	rule(),
 	heading(3, tx("A deeper heading")),
+	para(
+		tx("A marginal thought sits here "),
+		sidenote("1", tx("margin note one")),
+		tx(" and another "),
+		sidenote("2", tx("margin note two")),
+		tx("."),
+	),
+	pullquote(para(tx("Design is the shape of the argument."))),
 	para(tx("Closing paragraph.")),
+	footnote(para(tx("First footnote text."))),
+	footnote(para(tx("Second footnote text."))),
 );
 
 const EN_SECOND_DOC = doc(

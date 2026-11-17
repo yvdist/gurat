@@ -12,10 +12,10 @@ import { z } from "zod";
 // to bare `z.ZodType`). Only the recursive `BlockSchema` carries an explicit
 // type, which recursion requires.
 //
-// EXTENSION POINT: future block nodes (`footnote`, `pullquote`, `callout`)
-// are added here — a new interface plus its schema in the `Block` union
-// below, plus a branch in `renderDoc`. Nothing else needs to change:
-// validation and rendering both dispatch on this union.
+// EXTENSION POINT: future block nodes (e.g. `callout`) are added here — a
+// new interface plus its schema in the `Block` union below, plus a branch in
+// `renderDoc`. Nothing else needs to change: validation and rendering both
+// dispatch on this union.
 
 export interface BoldMark {
 	type: "bold";
@@ -49,7 +49,15 @@ export interface HardBreak {
 	type: "hardBreak";
 }
 
-export type Inline = DocText | HardBreak;
+export interface Sidenote {
+	type: "sidenote";
+	attrs: {
+		label: string;
+	};
+	content: Inline[];
+}
+
+export type Inline = DocText | HardBreak | Sidenote;
 
 export interface Paragraph {
 	type: "paragraph";
@@ -111,6 +119,16 @@ export interface Figure {
 	};
 }
 
+export interface Pullquote {
+	type: "pullquote";
+	content: Block[];
+}
+
+export interface Footnote {
+	type: "footnote";
+	content: Block[];
+}
+
 export type Block =
 	| Paragraph
 	| Heading
@@ -119,7 +137,9 @@ export type Block =
 	| OrderedList
 	| CodeBlock
 	| HorizontalRule
-	| Figure;
+	| Figure
+	| Pullquote
+	| Footnote;
 
 export interface Doc {
 	type: "doc";
@@ -158,9 +178,22 @@ const DocTextSchema = z
 
 const HardBreakSchema = z.object({ type: z.literal("hardBreak") }).strict();
 
-const InlineSchema = z.discriminatedUnion("type", [
+// Assigned below: sidenotes nest inlines (e.g. a link inside a sidenote).
+let InlineSchema: z.ZodType<Inline>;
+const lazyInline = (): z.ZodType<Inline> => InlineSchema;
+
+const SidenoteSchema = z
+	.object({
+		type: z.literal("sidenote"),
+		attrs: z.object({ label: z.string() }).strict(),
+		content: z.array(z.lazy(lazyInline)).min(1),
+	})
+	.strict();
+
+InlineSchema = z.discriminatedUnion("type", [
 	DocTextSchema,
 	HardBreakSchema,
+	SidenoteSchema,
 ]);
 
 // Assigned below after the container schemas (they reference it lazily).
@@ -242,6 +275,20 @@ const FigureSchema = z
 	})
 	.strict();
 
+const PullquoteSchema = z
+	.object({
+		type: z.literal("pullquote"),
+		content: z.array(z.lazy(lazyBlock)).min(1),
+	})
+	.strict();
+
+const FootnoteSchema = z
+	.object({
+		type: z.literal("footnote"),
+		content: z.array(z.lazy(lazyBlock)).min(1),
+	})
+	.strict();
+
 BlockSchema = z.discriminatedUnion("type", [
 	ParagraphSchema,
 	HeadingSchema,
@@ -251,6 +298,8 @@ BlockSchema = z.discriminatedUnion("type", [
 	CodeBlockSchema,
 	HorizontalRuleSchema,
 	FigureSchema,
+	PullquoteSchema,
+	FootnoteSchema,
 ]);
 
 const DocSchema = z

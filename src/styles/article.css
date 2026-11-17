@@ -1,5 +1,5 @@
 /* Typography for rendered article HTML (output of renderDoc).
-   Shared with the Phase-4 editor preview. Neutral only; DESIGN: Phase 3. */
+   Shared with the Phase-4 editor preview. Consumes tokens only. */
 
 .article-body {
 	line-height: var(--line-height-body);
@@ -10,9 +10,20 @@
 	margin-block-start: var(--space-4);
 }
 
+/* drop cap on the first paragraph (spec §A4) */
+.article-body > p:first-of-type::first-letter {
+	font-family: var(--font-display);
+	font-size: var(--dropcap-scale);
+	font-weight: 600;
+	line-height: 0.9;
+	float: left;
+	padding-right: var(--space-2);
+}
+
 .article-body h2,
 .article-body h3,
 .article-body h4 {
+	font-family: var(--font-display);
 	line-height: var(--line-height-heading);
 	margin-block-start: var(--space-6);
 }
@@ -29,10 +40,21 @@
 	font-size: var(--font-size-h4);
 }
 
-.article-body blockquote {
+/* pullquote: italic serif + left indigo rule (spec §6) */
+.article-body .pullquote {
 	margin-inline: 0;
 	padding-inline-start: var(--space-4);
-	border-inline-start: 2px solid var(--border);
+	border-inline-start: var(--rule) solid var(--indigo);
+	font-family: var(--font-display);
+	font-style: italic;
+	font-size: var(--font-size-pullquote);
+	line-height: 1.5;
+}
+
+.article-body blockquote:not(.pullquote) {
+	margin-inline: 0;
+	padding-inline-start: var(--space-4);
+	border-inline-start: var(--rule) solid var(--line);
 	color: var(--muted);
 }
 
@@ -45,16 +67,21 @@
 	margin-block-start: var(--space-2);
 }
 
+/* code: raised panel, uncolored mono (no syntax highlighting, ADR-003) */
 .article-body pre {
 	overflow-x: auto;
 	padding: var(--space-4);
-	border: 1px solid var(--border);
+	background: var(--surface);
+	border: var(--hairline) solid var(--line);
 	border-radius: var(--radius);
 }
 
+[data-theme="dark"] .article-body pre {
+	background: var(--raised);
+}
+
 .article-body code {
-	font-family:
-		ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+	font-family: var(--font-mono);
 	font-size: var(--font-size-small);
 }
 
@@ -64,11 +91,44 @@
 
 .article-body figcaption {
 	color: var(--muted);
-	font-size: var(--font-size-small);
+	font-family: var(--font-mono);
+	font-size: var(--font-size-meta);
+	text-transform: uppercase;
+	letter-spacing: var(--tracking-meta);
 	margin-block-start: var(--space-2);
+}
+
+/* sidenotes: right column ≥1280px, inline marginal below (spec §6) */
+.article-body .sidenote-label {
+	font-family: var(--font-mono);
+	font-size: var(--font-size-meta);
+	color: var(--indigo);
+	margin-right: var(--space-1);
+}
+
+.article-body .sidenotes-inline {
+	display: block;
+	margin-top: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	border-inline-start: var(--hairline) solid var(--line);
+	color: var(--muted);
+	font-size: var(--font-size-small);
+}
+
+/* footnotes: collected section after the last block (spec §6) */
+.article-body .footnotes {
+	margin-top: var(--space-8);
+	padding-top: var(--space-4);
+	border-top: var(--hairline) solid var(--line);
+	font-size: var(--font-size-small);
+	color: var(--muted);
+}
+
+.article-body .footnotes ol {
+	padding-inline-start: var(--space-6);
 }
 
 .article-body hr {
 	border: 0;
-	border-top: 1px solid var(--border);
+	border-top: var(--hairline) solid var(--line);
 }

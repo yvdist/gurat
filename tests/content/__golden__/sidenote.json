@@ -1,0 +1,13 @@
+[
+	{
+		"type": "paragraph",
+		"content": [
+			{ "type": "text", "text": "before " },
+			{
+				"type": "sidenote",
+				"attrs": { "label": "1" },
+				"content": [{ "type": "text", "text": "margin note" }]
+			}
+		]
+	}
+]

@@ -1,32 +1,68 @@
 ---
+import Footer from "../components/Footer.astro";
+import Header from "../components/Header.astro";
 import type { Locale } from "../config/site";
 import { SITE } from "../config/site";
-import { localizePath, t } from "../i18n";
+import { t } from "../i18n";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import "../styles/article.css";
+// Self-hosted faces: display (latin), body (latin + latin-ext for ID glyphs),
+// mono labels (latin). Kanji accents render in the system CJK stack from
+// --font-cjk — never a CJK webfont. font-display: swap via fontsource.
+import "@fontsource/bodoni-moda/latin-400.css";
+import "@fontsource/bodoni-moda/latin-400-italic.css";
+import "@fontsource/bodoni-moda/latin-500.css";
+import "@fontsource/newsreader/latin-400.css";
+import "@fontsource/newsreader/latin-400-italic.css";
+import "@fontsource/newsreader/latin-500.css";
+import "@fontsource/newsreader/latin-ext-400.css";
+import "@fontsource/newsreader/latin-ext-400-italic.css";
+import "@fontsource/newsreader/latin-ext-500.css";
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-500.css";
+
+// Preload the faces first paint actually uses: display 400 + 500 (h1–h4
+// render weight 500), body latin 400 + latin-ext 400 (ID glyphs arrive in
+// the ext file; late swap reflows above-fold text — measured ID-post CLS
+// 0.17 without it), mono 400 (inline <code>). All same-origin, no CSP
+// change.
+import bodoni400 from "@fontsource/bodoni-moda/files/bodoni-moda-latin-400-normal.woff2?url";
+import newsreader400 from "@fontsource/newsreader/files/newsreader-latin-400-normal.woff2?url";
+import plexmono400 from "@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url";
+import bodoni500 from "@fontsource/bodoni-moda/files/bodoni-moda-latin-500-normal.woff2?url";
+import newsreaderExt400 from "@fontsource/newsreader/files/newsreader-latin-ext-400-normal.woff2?url";
 
 interface Hreflang {
 	locale: Locale;
 	href: string;
 }
-
 interface Props {
 	title: string;
 	description: string;
 	canonical: string;
 	hreflangs: Hreflang[];
 	locale: Locale;
-	heading: string;
+	heading?: string;
+	headingClass?: string;
+	path: string;
 }
 
-const { title, description, canonical, hreflangs, locale, heading } =
-	Astro.props;
+const {
+	title,
+	description,
+	canonical,
+	hreflangs,
+	locale,
+	heading,
+	headingClass,
+	path,
+} = Astro.props;
 const fullCanonical = `${SITE.url}${canonical}`;
 ---
 
 <!doctype html>
-<html lang={locale}>
+<html lang={locale} data-theme="light">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -39,23 +75,123 @@ const fullCanonical = `${SITE.url}${canonical}`;
 			))
 		}
 		<link rel="alternate" hreflang="x-default" href={`${SITE.url}${hreflangs.find((h) => h.locale === SITE.defaultLocale)?.href ?? canonical}`} />
+		<link
+			rel="preload"
+			href={bodoni400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={newsreader400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={plexmono400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={bodoni500}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={newsreaderExt400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<script>
+			try {
+				var t = localStorage.getItem("gurat-theme");
+				document.documentElement.dataset.theme =
+					t === "light" || t === "dark"
+						? t
+						: matchMedia("(prefers-color-scheme: dark)").matches
+							? "dark"
+							: "light";
+			} catch (e) {
+				document.documentElement.dataset.theme = "light";
+			}
+		</script>
 	</head>
 	<body>
 		<a class="skip-link" href="#main">{t(locale, "nav.skip")}</a>
-		<header>
-			<nav aria-label={t(locale, "nav.primary")}>
-				<a href={localizePath("/", locale)}>{SITE.name}</a>
-				<a href={localizePath("/writing", locale)}>{t(locale, "nav.writing")}</a>
-				<a href={localizePath("/tags", locale)}>{t(locale, "nav.tags")}</a>
-				<a href={localizePath("/about", locale)}>{t(locale, "nav.about")}</a>
-			</nav>
-		</header>
+		<Header locale={locale} path={path} />
 		<main id="main">
-			<h1>{heading}</h1>
+			{heading !== undefined && <h1 class={headingClass}>{heading}</h1>}
 			<slot />
 		</main>
-		<footer>
-			<p>{SITE.name} — {t(locale, "site.tagline")}</p>
-		</footer>
+		<Footer locale={locale} />
+		<script>
+			(function () {
+				var r = document.documentElement;
+				const sync = function (t: string): void {
+					document
+						.querySelectorAll(".theme-seg [data-theme-value]")
+						.forEach(function (b) {
+							b.setAttribute(
+								"aria-pressed",
+								String(b.getAttribute("data-theme-value") === t),
+							);
+						});
+				};
+				const set = function (t: string): void {
+					try {
+						localStorage.setItem("gurat-theme", t);
+					} catch (e) {}
+					r.dataset.theme =
+						t === "auto"
+							? matchMedia("(prefers-color-scheme: dark)").matches
+								? "dark"
+								: "light"
+							: t;
+					sync(t);
+				};
+				var init = null;
+				try {
+					init = localStorage.getItem("gurat-theme");
+				} catch (e) {}
+				sync(init || "auto");
+				document
+					.querySelectorAll(".theme-seg [data-theme-value]")
+					.forEach(function (b) {
+						b.addEventListener("click", function () {
+							var v = b.getAttribute("data-theme-value");
+							if (v) set(v);
+						});
+					});
+				document
+					.querySelectorAll("[data-locale-href]")
+					.forEach(function (b) {
+						b.addEventListener("click", function () {
+							var href = b.getAttribute("data-locale-href");
+							if (href) location.href = href;
+						});
+					});
+				var c = document.querySelector("[data-copy-link]");
+				if (c) {
+					var target = c;
+					var u = target.getAttribute("data-copy-link");
+					var done = target.getAttribute("data-copied") || "copied";
+					target.addEventListener("click", function () {
+						if (navigator.clipboard && u) {
+							navigator.clipboard.writeText(u).then(function () {
+								target.textContent = done;
+							});
+						}
+					});
+				}
+			})();
+		</script>
 	</body>
 </html>

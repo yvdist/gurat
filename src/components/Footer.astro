@@ -1,0 +1,22 @@
+---
+// Site footer (spec §A2): hairline, mono © {year} {name}, center 余白,
+// rss as plain text until Phase 6 (placeholder to /rss.xml href "#" —
+// render as text, not a dead link).
+import { type Locale, SITE } from "../config/site";
+import { t } from "../i18n";
+
+interface Props {
+	locale: Locale;
+}
+
+const { locale } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+	<div class="page">
+		<p class="rights">{t(locale, "footer.rights").replace("{year}", String(year)).replace("{name}", SITE.name)}</p>
+		<p class="accent" aria-hidden="true">余白</p>
+		<p class="rss">{t(locale, "footer.rss")}</p>
+	</div>
+</footer>

@@ -1,0 +1,36 @@
+---
+// Table of contents: renders stored toc_json (spec §A4): contents +
+// numbered mono links.
+import type { Locale } from "../config/site";
+import { t } from "../i18n";
+
+interface TocEntry {
+	id: string;
+	text: string;
+	level: number;
+}
+
+interface Props {
+	locale: Locale;
+	entries: TocEntry[];
+}
+
+const { locale, entries } = Astro.props;
+---
+
+{
+	entries.length > 0 && (
+		<nav class="toc" aria-label={t(locale, "post.contents")}>
+			<p class="mono">{t(locale, "post.contents")}</p>
+			<ol>
+				{entries.map((entry, i) => (
+					<li>
+						<a href={`#${entry.id}`}>
+							{i + 1}. {entry.text}
+						</a>
+					</li>
+				))}
+			</ol>
+		</nav>
+	)
+}

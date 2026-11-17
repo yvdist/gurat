@@ -1,5 +1,6 @@
 ---
 import type { Locale } from "../config/site";
+import { SITE } from "../config/site";
 import { t } from "../i18n";
 import Base from "../layouts/Base.astro";
 import { rootHreflangs } from "../lib/archive";
@@ -9,12 +10,17 @@ const canonical = "/about";
 ---
 
 <Base
-	title={`${t(locale, "about.title")} — Gurat`}
+	title={`${t(locale, "about.title")} — ${SITE.name}`}
 	description={t(locale, "site.intro")}
 	canonical={canonical}
 	hreflangs={rootHreflangs(canonical)}
 	locale={locale}
-	heading={t(locale, "about.title")}
+	path={canonical}
 >
-	<p>{t(locale, "site.intro")}</p>
+	<div class="page">
+		<div class="center-page">
+			<h1>{t(locale, "about.title")}</h1>
+			<p>{t(locale, "site.intro")}</p>
+		</div>
+	</div>
 </Base>

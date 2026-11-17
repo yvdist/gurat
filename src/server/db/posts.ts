@@ -203,3 +203,88 @@ export async function getTranslations(
 			r.locale === "en" || r.locale === "id",
 	);
 }
+
+// Post numbering (Phase 3, plan step 6): reverse-chronological index per
+// locale over visible posts — the same ordering as the feed
+// (publishedAt DESC, id ASC). No. 001 is the newest visible post
+// (count of newer visible posts + 1); older posts count upward.
+// Zero-padded 3 at the call site (String(n).padStart(3, "0")).
+export async function getPostNo(
+	db: Db,
+	locale: Locale,
+	// Kept for the plan's (publishedAt, id) cursor signature; ranking needs
+	// only the id (same convention as admin.ts `_publishedAt`).
+	_publishedAt: number | null,
+	id: string,
+	now: number = Date.now(),
+): Promise<number> {
+	// No. 001 is the newest visible post (rank-by-index over the feed
+	// ordering); older posts count upward.
+	const rows = await db
+		.select({ id: posts.id })
+		.from(posts)
+		.where(and(eq(posts.locale, locale), visibilityFilter(now)))
+		.orderBy(desc(posts.publishedAt), asc(posts.id));
+	const index = rows.findIndex((row) => row.id === id);
+	return index === -1 ? 1 : index + 1;
+}
+
+// Batched numbering for card lists (never a per-card N+1): one query
+// returning id → number for the given post ids.
+export async function getPostNos(
+	db: Db,
+	locale: Locale,
+	ids: string[],
+	now: number = Date.now(),
+): Promise<Map<string, number>> {
+	const result = new Map<string, number>();
+	if (ids.length === 0) return result;
+	const visible = await db
+		.select({ id: posts.id, publishedAt: posts.publishedAt })
+		.from(posts)
+		.where(and(eq(posts.locale, locale), visibilityFilter(now)))
+		.orderBy(desc(posts.publishedAt), asc(posts.id));
+	visible.forEach((row, i) => {
+		if (ids.includes(row.id)) result.set(row.id, i + 1);
+	});
+	return result;
+}
+
+// Adjacent posts for prev/next (spec §A4): same ordering as the feed.
+// Returns { prev, next } nullable — prev is the older post, next the newer.
+export async function getAdjacentPosts(
+	db: Db,
+	locale: Locale,
+	// Same cursor-signature convention as getPostNo above.
+	_publishedAt: number | null,
+	id: string,
+	now: number = Date.now(),
+): Promise<{
+	prev: { id: string; slug: string; title: string } | null;
+	next: { id: string; slug: string; title: string } | null;
+}> {
+	const visible = await db
+		.select({
+			id: posts.id,
+			slug: posts.slug,
+			title: posts.title,
+			publishedAt: posts.publishedAt,
+		})
+		.from(posts)
+		.where(and(eq(posts.locale, locale), visibilityFilter(now)))
+		.orderBy(desc(posts.publishedAt), asc(posts.id));
+	const index = visible.findIndex((row) => row.id === id);
+	if (index === -1) return { prev: null, next: null };
+	const prev = index + 1 < visible.length ? visible[index + 1] : undefined;
+	const next = index - 1 >= 0 ? visible[index - 1] : undefined;
+	return {
+		prev:
+			prev === undefined
+				? null
+				: { id: prev.id, slug: prev.slug, title: prev.title },
+		next:
+			next === undefined
+				? null
+				: { id: next.id, slug: next.slug, title: next.title },
+	};
+}

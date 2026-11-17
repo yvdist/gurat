@@ -1,0 +1,67 @@
+---
+// Post card (spec §A3): CSS two-tone figure placeholder + pale circle
+// (aria-hidden), mono No. {n} · {tag} · {minutes}, serif title, excerpt.
+import type { Locale } from "../config/site";
+import { formatPostDate, localizePath, t } from "../i18n";
+
+interface Props {
+	locale: Locale;
+	slug: string;
+	title: string;
+	excerpt: string;
+	publishedAt: number | null;
+	readingMinutes: number;
+	postNo: string;
+	tag: string;
+	index: number;
+}
+
+const {
+	locale,
+	slug,
+	title,
+	excerpt,
+	publishedAt,
+	readingMinutes,
+	postNo,
+	tag,
+	index,
+} = Astro.props;
+const tints = ["tint-blue", "tint-sage", "tint-lilac", "tint-plum"] as const;
+const tint = tints[index % tints.length];
+const href = localizePath(`/writing/${slug}`, locale);
+---
+
+<article class="post-card">
+	<a href={href} aria-hidden="true" tabindex="-1">
+		<div class={`figure-ph ${tint}`} aria-hidden="true">
+			<div class="wash"></div>
+			<div class="navy"></div>
+			<div class="disc"></div>
+		</div>
+	</a>
+	<p class="mono card-meta">
+		<span>No. {postNo}</span>
+		<span aria-hidden="true"> · </span>
+		<span>{tag}</span>
+		<span aria-hidden="true"> · </span>
+		<span
+			>{t(locale, "post.readingMinutes").replace(
+				"{minutes}",
+				String(readingMinutes),
+			)}</span
+		>
+	</p>
+	<h3 class="card-title"><a href={href}>{title}</a></h3>
+	<p class="card-excerpt">{excerpt}</p>
+	{
+		publishedAt !== null && (
+			<time
+				class="mono"
+				datetime={new Date(publishedAt).toISOString()}
+			>
+				{formatPostDate(publishedAt, locale)}
+			</time>
+		)
+	}
+</article>

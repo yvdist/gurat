@@ -1,0 +1,15 @@
+---
+// Tag pill (spec §A4): mono pill link.
+import type { Locale } from "../config/site";
+import { localizePath } from "../i18n";
+
+interface Props {
+	locale: Locale;
+	slug: string;
+	label: string;
+}
+
+const { locale, slug, label } = Astro.props;
+---
+
+<a class="tag-pill mono" href={localizePath(`/tags/${slug}`, locale)}>{label}</a>
