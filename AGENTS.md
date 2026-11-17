@@ -41,3 +41,7 @@ No rendering, admin, editor, media, or visual design.
 - Scripts use `pnpm exec <bin>` (bare bins fail under `pnpm run` on Windows).
 - Biome `recommended` preset; `*.astro` override disables `noUnusedImports`
   (Biome can't see frontmatter use in markup — imports there ARE used).
+- Commit messages MUST follow Conventional Commits: `type(scope): subject`,
+  one logical change per commit (`feat`, `fix`, `docs`, `test`, `refactor`,
+  `chore`). Scope is the phase (`phase-5`) or area (`e2e`, `media`). NEVER
+  rewrite published history without owner approval.
