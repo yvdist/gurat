@@ -22,8 +22,8 @@ import {
 	TagInUseError,
 	unpublishPost,
 } from "../db";
-import { media, postTags, tags } from "../db/schema";
 import type { Media } from "../db/schema";
+import { media, postTags, tags } from "../db/schema";
 
 // Shared admin service: thin Astro endpoints call these; tests call them
 // directly (no HTTP layer). Every function returns a `ServiceResult` —
@@ -227,7 +227,8 @@ export async function resolvePostMedia(
 	coverMediaId: string | null | undefined,
 ): Promise<ResolvedMedia | ServiceError> {
 	const ids = new Set(refs.map((r) => r.mediaId));
-	if (coverMediaId !== undefined && coverMediaId !== null) ids.add(coverMediaId);
+	if (coverMediaId !== undefined && coverMediaId !== null)
+		ids.add(coverMediaId);
 	const list = [...ids];
 	const rows =
 		list.length > 0
@@ -239,7 +240,11 @@ export async function resolvePostMedia(
 			return { code: "render", status: 422, detail: ref.path };
 		}
 	}
-	if (coverMediaId !== undefined && coverMediaId !== null && !byId.has(coverMediaId)) {
+	if (
+		coverMediaId !== undefined &&
+		coverMediaId !== null &&
+		!byId.has(coverMediaId)
+	) {
 		return { code: "media", status: 422, detail: "unknown cover" };
 	}
 	return { mediaMap: byId, mediaIds: list };
@@ -429,7 +434,9 @@ export async function savePostService(
 		const locale = patch.locale ?? (current.locale as Locale);
 		const effectiveContent = patch.contentJson ?? current.contentJson;
 		const effectiveCover =
-			patch.coverMediaId !== undefined ? patch.coverMediaId : current.coverMediaId;
+			patch.coverMediaId !== undefined
+				? patch.coverMediaId
+				: current.coverMediaId;
 		const prepared = await renderWithMedia(
 			db,
 			effectiveContent,
