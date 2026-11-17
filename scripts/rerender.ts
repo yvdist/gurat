@@ -41,6 +41,9 @@ function runWrangler(args: string[], inheritStdout: boolean): string {
 interface DumpRow {
 	id: string;
 	locale: string;
+	title: string;
+	excerpt: string;
+	status: string;
 	content_json: string;
 }
 
@@ -103,7 +106,9 @@ function dump<T>(command: string): T[] {
 }
 
 function dumpRows(): DumpRow[] {
-	return dump<DumpRow>("SELECT id, locale, content_json FROM posts");
+	return dump<DumpRow>(
+		"SELECT id, locale, title, excerpt, status, content_json FROM posts",
+	);
 }
 
 function loadMediaMap(): Map<string, MediaMapValue> {
@@ -137,6 +142,7 @@ function renderRow(
 	html: string;
 	toc: string;
 	minutes: number;
+	plain: string;
 } {
 	const locale: Locale = isLocale(row.locale) ? row.locale : "en";
 	const doc = validateDoc(JSON.parse(row.content_json));
@@ -145,6 +151,7 @@ function renderRow(
 		html: rendered.html,
 		toc: JSON.stringify(rendered.toc),
 		minutes: rendered.readingMinutes,
+		plain: rendered.plainText,
 	};
 }
 
@@ -155,14 +162,26 @@ const updates = rows.map((row) => {
 	const { html, toc, minutes } = renderRow(row, media, baseUrl);
 	return `UPDATE posts SET content_html = ${quote(html)}, toc_json = ${quote(toc)}, reading_minutes = ${minutes} WHERE id = ${quote(row.id)};`;
 });
+// Search backfill (spec 06 §6.6): full rebuild — rows for published posts
+// only; the route applies the visibility rule at query time.
+const ftsReset = ["DELETE FROM posts_fts;"];
+for (const row of rows) {
+	if (row.status !== "published" || !isLocale(row.locale)) continue;
+	const { plain } = renderRow(row, media, baseUrl);
+	ftsReset.push(
+		`INSERT INTO posts_fts (title, excerpt, plain_text, locale, post_id) VALUES (${quote(row.title)}, ${quote(row.excerpt)}, ${quote(plain)}, ${quote(row.locale)}, ${quote(row.id)});`,
+	);
+}
 
 const dir = mkdtempSync(join(tmpdir(), "gurat-rerender-"));
 const file = join(dir, "rerender.sql");
 try {
-	writeFileSync(file, `${updates.join("\n")}\n`, "utf8");
+	writeFileSync(file, `${[...updates, ...ftsReset].join("\n")}\n`, "utf8");
 	runWrangler(["d1", "execute", "gurat", "--local", "--file", file], true);
 } finally {
 	rmSync(dir, { recursive: true, force: true });
 }
 
-console.log(`rerendered ${updates.length} posts`);
+console.log(
+	`rerendered ${updates.length} posts, reindexed ${ftsReset.length - 1} published`,
+);

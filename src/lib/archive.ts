@@ -24,14 +24,14 @@ export function groupByYear(
 		.map(([year, yearPosts]) => ({ year, posts: yearPosts }));
 }
 
-// hreflang pairs for a locale-rooted path: the unprefixed path plus self.
-// Same list serves both locales (EN unprefixed, ID under /id).
-export function rootHreflangs(
-	path: string,
-): { locale: Locale; href: string }[] {
+// hreflang pairs for a locale-rooted path. Callers pass their page canonical,
+// which on ID pages already carries the `/id` prefix — strip any locale
+// prefix first so both locales point at the true alternates.
+export function rootHreflangs(path: string): HreflangLink[] {
+	const bare = path.replace(/^\/(en|id)(?=\/|$)/, "") || "/";
 	return SITE.locales.map((l) => ({
 		locale: l,
-		href: l === SITE.defaultLocale ? path : `/${l}${path === "/" ? "" : path}`,
+		href: l === SITE.defaultLocale ? bare : `/${l}${bare === "/" ? "" : bare}`,
 	}));
 }
 export interface HreflangLink {

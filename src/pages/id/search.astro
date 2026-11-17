@@ -1,0 +1,51 @@
+---
+import { type Locale, SITE } from "../../config/site";
+import { localizePath, t } from "../../i18n";
+import Base from "../../layouts/Base.astro";
+import { rootHreflangs } from "../../lib/archive";
+import { getEnv } from "../../lib/env";
+import { createDb } from "../../server/db";
+import { searchPosts, toMatchQuery } from "../../server/search/fts";
+
+const locale: Locale = "id";
+const db = createDb(getEnv().DB);
+const raw = Astro.url.searchParams.get("q");
+const q = raw === null ? null : raw.trim().slice(0, 100);
+const match = q === null || q === "" ? null : toMatchQuery(q);
+if (raw !== null && q === "") Astro.response.status = 400;
+const results =
+	match === null
+		? []
+		: await searchPosts(db, { locale, match, now: Date.now() });
+const canonical = "/id/search";
+---
+
+<Base
+	title={`${t(locale, "search.title")} — ${SITE.name}`}
+	description={t(locale, "site.intro")}
+	canonical={canonical}
+	hreflangs={rootHreflangs(canonical)}
+	locale={locale}
+	heading={t(locale, "search.title")}
+	path={canonical}
+	noindex
+>
+	<div class="page">
+		<form method="get" action={localizePath("/search", locale)} role="search">
+			<label>{t(locale, "search.label")}
+				<input type="search" name="q" value={q ?? ""} maxlength={100} />
+			</label>
+			<button type="submit">{t(locale, "search.button")}</button>
+		</form>
+		{raw !== null && q === "" && <p>{t(locale, "search.error")}</p>}
+		{q !== null && q !== "" && results.length === 0 && <p>{t(locale, "search.none")}</p>}
+		{
+			results.map((r) => (
+				<div class="archive-row">
+					<a href={localizePath(`/writing/${r.slug}`, locale)}>{r.title}</a>
+					<p>{r.excerpt}</p>
+				</div>
+			))
+		}
+	</div>
+</Base>

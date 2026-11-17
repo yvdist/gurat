@@ -264,3 +264,17 @@ describe("og upload validation", () => {
 		expect(parsePngDimensions(new Uint8Array(10))).toBeNull();
 	});
 });
+
+describe("search match builder", () => {
+	it("quotes terms, truncates, rejects empties", async () => {
+		const { toMatchQuery } = await import("../src/server/search/fts");
+		expect(toMatchQuery("hello world")).toBe('"hello" "world"');
+		// FTS5 operators become inert quoted terms (`*` is literal in phrases).
+		expect(toMatchQuery('a OR b "c*')).toBe('"a" "OR" "b" "c*"');
+		expect(toMatchQuery("   ")).toBeNull();
+		expect(toMatchQuery("")).toBeNull();
+		const long = toMatchQuery("a".repeat(200));
+		expect(long).not.toBeNull();
+		expect(long?.length).toBeLessThanOrEqual(32);
+	});
+});

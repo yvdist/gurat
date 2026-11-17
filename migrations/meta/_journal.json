@@ -15,6 +15,13 @@
       "when": 1794918423255,
       "tag": "0001_optimal_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794919078065,
+      "tag": "0002_posts-fts",
+      "breakpoints": true
     }
   ]
 }

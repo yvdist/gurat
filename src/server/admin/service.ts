@@ -24,6 +24,7 @@ import {
 } from "../db";
 import type { Media } from "../db/schema";
 import { media, postTags, tags } from "../db/schema";
+import { deletePostFts, syncPostFts } from "../search/fts";
 
 // Shared admin service: thin Astro endpoints call these; tests call them
 // directly (no HTTP layer). Every function returns a `ServiceResult` —
@@ -138,6 +139,7 @@ export interface RenderedContent {
 	contentHtml: string;
 	tocJson: string;
 	readingMinutes: number;
+	plainText: string;
 }
 
 /**
@@ -174,6 +176,7 @@ export function renderContent(
 			contentHtml: rendered.html,
 			tocJson: JSON.stringify(rendered.toc),
 			readingMinutes: rendered.readingMinutes,
+			plainText: rendered.plainText,
 		};
 	} catch (err) {
 		if (err instanceof RenderError)
@@ -290,6 +293,7 @@ export async function renderWithMedia(
 				contentHtml: rendered.html,
 				tocJson: JSON.stringify(rendered.toc),
 				readingMinutes: rendered.readingMinutes,
+				plainText: rendered.plainText,
 			},
 			mediaIds: resolved.mediaIds,
 		};
@@ -394,7 +398,17 @@ export async function createPostService(
 		mediaIds: prepared.mediaIds,
 	};
 	try {
-		return { ok: true, value: await createPost(db, repoInput) };
+		const created = await createPost(db, repoInput);
+		// Fresh drafts never index (status check inside); uniform call.
+		await syncPostFts(db, {
+			id: created.id,
+			locale: created.locale as Locale,
+			title: created.title,
+			excerpt: created.excerpt,
+			status: created.status,
+			plainText: prepared.rendered.plainText,
+		});
+		return { ok: true, value: created };
 	} catch (err) {
 		return { ok: false, err: mapRepoError(err) };
 	}
@@ -461,10 +475,20 @@ export async function savePostService(
 		...(mediaIds !== undefined ? { mediaIds } : {}),
 	};
 	try {
-		return {
-			ok: true,
-			value: await savePost(db, id, repoPatch, expectedUpdatedAt),
-		};
+		const saved = await savePost(db, id, repoPatch, expectedUpdatedAt);
+		// Draft autosaves skip the index write; published saves re-index
+		// (fresh plain text when content re-rendered, else existing row kept).
+		if (saved.status === "published" || current.status === "published") {
+			await syncPostFts(db, {
+				id: saved.id,
+				locale: saved.locale as Locale,
+				title: saved.title,
+				excerpt: saved.excerpt,
+				status: saved.status,
+				plainText: rendered?.plainText,
+			});
+		}
+		return { ok: true, value: saved };
 	} catch (err) {
 		if (err instanceof ConcurrencyError) {
 			// Report the live stamp so the UI can offer reload/overwrite.
@@ -519,10 +543,19 @@ export async function publishPostService(
 		if (!saved.ok) return saved;
 	}
 	try {
-		return {
-			ok: true,
-			value: await publishPost(db, id, parsed.data.publishedAt),
-		};
+		const published = await publishPost(db, id, parsed.data.publishedAt);
+		// Clean-publish of a saved draft has no fresh render — re-render the
+		// stored content for plain text (publish clicks only, not per-request).
+		await syncPostFts(db, {
+			id: published.id,
+			locale: published.locale as Locale,
+			title: published.title,
+			excerpt: published.excerpt,
+			status: published.status,
+			contentJson: published.contentJson,
+			baseUrl: opts.baseUrl,
+		});
+		return { ok: true, value: published };
 	} catch (err) {
 		return { ok: false, err: mapRepoError(err) };
 	}
@@ -533,18 +566,26 @@ export async function unpublishPostService(
 	id: string,
 ): Promise<ServiceResult<AdminPost>> {
 	try {
-		return { ok: true, value: await unpublishPost(db, id) };
+		const unpublished = await unpublishPost(db, id);
+		await syncPostFts(db, {
+			id: unpublished.id,
+			locale: unpublished.locale as Locale,
+			title: unpublished.title,
+			excerpt: unpublished.excerpt,
+			status: unpublished.status,
+		});
+		return { ok: true, value: unpublished };
 	} catch (err) {
 		return { ok: false, err: mapRepoError(err) };
 	}
 }
-
 export async function deletePostService(
 	db: Db,
 	id: string,
 ): Promise<ServiceResult<null>> {
 	try {
 		await deletePost(db, id);
+		await deletePostFts(db, id);
 		return { ok: true, value: null };
 	} catch (err) {
 		return { ok: false, err: mapRepoError(err) };

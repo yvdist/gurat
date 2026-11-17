@@ -39,5 +39,10 @@
 	"post.prev": "sebelumnya",
 	"post.next": "berikutnya",
 	"footer.rights": "© {year} {name}",
-	"footer.rss": "rss"
+	"footer.rss": "rss",
+	"search.title": "Cari",
+	"search.label": "Cari tulisan",
+	"search.button": "Cari",
+	"search.none": "Tidak ada hasil.",
+	"search.error": "Ketik sesuatu untuk mencari."
 }

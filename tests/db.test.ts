@@ -293,3 +293,58 @@ describe("getRelatedPosts (real local D1)", () => {
 		]);
 	});
 });
+
+describe("post search (real local D1 FTS5)", () => {
+	beforeEach(async () => {
+		await fixture();
+	});
+
+	it("indexes on publish and removes on unpublish", async () => {
+		const { createPostService, publishPostService, unpublishPostService } =
+			await import("../src/server/admin/service");
+		const { searchPosts, toMatchQuery } = await import(
+			"../src/server/search/fts"
+		);
+		const db = createDb(env.DB);
+		const created = await createPostService(db, {
+			locale: "en",
+			slug: "searchable",
+			title: "Searchable post",
+			excerpt: "",
+			contentJson: JSON.stringify({
+				type: "doc",
+				content: [
+					{
+						type: "heading",
+						attrs: { level: 2 },
+						content: [{ type: "text", text: "Zebra stripes" }],
+					},
+					{ type: "paragraph", content: [{ type: "text", text: "Body." }] },
+				],
+			}),
+			tagIds: [],
+		});
+		if (!created.ok) throw new Error("create failed");
+		const match = toMatchQuery("zebra");
+		if (match === null) throw new Error("match failed");
+		// Draft: invisible to search.
+		expect(await searchPosts(db, { locale: "en", match, now: NOW })).toEqual(
+			[],
+		);
+		const published = await publishPostService(db, created.value.id, {
+			publishedAt: NOW - DAY,
+		});
+		if (!published.ok) throw new Error("publish failed");
+		const hits = await searchPosts(db, { locale: "en", match, now: NOW });
+		expect(hits.map((h) => h.slug)).toEqual(["searchable"]);
+		// Other locale never matches.
+		expect(await searchPosts(db, { locale: "id", match, now: NOW })).toEqual(
+			[],
+		);
+		const unpublished = await unpublishPostService(db, created.value.id);
+		if (!unpublished.ok) throw new Error("unpublish failed");
+		expect(await searchPosts(db, { locale: "en", match, now: NOW })).toEqual(
+			[],
+		);
+	});
+});
