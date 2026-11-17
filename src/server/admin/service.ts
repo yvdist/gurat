@@ -2,7 +2,7 @@ import { inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { Locale } from "../../config/site";
 import { RenderError, renderDoc } from "../../lib/content/render";
-import type { Doc } from "../../lib/content/schema";
+import type { Block, Doc } from "../../lib/content/schema";
 import { validateDoc } from "../../lib/content/schema";
 import type { AdminPost, Db, NewPostInput, SavePostPatch, Tag } from "../db";
 import {
@@ -22,7 +22,8 @@ import {
 	TagInUseError,
 	unpublishPost,
 } from "../db";
-import { postTags, tags } from "../db/schema";
+import { media, postTags, tags } from "../db/schema";
+import type { Media } from "../db/schema";
 
 // Shared admin service: thin Astro endpoints call these; tests call them
 // directly (no HTTP layer). Every function returns a `ServiceResult` —
@@ -36,7 +37,7 @@ export type ServiceErrorCode =
 	| "concurrency"
 	| "validation"
 	| "tag-in-use"
-	| "media-unavailable"
+	| "media"
 	| "media-in-use"
 	| "too-large"
 	| "too-many"
@@ -141,11 +142,14 @@ export interface RenderedContent {
 
 /**
  * Spec 04 §4.4 save flow: JSON.parse → validateDoc → renderDoc.
- * Phase 4 has no media rows: empty media map (unknown mediaIds fail loudly).
+ * Phase 5: the caller supplies the media map (unknown figure ids fail loudly
+ * at render time) and the base URL for public media links.
  */
 export function renderContent(
 	contentJson: string,
 	locale: Locale,
+	mediaMap: Map<string, Media>,
+	baseUrl: string,
 ): RenderedContent | ServiceError {
 	let parsed: unknown;
 	try {
@@ -164,7 +168,7 @@ export function renderContent(
 	if (doc.content.length === 0)
 		return { code: "schema", status: 422, detail: "content" };
 	try {
-		const rendered = renderDoc(doc, { locale, media: new Map(), baseUrl: "" });
+		const rendered = renderDoc(doc, { locale, media: mediaMap, baseUrl });
 		return {
 			contentJson,
 			contentHtml: rendered.html,
@@ -178,6 +182,122 @@ export function renderContent(
 	}
 }
 
+export interface FigureRef {
+	mediaId: string;
+	path: string;
+}
+
+/** Walk a validated doc for figure nodes (paths mirror the renderer). */
+export function collectFigureRefs(doc: Doc): FigureRef[] {
+	const refs: FigureRef[] = [];
+	const walkBlocks = (blocks: Block[], path: string): void => {
+		blocks.forEach((b, i) => {
+			const p = `${path}[${i}]`;
+			if (b.type === "figure") {
+				refs.push({ mediaId: b.attrs.mediaId, path: p });
+			} else if (
+				b.type === "blockquote" ||
+				b.type === "pullquote" ||
+				b.type === "footnote"
+			) {
+				walkBlocks(b.content, `${p}.content`);
+			} else if (b.type === "bulletList" || b.type === "orderedList") {
+				b.content.forEach((item, j) => {
+					walkBlocks(item.content, `${p}.content[${j}].content`);
+				});
+			}
+		});
+	};
+	walkBlocks(doc.content, "content");
+	return refs;
+}
+
+export interface ResolvedMedia {
+	mediaMap: Map<string, Media>;
+	mediaIds: string[];
+}
+
+/**
+ * Validate figure + cover references against the media table. Returns the
+ * render map and the full `post_media` id set (figures ∪ cover).
+ */
+export async function resolvePostMedia(
+	db: Db,
+	refs: FigureRef[],
+	coverMediaId: string | null | undefined,
+): Promise<ResolvedMedia | ServiceError> {
+	const ids = new Set(refs.map((r) => r.mediaId));
+	if (coverMediaId !== undefined && coverMediaId !== null) ids.add(coverMediaId);
+	const list = [...ids];
+	const rows =
+		list.length > 0
+			? await db.select().from(media).where(inArray(media.id, list))
+			: [];
+	const byId = new Map(rows.map((r) => [r.id, r]));
+	for (const ref of refs) {
+		if (!byId.has(ref.mediaId)) {
+			return { code: "render", status: 422, detail: ref.path };
+		}
+	}
+	if (coverMediaId !== undefined && coverMediaId !== null && !byId.has(coverMediaId)) {
+		return { code: "media", status: 422, detail: "unknown cover" };
+	}
+	return { mediaMap: byId, mediaIds: list };
+}
+export interface PreparedContent {
+	rendered: RenderedContent;
+	mediaIds: string[];
+}
+
+/** Parse → resolve figure/cover refs → render. Single path for create/save. */
+export async function renderWithMedia(
+	db: Db,
+	contentJson: string,
+	locale: Locale,
+	coverMediaId: string | null | undefined,
+	baseUrl: string,
+): Promise<PreparedContent | ServiceError> {
+	let doc: Doc;
+	try {
+		doc = validateDoc(JSON.parse(contentJson));
+	} catch (err) {
+		if (err instanceof z.ZodError)
+			return { code: "schema", status: 422, detail: zodIssues(err) };
+		if (err instanceof SyntaxError)
+			return { code: "schema", status: 422, detail: "" };
+		throw err;
+	}
+	if (doc.content.length === 0)
+		return { code: "schema", status: 422, detail: "content" };
+	const refs = collectFigureRefs(doc);
+	const resolved = await resolvePostMedia(db, refs, coverMediaId);
+	if ("code" in resolved) return resolved;
+	try {
+		const rendered = renderDoc(doc, {
+			locale,
+			media: resolved.mediaMap,
+			baseUrl,
+			coverMediaId,
+		});
+		return {
+			rendered: {
+				contentJson,
+				contentHtml: rendered.html,
+				tocJson: JSON.stringify(rendered.toc),
+				readingMinutes: rendered.readingMinutes,
+			},
+			mediaIds: resolved.mediaIds,
+		};
+	} catch (err) {
+		if (err instanceof RenderError)
+			return { code: "render", status: 422, detail: err.path };
+		throw err;
+	}
+}
+
+export interface SaveOptions {
+	baseUrl?: string;
+}
 async function tagsExist(db: Db, tagIds: string[]): Promise<boolean> {
 	if (tagIds.length === 0) return true;
 	const rows = await db
@@ -185,16 +305,6 @@ async function tagsExist(db: Db, tagIds: string[]): Promise<boolean> {
 		.from(tags)
 		.where(inArray(tags.id, tagIds));
 	return rows.length === tagIds.length;
-}
-
-function checkCoverMedia(
-	coverMediaId: string | null | undefined,
-): ServiceError | null {
-	// Phase 5 owns media rows: any non-null cover is rejected until then.
-	if (coverMediaId !== undefined && coverMediaId !== null) {
-		return { code: "media-unavailable", status: 422 };
-	}
-	return null;
 }
 export interface ListPostsQuery {
 	status?: "draft" | "published";
@@ -237,6 +347,7 @@ export async function listPostsService(
 export async function createPostService(
 	db: Db,
 	body: unknown,
+	opts: SaveOptions = {},
 ): Promise<ServiceResult<AdminPost>> {
 	const parsed = newPostSchema.safeParse(body);
 	if (!parsed.success)
@@ -249,28 +360,33 @@ export async function createPostService(
 			},
 		};
 	const input = parsed.data;
-	const mediaErr = checkCoverMedia(input.coverMediaId);
-	if (mediaErr) return { ok: false, err: mediaErr };
 	if (!(await tagsExist(db, input.tagIds)))
 		return {
 			ok: false,
 			err: { code: "bad-request", status: 400, detail: "tagIds" },
 		};
-	const rendered = renderContent(input.contentJson, input.locale);
-	if ("code" in rendered) return { ok: false, err: rendered };
+	const prepared = await renderWithMedia(
+		db,
+		input.contentJson,
+		input.locale,
+		input.coverMediaId ?? null,
+		opts.baseUrl ?? "",
+	);
+	if ("code" in prepared) return { ok: false, err: prepared };
 	const repoInput: NewPostInput = {
 		locale: input.locale,
 		slug: input.slug,
 		title: input.title,
 		excerpt: input.excerpt,
-		contentJson: rendered.contentJson,
-		contentHtml: rendered.contentHtml,
-		tocJson: rendered.tocJson,
-		readingMinutes: rendered.readingMinutes,
+		contentJson: prepared.rendered.contentJson,
+		contentHtml: prepared.rendered.contentHtml,
+		tocJson: prepared.rendered.tocJson,
+		readingMinutes: prepared.rendered.readingMinutes,
 		seoDescription: input.seoDescription,
 		translationGroupId: input.translationGroupId,
 		tagIds: input.tagIds,
 		coverMediaId: input.coverMediaId ?? null,
+		mediaIds: prepared.mediaIds,
 	};
 	try {
 		return { ok: true, value: await createPost(db, repoInput) };
@@ -283,6 +399,7 @@ export async function savePostService(
 	db: Db,
 	id: string,
 	body: unknown,
+	opts: SaveOptions = {},
 ): Promise<ServiceResult<AdminPost>> {
 	const parsed = savePatchSchema.safeParse(body);
 	if (!parsed.success)
@@ -295,25 +412,34 @@ export async function savePostService(
 			},
 		};
 	const { expectedUpdatedAt, ...patch } = parsed.data;
-	const mediaErr = checkCoverMedia(patch.coverMediaId);
-	if (mediaErr) return { ok: false, err: mediaErr };
 	if (patch.tagIds !== undefined && !(await tagsExist(db, patch.tagIds)))
 		return {
 			ok: false,
 			err: { code: "bad-request", status: 400, detail: "tagIds" },
 		};
+	let current: AdminPost;
+	try {
+		current = await getPostById(db, id);
+	} catch (err) {
+		return { ok: false, err: mapRepoError(err) };
+	}
 	let rendered: RenderedContent | undefined;
-	if (patch.contentJson !== undefined) {
-		let current: AdminPost;
-		try {
-			current = await getPostById(db, id);
-		} catch (err) {
-			return { ok: false, err: mapRepoError(err) };
-		}
+	let mediaIds: string[] | undefined;
+	if (patch.contentJson !== undefined || patch.coverMediaId !== undefined) {
 		const locale = patch.locale ?? (current.locale as Locale);
-		const r = renderContent(patch.contentJson, locale);
-		if ("code" in r) return { ok: false, err: r };
-		rendered = r;
+		const effectiveContent = patch.contentJson ?? current.contentJson;
+		const effectiveCover =
+			patch.coverMediaId !== undefined ? patch.coverMediaId : current.coverMediaId;
+		const prepared = await renderWithMedia(
+			db,
+			effectiveContent,
+			locale,
+			effectiveCover,
+			opts.baseUrl ?? "",
+		);
+		if ("code" in prepared) return { ok: false, err: prepared };
+		mediaIds = prepared.mediaIds;
+		if (patch.contentJson !== undefined) rendered = prepared.rendered;
 	}
 	const repoPatch: SavePostPatch = {
 		...patch,
@@ -325,6 +451,7 @@ export async function savePostService(
 					readingMinutes: rendered.readingMinutes,
 				}
 			: {}),
+		...(mediaIds !== undefined ? { mediaIds } : {}),
 	};
 	try {
 		return {
@@ -356,6 +483,7 @@ export async function publishPostService(
 	db: Db,
 	id: string,
 	body: unknown,
+	opts: SaveOptions = {},
 ): Promise<ServiceResult<AdminPost>> {
 	const parsed = publishBodySchema.safeParse(body);
 	if (!parsed.success)
@@ -372,10 +500,15 @@ export async function publishPostService(
 		parsed.data.contentJson !== undefined &&
 		parsed.data.expectedUpdatedAt !== undefined
 	) {
-		const saved = await savePostService(db, id, {
-			contentJson: parsed.data.contentJson,
-			expectedUpdatedAt: parsed.data.expectedUpdatedAt,
-		});
+		const saved = await savePostService(
+			db,
+			id,
+			{
+				contentJson: parsed.data.contentJson,
+				expectedUpdatedAt: parsed.data.expectedUpdatedAt,
+			},
+			opts,
+		);
 		if (!saved.ok) return saved;
 	}
 	try {

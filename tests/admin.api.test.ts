@@ -13,7 +13,7 @@ import {
 } from "../src/server/admin/service";
 import { getPublishedPostBySlug } from "../src/server/db";
 import { createDb } from "../src/server/db/client";
-import { posts, postTags, tags } from "../src/server/db/schema";
+import { media, postMedia, posts, postTags, tags } from "../src/server/db/schema";
 
 function doc(title = "Hello"): string {
 	return JSON.stringify({
@@ -34,8 +34,10 @@ function doc(title = "Hello"): string {
 
 async function fixture() {
 	const db = createDb(env.DB);
+	await db.delete(postMedia);
 	await db.delete(postTags);
 	await db.delete(posts);
+	await db.delete(media);
 	await db.delete(tags);
 	await db
 		.insert(tags)
@@ -152,15 +154,102 @@ describe("admin service", () => {
 		expect(result.err).toMatchObject({ code: "validation", status: 422 });
 	});
 
-	it("rejects non-null coverMediaId with 422", async () => {
+	it("accepts a known cover, rejects unknown cover and figure ids", async () => {
 		const db = createDb(env.DB);
-		const result = await createPostService(
+		const mediaRow = {
+			id: "m-1",
+			r2KeyPrefix: "media/m-1/",
+			mime: "image/webp",
+			width: 960,
+			height: 480,
+			bytes: 100,
+			altDefault: "Alt",
+			dominantColor: null,
+			variantsJson: JSON.stringify([
+				{ w: 960, key: "media/m-1/960.webp", bytes: 100, mime: "image/webp" },
+			]),
+			createdAt: 0,
+		};
+		await db.insert(media).values(mediaRow);
+		const ok = await createPostService(db, newPost({ coverMediaId: "m-1" }));
+		expect(ok.ok).toBe(true);
+
+		const unknownCover = await createPostService(
 			db,
-			newPost({ coverMediaId: "m-1" }),
+			newPost({ slug: "hello-2", coverMediaId: "m-missing" }),
 		);
-		expect(result.ok).toBe(false);
-		if (result.ok) return;
-		expect(result.err.code).toBe("media-unavailable");
+		expect(unknownCover.ok).toBe(false);
+		if (unknownCover.ok) return;
+		expect(unknownCover.err).toMatchObject({
+			code: "media",
+			status: 422,
+			detail: "unknown cover",
+		});
+
+		const badFigure = JSON.stringify({
+			type: "doc",
+			content: [
+				{
+					type: "figure",
+					attrs: { mediaId: "m-missing", alt: "a", caption: "", layout: "inline" },
+				},
+			],
+		});
+		const unknownFigure = await createPostService(
+			db,
+			newPost({ slug: "hello-3", contentJson: badFigure }),
+		);
+		expect(unknownFigure.ok).toBe(false);
+		if (unknownFigure.ok) return;
+		expect(unknownFigure.err).toMatchObject({
+			code: "render",
+			status: 422,
+			detail: "content[0]",
+		});
+	});
+
+	it("syncs post_media links on save and resave", async () => {
+		const db = createDb(env.DB);
+		await db.insert(media).values({
+			id: "m-1",
+			r2KeyPrefix: "media/m-1/",
+			mime: "image/webp",
+			width: 960,
+			height: 480,
+			bytes: 100,
+			altDefault: "Alt",
+			dominantColor: null,
+			variantsJson: JSON.stringify([
+				{ w: 960, key: "media/m-1/960.webp", bytes: 100, mime: "image/webp" },
+			]),
+			createdAt: 0,
+		});
+		const withFigure = JSON.stringify({
+			type: "doc",
+			content: [
+				{
+					type: "figure",
+					attrs: { mediaId: "m-1", alt: "", caption: "Cap", layout: "wide" },
+				},
+			],
+		});
+		const created = await createPostService(
+			db,
+			newPost({ contentJson: withFigure, coverMediaId: "m-1" }),
+		);
+		expect(created.ok).toBe(true);
+		if (!created.ok) return;
+		expect(await db.select().from(postMedia)).toHaveLength(1);
+		expect(created.value.coverMediaId).toBe("m-1");
+		expect(created.value.contentHtml).toContain("srcset=");
+
+		const saved = await savePostService(db, created.value.id, {
+			expectedUpdatedAt: created.value.updatedAt,
+			contentJson: doc(),
+			coverMediaId: null,
+		});
+		expect(saved.ok).toBe(true);
+		expect(await db.select().from(postMedia)).toHaveLength(0);
 	});
 
 	it("tag delete blocked in use, then confirmed", async () => {
