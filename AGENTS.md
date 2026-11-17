@@ -17,6 +17,7 @@ No rendering, admin, editor, media, or visual design.
 
 `pnpm dev` (workerd + local D1) · `pnpm check` (= `astro check` + `biome check .` + `vitest run`) ·
 `pnpm build` · `pnpm test` · `pnpm e2e` ·
+`pnpm types` (regenerate gitignored `src/worker-configuration.d.ts` — required for `astro check`) ·
 `pnpm db:migrate:local|remote` · `pnpm db:seed:local`
 
 ## Conventions

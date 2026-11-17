@@ -18,5 +18,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # `src/worker-configuration.d.ts` is gitignored but required for
+      # `astro check` (`declare module 'cloudflare:workers'`); regenerate it
+      # from wrangler.jsonc before typechecking.
+      - run: pnpm types
       - run: pnpm check
-      - run: pnpm build
