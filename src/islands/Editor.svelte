@@ -667,87 +667,89 @@ async function filesToFigures(files: File[]): Promise<void> {
 	}
 }
 
-onMount(async () => {
+onMount(() => {
 	// Library first so figure previews resolve to real variant URLs on the
 	// initial render (same prefix rule as the server renderer).
-	await refreshLibrary();
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(initialDoc);
-	} catch {
-		parsed = { type: "doc", content: [] };
-	}
-	editor = new Editor({
-		element: element as HTMLElement,
-		extensions: [
-			StarterKit.configure({
-				heading: { levels: [2, 3, 4] },
-				link: false,
-			}),
-			LinkExt.configure({
-				openOnClick: false,
-				HTMLAttributes: { rel: "noopener noreferrer" },
-			}),
-			Sidenote,
-			Footnote,
-			Pullquote,
-			FigureView,
-		],
-		content: docToTiptap(tiptapToDoc(parsed)),
-		editorProps: {
-			transformPastedHTML: (html) => stripLinkAttrs(html),
-			handleDrop: (_view, event) => {
-				const files = event.dataTransfer?.files;
-				if (!files || files.length === 0) return false;
-				const images = [...files].filter((f) => f.type.startsWith("image/"));
-				if (images.length === 0) return false;
-				event.preventDefault();
-				void filesToFigures(images);
-				return true;
+	void (async () => {
+		await refreshLibrary();
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(initialDoc);
+		} catch {
+			parsed = { type: "doc", content: [] };
+		}
+		editor = new Editor({
+			element: element as HTMLElement,
+			extensions: [
+				StarterKit.configure({
+					heading: { levels: [2, 3, 4] },
+					link: false,
+				}),
+				LinkExt.configure({
+					openOnClick: false,
+					HTMLAttributes: { rel: "noopener noreferrer" },
+				}),
+				Sidenote,
+				Footnote,
+				Pullquote,
+				FigureView,
+			],
+			content: docToTiptap(tiptapToDoc(parsed)),
+			editorProps: {
+				transformPastedHTML: (html) => stripLinkAttrs(html),
+				handleDrop: (_view, event) => {
+					const files = event.dataTransfer?.files;
+					if (!files || files.length === 0) return false;
+					const images = [...files].filter((f) => f.type.startsWith("image/"));
+					if (images.length === 0) return false;
+					event.preventDefault();
+					void filesToFigures(images);
+					return true;
+				},
+				handlePaste: (_view, event) => {
+					const files = event.clipboardData?.files;
+					if (!files || files.length === 0) return false;
+					const images = [...files].filter((f) => f.type.startsWith("image/"));
+					if (images.length === 0) return false;
+					event.preventDefault();
+					void filesToFigures(images);
+					return true;
+				},
 			},
-			handlePaste: (_view, event) => {
-				const files = event.clipboardData?.files;
-				if (!files || files.length === 0) return false;
-				const images = [...files].filter((f) => f.type.startsWith("image/"));
-				if (images.length === 0) return false;
-				event.preventDefault();
-				void filesToFigures(images);
-				return true;
+			onUpdate: () => {
+				refreshStats();
+				markDirty();
 			},
-		},
-		onUpdate: () => {
-			refreshStats();
-			markDirty();
-		},
-		onCreate: ({ editor: e }) => {
-			words = wordCount(e.getText());
-		},
-	});
-	window.addEventListener("beforeunload", beforeUnload);
-	syncGroupInput();
-	// Slug auto-fills from the title until the author edits it by hand.
-	const slugEl = document.getElementById(
-		"meta-slug",
-	) as HTMLInputElement | null;
-	const titleEl = document.getElementById(
-		"meta-title",
-	) as HTMLInputElement | null;
-	if (slugEl && titleEl && slugEl.value === "") {
-		const fill = () => {
-			if (slugEl.dataset.touched === "1") return;
-			slugEl.value = titleEl.value
-				.toLowerCase()
-				.normalize("NFKD")
-				.replaceAll(/[\u0300-\u036f]/g, "")
-				.replaceAll(/[^a-z0-9]+/g, "-")
-				.replaceAll(/^-+|-+$/g, "")
-				.slice(0, 150);
-		};
-		titleEl.addEventListener("input", fill);
-		slugEl.addEventListener("input", () => {
-			slugEl.dataset.touched = "1";
+			onCreate: ({ editor: e }) => {
+				words = wordCount(e.getText());
+			},
 		});
-	}
+		window.addEventListener("beforeunload", beforeUnload);
+		syncGroupInput();
+		// Slug auto-fills from the title until the author edits it by hand.
+		const slugEl = document.getElementById(
+			"meta-slug",
+		) as HTMLInputElement | null;
+		const titleEl = document.getElementById(
+			"meta-title",
+		) as HTMLInputElement | null;
+		if (slugEl && titleEl && slugEl.value === "") {
+			const fill = () => {
+				if (slugEl.dataset.touched === "1") return;
+				slugEl.value = titleEl.value
+					.toLowerCase()
+					.normalize("NFKD")
+					.replaceAll(/[\u0300-\u036f]/g, "")
+					.replaceAll(/[^a-z0-9]+/g, "-")
+					.replaceAll(/^-+|-+$/g, "")
+					.slice(0, 150);
+			};
+			titleEl.addEventListener("input", fill);
+			slugEl.addEventListener("input", () => {
+				slugEl.dataset.touched = "1";
+			});
+		}
+	})();
 });
 
 onDestroy(() => {
