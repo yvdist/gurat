@@ -1,0 +1,32 @@
+---
+import { largestVariantUrl, srcsetFor } from "../lib/content/render";
+import type { Media } from "../server/db/schema";
+
+// Public + preview cover slot: same srcset/sizes/dimensions output as the
+// figure renderer, always eager (above the fold).
+interface Props {
+	media: Media;
+	baseUrl: string;
+}
+
+const { media, baseUrl } = Astro.props;
+const src = largestVariantUrl(media, baseUrl);
+const srcset = srcsetFor(media, baseUrl);
+const style =
+	typeof media.dominantColor === "string" &&
+	/^#[0-9a-f]{6}$/i.test(media.dominantColor)
+		? `background-color:${media.dominantColor}`
+		: undefined;
+---
+<img
+	src={src}
+	srcset={srcset}
+	sizes="(max-width: 1280px) 100vw, 1200px"
+	width={media.width}
+	height={media.height}
+	decoding="async"
+	loading="eager"
+	fetchpriority="high"
+	alt={media.altDefault}
+	style={style}
+/>

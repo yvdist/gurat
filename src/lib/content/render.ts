@@ -134,6 +134,13 @@ export function largestVariantUrl(mediaRow: Media, baseUrl: string): string {
 	const url = last.split(" ")[0] ?? "";
 	return url === "" ? variantUrl(mediaRow, mediaRow.width, baseUrl) : url;
 }
+/** Smallest variant URL (thumbnails, editor previews). */
+export function smallestVariantUrl(mediaRow: Media, baseUrl: string): string {
+	const srcset = srcsetFor(mediaRow, baseUrl);
+	const first = srcset.split(", ")[0] ?? "";
+	const url = first.split(" ")[0] ?? "";
+	return url === "" ? variantUrl(mediaRow, mediaRow.width, baseUrl) : url;
+}
 
 function renderMark(mark: Mark, inner: string, path: string): string {
 	switch (mark.type) {

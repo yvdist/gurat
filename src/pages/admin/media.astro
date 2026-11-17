@@ -1,0 +1,149 @@
+---
+import Admin from "../../layouts/Admin.astro";
+import { smallestVariantUrl } from "../../lib/content/render";
+import { getEnv } from "../../lib/env";
+import type { AccessIdentity } from "../../server/auth/access";
+import { requireAdminPage } from "../../server/auth/access";
+import { createDb } from "../../server/db";
+import {
+	deleteMediaService,
+	listMediaService,
+	renameMediaService,
+} from "../../server/media/service";
+
+export const prerender = false;
+
+const env = getEnv();
+let identity: AccessIdentity;
+try {
+	identity = await requireAdminPage(
+		Astro.request,
+		env,
+		new URL(Astro.request.url),
+		{ isDev: import.meta.env.DEV },
+	);
+} catch (res) {
+	if (res instanceof Response) return res;
+	throw res;
+}
+
+const db = createDb(env.DB);
+const baseUrl = env.MEDIA_BASE_URL;
+// Server-rendered forms (no client JS) for rename/delete; uploads go through
+// the dropzone script below (browser variant pipeline → multipart API).
+let formError: string | null = null;
+if (Astro.request.method === "POST") {
+	const origin = Astro.request.headers.get("Origin") ?? "";
+	if (origin !== env.SITE_URL) {
+		formError = "csrf";
+	} else {
+		const data = await Astro.request.formData();
+		const action = String(data.get("action") ?? "");
+		const id = String(data.get("id") ?? "");
+		try {
+			if (action === "rename" && id !== "") {
+				const result = await renameMediaService(db, id, {
+					altDefault: String(data.get("altDefault") ?? ""),
+				});
+				if (!result.ok) throw new Error(result.err.code);
+			} else if (action === "delete" && id !== "") {
+				const result = await deleteMediaService(db, env, id);
+				if (!result.ok) {
+					throw new Error(
+						result.err.code === "media-in-use"
+							? `in use by: ${result.err.detail ?? "?"} — remove from posts first`
+							: result.err.code,
+					);
+				}
+			}
+		} catch (err) {
+			formError = err instanceof Error ? err.message : "request failed";
+		}
+	}
+}
+const items = await listMediaService(db);
+const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
+---
+
+<Admin title="Media" email={identity.email} current="media" logoutUrl={logoutUrl}>
+	<h1>Media</h1>
+
+	{formError !== null && <p class="admin-error" role="alert">{formError}</p>}
+
+	<section aria-label="Upload">
+		<h2>Upload</h2>
+		<div id="dropzone" class="admin-dropzone" role="button" tabindex="0" aria-label="Upload images: drop files, paste, or activate to browse">
+			Drop images, paste, or click to browse (JPEG/PNG/WebP → WebP variants)
+		</div>
+		<input id="filepick" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+		<p id="upload-status" class="admin-status" role="status"></p>
+	</section>
+
+	<section aria-label="Library">
+		<h2>Library</h2>
+		<div class="admin-media-grid">
+			{items.map((m) => (
+				<figure class="admin-media-card">
+					<img src={smallestVariantUrl(m, baseUrl)} alt={m.altDefault} loading="lazy" width={m.width} height={m.height} />
+					<figcaption>
+						<code>{m.id}</code>
+						<span>{m.width}×{m.height} · {m.useCount} {m.useCount === 1 ? "post" : "posts"}</span>
+						{m.posts.length > 0 && <span>used in: {m.posts.join(", ")}</span>}
+						<form method="post">
+							<input type="hidden" name="action" value="rename" />
+							<input type="hidden" name="id" value={m.id} />
+							<input name="altDefault" value={m.altDefault} maxlength={200} aria-label={`Default alt text for ${m.id}`} />
+							<button type="submit">Save alt</button>
+						</form>
+						<form method="post" onsubmit="return confirm('Delete this media?')">
+							<input type="hidden" name="action" value="delete" />
+							<input type="hidden" name="id" value={m.id} />
+							<button type="submit">Delete</button>
+						</form>
+					</figcaption>
+				</figure>
+			))}
+		</div>
+	</section>
+</Admin>
+
+<script>
+	import { fileToVariants, uploadMedia } from "../../islands/mediaClient";
+
+	const zone = document.getElementById("dropzone");
+	const pick = document.getElementById("filepick") as HTMLInputElement | null;
+	const status = document.getElementById("upload-status");
+
+	async function handleFiles(files: FileList | File[]): Promise<void> {
+		const list = [...files].filter((f) => f.type.startsWith("image/"));
+		if (list.length === 0 || !status) return;
+		for (const file of list) {
+			try {
+				status.textContent = `Uploading ${file.name}…`;
+				const prepared = await fileToVariants(file);
+				await uploadMedia(prepared, "");
+				window.location.reload();
+				return;
+			} catch (err) {
+				status.textContent = err instanceof Error ? err.message : "upload failed";
+			}
+		}
+	}
+
+	zone?.addEventListener("click", () => pick?.click());
+	zone?.addEventListener("keydown", (e) => {
+		if (e.key === "Enter" || e.key === " ") pick?.click();
+	});
+	zone?.addEventListener("dragover", (e) => e.preventDefault());
+	zone?.addEventListener("drop", (e) => {
+		e.preventDefault();
+		if (e.dataTransfer?.files) void handleFiles(e.dataTransfer.files);
+	});
+	pick?.addEventListener("change", () => {
+		if (pick.files) void handleFiles(pick.files);
+	});
+	document.addEventListener("paste", (e) => {
+		const files = e.clipboardData?.files;
+		if (files && files.length > 0) void handleFiles(files);
+	});
+</script>

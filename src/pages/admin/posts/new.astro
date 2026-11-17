@@ -6,6 +6,7 @@ import { listAllTagsService } from "../../../server/admin/service";
 import type { AccessIdentity } from "../../../server/auth/access";
 import { requireAdminPage } from "../../../server/auth/access";
 import { createDb } from "../../../server/db";
+import { listMediaService } from "../../../server/media/service";
 
 export const prerender = false;
 
@@ -25,6 +26,7 @@ try {
 
 const db = createDb(env.DB);
 const tags = await listAllTagsService(db);
+const mediaItems = await listMediaService(db);
 const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
 const emptyDoc = JSON.stringify({ type: "doc", content: [] });
 ---
@@ -64,6 +66,15 @@ const emptyDoc = JSON.stringify({ type: "doc", content: [] });
 		</select>
 	</div>
 	<div class="admin-field">
+		<span>Cover image</span>
+		<select id="meta-cover">
+			<option value="">—</option>
+			{mediaItems.map((m) => (
+				<option value={m.id}>{m.id} ({m.width}×{m.height})</option>
+			))}
+		</select>
+	</div>
+	<div class="admin-field">
 		<span>Published at (future = scheduled)</span>
 		<input id="meta-published" type="datetime-local" value="" />
 	</div>
@@ -76,5 +87,6 @@ const emptyDoc = JSON.stringify({ type: "doc", content: [] });
 		locale="en"
 		groupId={null}
 		candidates={[]}
+		mediaBaseUrl={env.MEDIA_BASE_URL}
 	/>
 </Admin>

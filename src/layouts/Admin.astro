@@ -5,8 +5,8 @@ import "../styles/admin.css";
 
 interface Props {
 	title: string;
+	current: "posts" | "tags" | "media";
 	email: string;
-	current: "posts" | "tags";
 	logoutUrl: string;
 }
 
@@ -29,6 +29,7 @@ Astro.response.headers.set("Cache-Control", "no-store");
 				<div class="admin-nav">
 					<a href="/admin" aria-current={current === "posts" ? "page" : undefined}>Posts</a>
 					<a href="/admin/tags" aria-current={current === "tags" ? "page" : undefined}>Tags</a>
+				<a href="/admin/media" aria-current={current === "media" ? "page" : undefined}>Media</a>
 				</div>
 				<div class="admin-foot">
 					<a href="/">view site ↗</a>
