@@ -7,6 +7,7 @@ import type {
 import {
 	AccessError,
 	assertSameOrigin,
+	assertSameOriginMultipart,
 	requireAdminApi,
 } from "../../../server/auth/access";
 import type { Db } from "../../../server/db";
@@ -24,12 +25,16 @@ export interface Guarded {
 /** Auth guard; returns a `Response` to send on failure, else the env+db. */
 export async function guard(
 	request: Request,
-	opts: { mutating: boolean },
+	opts: { mutating: boolean; multipart?: boolean },
 ): Promise<Guarded | Response> {
 	const env = getEnv();
 	try {
 		await requireAdminApi(request, env, { isDev: import.meta.env.DEV });
-		if (opts.mutating) assertSameOrigin(request, env);
+		if (opts.mutating)
+			(opts.multipart === true ? assertSameOriginMultipart : assertSameOrigin)(
+				request,
+				env,
+			);
 	} catch (res) {
 		if (res instanceof Response) return res;
 		if (res instanceof AccessError)
