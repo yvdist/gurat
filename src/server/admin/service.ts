@@ -164,7 +164,7 @@ export function renderContent(
 	if (doc.content.length === 0)
 		return { code: "schema", status: 422, detail: "content" };
 	try {
-		const rendered = renderDoc(doc, { locale, media: new Map() });
+		const rendered = renderDoc(doc, { locale, media: new Map(), baseUrl: "" });
 		return {
 			contentJson,
 			contentHtml: rendered.html,

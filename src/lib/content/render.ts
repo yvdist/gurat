@@ -30,6 +30,10 @@ export class RenderError extends Error {
 export interface RenderContext {
 	locale: Locale;
 	media: Map<string, Media>;
+	/** Public origin for media URLs; empty = same-origin `/media/...`. */
+	baseUrl: string;
+	/** Cover media id: treated as above-the-fold (eager + fetchpriority). */
+	coverMediaId?: string | null;
 }
 
 export interface TocEntry {
@@ -88,11 +92,41 @@ function slugify(text: string): string {
 	return slug === "" ? "section" : slug;
 }
 
-// Phase-2 placeholder for figure image URLs. Media lives in R2 from Phase 5;
-// until then the seed carries no figure nodes, so every call site passes an
-// empty map and unknown mediaIds fail loudly at render time.
-export function variantUrl(mediaRow: Media): string {
-	return `/media/${mediaRow.id}/placeholder`;
+// Single URL rule (spec 05 §5.4): `baseUrl` (MEDIA_BASE_URL) + `/media/<id>/<w>.webp`.
+// Empty base = same-origin (local dev route); absolute origin = public R2.
+export function variantUrl(mediaRow: Media, width: number, baseUrl: string): string {
+	const prefix = baseUrl.replace(/\/+$/, "");
+	return `${prefix}/media/${mediaRow.id}/${width}.webp`;
+}
+
+/** Ascending `${url} ${w}w` srcset from stored variants; falls back to the single stored width. */
+export function srcsetFor(mediaRow: Media, baseUrl: string): string {
+	let widths: number[] | null = null;
+	try {
+		const v: unknown = JSON.parse(mediaRow.variantsJson);
+		if (Array.isArray(v)) {
+			const ws: number[] = [];
+			for (const item of v) {
+				if (typeof item === "object" && item !== null) {
+					const w = (item as Record<string, unknown>).w;
+					if (typeof w === "number" && Number.isInteger(w) && w > 0) ws.push(w);
+				}
+			}
+			if (ws.length > 0) widths = [...new Set(ws)].sort((a, b) => a - b);
+		}
+	} catch {
+		widths = null;
+	}
+	const list = widths ?? [mediaRow.width];
+	return list.map((w) => `${variantUrl(mediaRow, w, baseUrl)} ${w}w`).join(", ");
+}
+
+/** Largest variant URL (src fallback); falls back to the single stored width. */
+export function largestVariantUrl(mediaRow: Media, baseUrl: string): string {
+	const srcset = srcsetFor(mediaRow, baseUrl);
+	const last = srcset.split(", ").pop() ?? "";
+	const url = last.split(" ")[0] ?? "";
+	return url === "" ? variantUrl(mediaRow, mediaRow.width, baseUrl) : url;
 }
 
 function renderMark(mark: Mark, inner: string, path: string): string {
@@ -191,17 +225,73 @@ function codeClass(language: string): string {
 		: "";
 }
 
+const SIZES_BY_LAYOUT: Record<Figure["attrs"]["layout"], string> = {
+	inline: "(max-width: 768px) 100vw, 68ch",
+	wide: "(max-width: 1280px) 100vw, 1200px",
+	full: "100vw",
+};
+
+const DOMINANT_RE = /^#[0-9a-f]{6}$/i;
+
 function renderFigure(
 	node: Figure,
 	ctx: RenderContext,
+	state: BlockState,
 	path: string,
 ): { html: string; plain: string } {
 	const mediaRow = ctx.media.get(node.attrs.mediaId);
 	if (mediaRow === undefined) {
 		throw new RenderError(path, `unknown mediaId ${node.attrs.mediaId}`);
 	}
+	let widths: number[];
+	try {
+		const v: unknown = JSON.parse(mediaRow.variantsJson);
+		if (!Array.isArray(v)) {
+			throw new RenderError(path, "bad variants_json");
+		}
+		const ws: number[] = [];
+		for (const item of v) {
+			if (typeof item !== "object" || item === null) {
+				throw new RenderError(path, "bad variants_json");
+			}
+			const w = (item as Record<string, unknown>).w;
+			if (typeof w !== "number" || !Number.isInteger(w) || w <= 0) {
+				throw new RenderError(path, "bad variants_json");
+			}
+			ws.push(w);
+		}
+		const ordered = [...new Set(ws)].sort((a, b) => a - b);
+		// Empty array (no recorded variants) falls back to the stored width.
+		widths = ordered.length > 0 ? ordered : [mediaRow.width];
+	} catch (err) {
+		if (err instanceof RenderError) throw err;
+		throw new RenderError(path, "bad variants_json");
+	}
 	const alt = node.attrs.alt === "" ? mediaRow.altDefault : node.attrs.alt;
-	const img = `<img src="${escapeHtml(variantUrl(mediaRow))}" alt="${escapeHtml(alt)}">`;
+	const lastW = widths[widths.length - 1] ?? mediaRow.width;
+	const src = variantUrl(mediaRow, lastW, ctx.baseUrl);
+	const srcset = widths
+		.map((w) => `${variantUrl(mediaRow, w, ctx.baseUrl)} ${w}w`)
+		.join(", ");
+	const sizes = SIZES_BY_LAYOUT[node.attrs.layout];
+	const isFirst = state.figureCount === 0;
+	const isAboveFold = isFirst || ctx.coverMediaId === node.attrs.mediaId;
+	state.figureCount += 1;
+	const loading = isAboveFold
+		? ` loading="eager" fetchpriority="high"`
+		: ` loading="lazy"`;
+	const style =
+		typeof mediaRow.dominantColor === "string" &&
+		DOMINANT_RE.test(mediaRow.dominantColor)
+			? ` style="background-color:${escapeHtml(mediaRow.dominantColor)}"`
+			: "";
+	const img =
+		`<img src="${escapeHtml(src)}"` +
+		` srcset="${escapeHtml(srcset)}"` +
+		` sizes="${sizes}"` +
+		` width="${mediaRow.width}" height="${mediaRow.height}"` +
+		` decoding="async"${loading}` +
+		` alt="${escapeHtml(alt)}"${style}>`;
 	const caption =
 		node.attrs.caption === ""
 			? ""
@@ -223,6 +313,7 @@ interface BlockState {
 	sidenoteCount: number;
 	footnoteCount: number;
 	footnotes: FootnoteEntry[];
+	figureCount: number;
 }
 
 function renderHeading(
@@ -324,7 +415,7 @@ function renderBlock(
 		case "horizontalRule":
 			return { html: "<hr>", plain: "" };
 		case "figure":
-			return renderFigure(node, ctx, path);
+			return renderFigure(node, ctx, state, path);
 		default:
 			throw new RenderError(path, "unknown block node");
 	}
@@ -346,6 +437,7 @@ export function renderDoc(doc: Doc, ctx: RenderContext): RenderResult {
 		sidenoteCount: 0,
 		footnoteCount: 0,
 		footnotes: [],
+		figureCount: 0,
 	};
 	const parts = doc.content.map((b, i) =>
 		renderBlock(b, ctx, state, `content[${i}]`),

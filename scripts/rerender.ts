@@ -89,7 +89,7 @@ function renderRow(row: DumpRow): {
 } {
 	const locale: Locale = isLocale(row.locale) ? row.locale : "en";
 	const doc = validateDoc(JSON.parse(row.content_json));
-	const rendered = renderDoc(doc, { locale, media: new Map() });
+	const rendered = renderDoc(doc, { locale, media: new Map(), baseUrl: "" });
 	return {
 		html: rendered.html,
 		toc: JSON.stringify(rendered.toc),
