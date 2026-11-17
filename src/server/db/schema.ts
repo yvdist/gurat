@@ -52,6 +52,9 @@ export const posts = sqliteTable(
 			onDelete: "set null",
 		}),
 		seoDescription: text("seo_description"),
+		// Phase 6: client-generated share image key (`og/<postId>.png` in the
+		// media bucket). Null = fall back to the static og-default.png.
+		ogImageKey: text("og_image_key"),
 		createdAt: integer("created_at").notNull(),
 		updatedAt: integer("updated_at").notNull(),
 	},

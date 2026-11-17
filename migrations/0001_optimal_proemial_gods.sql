@@ -1,0 +1,1 @@
+ALTER TABLE `posts` ADD `og_image_key` text;

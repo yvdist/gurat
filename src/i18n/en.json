@@ -39,5 +39,10 @@
 	"post.prev": "previous",
 	"post.next": "next",
 	"footer.rights": "© {year} {name}",
-	"footer.rss": "rss"
+	"footer.rss": "rss",
+	"search.title": "Search",
+	"search.label": "Search posts",
+	"search.button": "Search",
+	"search.none": "No results.",
+	"search.error": "Type something to search."
 }

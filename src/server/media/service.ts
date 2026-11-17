@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { Env } from "../../lib/env";
 import type { ServiceError, ServiceResult } from "../admin/service";
 import type { Db } from "../db";
-import { media, postMedia } from "../db/schema";
+import { media, postMedia, posts } from "../db/schema";
 import {
 	checkVariants,
 	type MediaCheckError,
@@ -284,4 +284,84 @@ export async function deleteMediaService(
 	await db.delete(media).where(eq(media.id, id));
 	await Promise.allSettled(variants.map((v) => env.MEDIA.delete(v.key)));
 	return { ok: true, value: { deleted: true } };
+}
+
+export const OG_IMAGE_WIDTH = 1200;
+export const OG_IMAGE_HEIGHT = 630;
+export const OG_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+function readU32BE(bytes: Uint8Array, offset: number): number {
+	const b0 = bytes[offset] ?? Number.NaN;
+	const b1 = bytes[offset + 1] ?? Number.NaN;
+	const b2 = bytes[offset + 2] ?? Number.NaN;
+	const b3 = bytes[offset + 3] ?? Number.NaN;
+	return b0 * 0x1000000 + b1 * 0x10000 + b2 * 0x100 + b3;
+}
+
+/** PNG magic + IHDR dimensions; null when the buffer is not a PNG. */
+export function parsePngDimensions(
+	bytes: Uint8Array,
+): { width: number; height: number } | null {
+	if (bytes.length < 33) return null;
+	for (let i = 0; i < PNG_MAGIC.length; i++) {
+		if (bytes[i] !== PNG_MAGIC[i]) return null;
+	}
+	// IHDR must be the first chunk: length(4) + "IHDR"(4) + width(4) + height(4).
+	if (
+		bytes[12] !== 0x49 ||
+		bytes[13] !== 0x48 ||
+		bytes[14] !== 0x44 ||
+		bytes[15] !== 0x52
+	) {
+		return null;
+	}
+	return { width: readU32BE(bytes, 16), height: readU32BE(bytes, 20) };
+}
+
+/**
+ * Per-post share image (spec 06 §6.4). Validates a client-generated PNG
+ * (≤2 MiB, magic + 1200×630 IHDR), writes `og/<postId>.png` to R2 with
+ * immutable cache headers, then records the key. Same partial-failure
+ * cleanup as `uploadMediaService`: a failed DB update deletes the R2 key.
+ * `updatedAt` is untouched so OG refreshes never move feed/sitemap dates.
+ */
+export async function uploadOgImageService(
+	db: Db,
+	env: Env,
+	postId: string,
+	bytes: Uint8Array,
+): Promise<ServiceResult<{ key: string }>> {
+	const rows = await db
+		.select({ id: posts.id })
+		.from(posts)
+		.where(eq(posts.id, postId));
+	if (rows.length === 0)
+		return { ok: false, err: { code: "not-found", status: 404 } };
+	if (bytes.length > OG_IMAGE_MAX_BYTES) {
+		return { ok: false, err: { code: "too-large", status: 422 } };
+	}
+	const dims = parsePngDimensions(bytes);
+	if (
+		dims === null ||
+		dims.width !== OG_IMAGE_WIDTH ||
+		dims.height !== OG_IMAGE_HEIGHT
+	) {
+		return { ok: false, err: { code: "bad-dimensions", status: 422 } };
+	}
+	const key = `og/${postId}.png`;
+	await env.MEDIA.put(key, bytes, {
+		httpMetadata: {
+			contentType: "image/png",
+			cacheControl: "public, max-age=31536000, immutable",
+		},
+	});
+	try {
+		await db.update(posts).set({ ogImageKey: key }).where(eq(posts.id, postId));
+	} catch (err) {
+		await env.MEDIA.delete(key);
+		throw err;
+	}
+	return { ok: true, value: { key } };
 }

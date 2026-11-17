@@ -7,6 +7,7 @@ import {
 	t,
 } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
+import { tagHreflangs } from "../../../lib/archive";
 import { getEnv } from "../../../lib/env";
 import {
 	createDb,
@@ -60,7 +61,7 @@ const canonical = `/id/tags/${tagSlug}`;
 			title={`${tagLabel} — ${t(locale, "tags.title")} — ${SITE.name}`}
 			description={t(locale, "site.intro")}
 			canonical={canonical}
-			hreflangs={[]}
+			hreflangs={tagHreflangs(tagSlug)}
 			locale={locale}
 			heading={tagLabel}
 			path={canonical}

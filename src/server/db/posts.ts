@@ -288,3 +288,50 @@ export async function getAdjacentPosts(
 				: { id: next.id, slug: next.slug, title: next.title },
 	};
 }
+
+export interface RelatedPost {
+	id: string;
+	slug: string;
+	title: string;
+}
+
+// Related posts (spec 06 §6.5): visible posts sharing ≥1 tag, self excluded,
+// newest first (same ordering as the feed). Bound params only.
+export async function getRelatedPosts(
+	db: Db,
+	options: {
+		locale: Locale;
+		postId: string;
+		tagIds: string[];
+		limit?: number;
+	},
+	now: number = Date.now(),
+): Promise<RelatedPost[]> {
+	const limit = Math.min(Math.max(options.limit ?? 3, 1), 3);
+	if (options.tagIds.length === 0) return [];
+	const tagged = await db
+		.select({ postId: postTags.postId })
+		.from(postTags)
+		.where(inArray(postTags.tagId, options.tagIds));
+	const ids = [...new Set(tagged.map((r) => r.postId))].filter(
+		(id) => id !== options.postId,
+	);
+	if (ids.length === 0) return [];
+	const rows = await db
+		.select({
+			id: posts.id,
+			slug: posts.slug,
+			title: posts.title,
+		})
+		.from(posts)
+		.where(
+			and(
+				eq(posts.locale, options.locale),
+				visibilityFilter(now),
+				inArray(posts.id, ids),
+			),
+		)
+		.orderBy(desc(posts.publishedAt), asc(posts.id))
+		.limit(limit);
+	return rows;
+}

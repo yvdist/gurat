@@ -10,6 +10,7 @@ import { smallestVariantUrl } from "../lib/content/render";
 import type { Media } from "../server/db/schema";
 import { docToTiptap, tiptapToDoc } from "./editorDoc";
 import { fileToVariants, uploadMedia } from "./mediaClient";
+import { generateOgImage } from "./ogImage";
 
 // Browser-only editor island (spec 04 §4.3). Mounted `client:only` from
 // the post pages; Tiptap core is mounted directly in this component
@@ -187,6 +188,53 @@ let pickerCaption = $state("");
 let pickerLayout = $state("inline");
 let pickerBusy = $state(false);
 let pickerError: string | null = $state(null);
+// Share image (spec 06 §6.4): client-generated 1200×630 PNG uploaded on
+// demand. `ogStamp` records title/cover at the last successful upload; any
+// drift shows a regenerate hint (never silent overwrite).
+let ogStamp: { title: string; cover: string } | null = $state(null);
+let ogStatus: string | null = $state(null);
+let ogBusy = $state(false);
+let liveTitle = $state("");
+let liveCover = $state("");
+const ogStale = $derived(
+	ogStamp !== null &&
+		(ogStamp.title !== liveTitle || ogStamp.cover !== liveCover),
+);
+
+function snapshotMeta(): { title: string; cover: string } {
+	return { title: fieldValue("meta-title"), cover: fieldValue("meta-cover") };
+}
+
+async function generateShareImage(): Promise<void> {
+	if (postId === null) {
+		ogStatus = "Save the post first, then generate its share image.";
+		return;
+	}
+	ogBusy = true;
+	ogStatus = "Generating share image…";
+	try {
+		const meta = snapshotMeta();
+		const blob = await generateOgImage(meta.title || "(untitled)");
+		const form = new FormData();
+		form.append("image", new File([blob], "og.png", { type: "image/png" }));
+		const res = await fetch(`/admin/api/posts/${postId}/og`, {
+			method: "PUT",
+			body: form,
+		});
+		if (!res.ok) {
+			ogStatus = `Share image upload failed (${res.status}).`;
+			return;
+		}
+		ogStamp = meta;
+		liveTitle = meta.title;
+		liveCover = meta.cover;
+		ogStatus = "Share image updated.";
+	} catch {
+		ogStatus = "Share image generation failed.";
+	} finally {
+		ogBusy = false;
+	}
+}
 
 function fieldValue(id: string): string {
 	const el = document.getElementById(id) as HTMLInputElement | null;
@@ -749,6 +797,19 @@ onMount(() => {
 				slugEl.dataset.touched = "1";
 			});
 		}
+		// Share-image staleness: track title/cover edits against the last
+		// upload stamp (cover is a select → change; title is text → input).
+		const snap = () => {
+			const meta = snapshotMeta();
+			liveTitle = meta.title;
+			liveCover = meta.cover;
+		};
+		snap();
+		for (const id of ["meta-title", "meta-cover"]) {
+			const el = document.getElementById(id);
+			el?.addEventListener("input", snap);
+			el?.addEventListener("change", snap);
+		}
 	})();
 });
 
@@ -827,6 +888,23 @@ onDestroy(() => {
 			<button type="button" disabled={deleteSlug !== fieldValue("meta-slug")} onclick={() => void remove()}>Confirm delete</button>
 		{/if}
 	</div>
+
+	<section aria-label="Share image">
+		<h2>Share image</h2>
+		{#if postId === null}
+			<p>Save the post first, then generate its share image.</p>
+		{:else}
+			<button type="button" onclick={() => void generateShareImage()} disabled={ogBusy}>
+				{ogBusy ? "Generating…" : "Generate share image"}
+			</button>
+			{#if ogStale}
+				<p class="admin-status" role="status">Title or cover changed since the last share image — regenerate to refresh link previews.</p>
+			{/if}
+			{#if ogStatus !== null}
+				<p class="admin-status" role="status">{ogStatus}</p>
+			{/if}
+		{/if}
+	</section>
 
 	<section aria-label="Translation">
 		<h2>Translation</h2>

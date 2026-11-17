@@ -1,0 +1,122 @@
+import { expect, test } from "@playwright/test";
+
+// Phase-6 discovery surface against seeded local D1
+// (`pnpm db:seed:local && pnpm db:rerender`; production preview server):
+// feeds, sitemap, robots, head metadata, search, related-posts empty state.
+test("EN and ID feeds validate as RSS with public posts only", async ({
+	request,
+}) => {
+	const en = await request.get("/feed.xml");
+	expect(en.status()).toBe(200);
+	expect(en.headers()["content-type"]).toContain("application/rss+xml");
+	const enXml = await en.text();
+	expect(enXml).toContain("<rss version=");
+	expect(enXml).toContain("/writing/hello-world");
+	expect(enXml).toContain("/writing/second-post");
+	expect(enXml).not.toContain("draft-post");
+	const etag = en.headers().etag;
+	expect(etag).toBeTruthy();
+	const cached = await request.get("/feed.xml", {
+		headers: { "If-None-Match": etag ?? "" },
+	});
+	expect(cached.status()).toBe(304);
+
+	const id = await request.get("/id/feed.xml");
+	expect(id.status()).toBe(200);
+	const idXml = await id.text();
+	expect(idXml).toContain("/id/writing/halo-dunia");
+	expect(idXml).not.toContain("tulisan-mendatang");
+	expect(idXml).toContain("<language>id</language>");
+});
+
+test("sitemap lists public URLs with alternates; robots points at it", async ({
+	request,
+}) => {
+	const sm = await request.get("/sitemap.xml");
+	expect(sm.status()).toBe(200);
+	const xml = await sm.text();
+	expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
+	expect(xml).toContain("/writing/hello-world");
+	expect(xml).toContain("/id/writing/halo-dunia");
+	expect(xml).not.toContain("draft-post");
+	expect(xml).not.toContain("tulisan-mendatang");
+	expect(xml).toContain('hreflang="id"');
+	expect(xml).toContain("x-default");
+
+	const robots = await request.get("/robots.txt");
+	expect(robots.status()).toBe(200);
+	const body = await robots.text();
+	expect(body).toContain("Disallow: /admin");
+	expect(body).toContain("Sitemap:");
+	expect(body).toContain("/sitemap.xml");
+});
+
+test("post page carries absolute OG/Twitter/JSON-LD and symmetric hreflangs", async ({
+	page,
+}) => {
+	await page.goto("/writing/hello-world");
+	const head = page.locator("head");
+	await expect(head.locator('meta[property="og:title"]')).toHaveAttribute(
+		"content",
+		/Hello, world/,
+	);
+	await expect(head.locator('meta[name="twitter:card"]')).toHaveAttribute(
+		"content",
+		"summary_large_image",
+	);
+	const ogImage = await head
+		.locator('meta[property="og:image"]')
+		.getAttribute("content");
+	expect(ogImage).toMatch(/^https?:\/\//);
+	expect(ogImage).toContain("og-default.png");
+	const jsonLd = JSON.parse(
+		(await head.locator('script[type="application/ld+json"]').textContent()) ??
+			"{}",
+	) as Record<string, unknown>;
+	expect(jsonLd).toMatchObject({
+		"@type": "BlogPosting",
+		inLanguage: "en",
+	});
+	// Self + translation, linking back (RSS autodiscovery shares hreflang,
+	// so scope to links without a type attribute).
+	const idHref = await head
+		.locator('link[rel="alternate"][hreflang="id"]:not([type])')
+		.getAttribute("href");
+	expect(idHref).toContain("/id/writing/halo-dunia");
+	// Feed autodiscovery for both locales on every page.
+	await expect(
+		head.locator('link[type="application/rss+xml"][hreflang="en"]'),
+	).toHaveCount(1);
+	await expect(
+		head.locator('link[type="application/rss+xml"][hreflang="id"]'),
+	).toHaveCount(1);
+	// Seeded posts share no EN tags: the related section is omitted, not empty.
+	await expect(page.locator(".related")).toHaveCount(0);
+	// Home footer RSS text is now a real link to the locale feed.
+	await expect(page.locator(".site-footer .rss a")).toHaveAttribute(
+		"href",
+		"/feed.xml",
+	);
+});
+
+test("search serves form-only without q, results with q, 400 on blank", async ({
+	page,
+	request,
+}) => {
+	await page.goto("/search");
+	await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
+	await expect(page.locator(".archive-row")).toHaveCount(0);
+
+	await page.goto("/search?q=structure");
+	await expect(page.locator(".archive-row").first()).toContainText(
+		"A very long title",
+	);
+
+	const blank = await request.get("/search?q=%20%20");
+	expect(blank.status()).toBe(400);
+
+	await page.goto("/id/search?q=struktur");
+	await expect(page.locator(".archive-row").first()).toContainText(
+		"Tulisan kedua",
+	);
+});

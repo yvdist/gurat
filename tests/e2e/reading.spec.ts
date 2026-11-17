@@ -16,7 +16,7 @@ test("home links to posts with one h1 and reader head tags", async ({
 	const canonical = page.locator('link[rel="canonical"]');
 	await expect(canonical).toHaveAttribute("href", /\/$/);
 	await expect(
-		page.locator('link[rel="alternate"][hreflang="id"]'),
+		page.locator('link[rel="alternate"][hreflang="id"]:not([type])'),
 	).toHaveCount(1);
 	await expect(
 		page.locator('link[rel="alternate"][hreflang="x-default"]'),
@@ -31,7 +31,8 @@ test("post page shows translated content and switches locale", async ({
 	await page.goto("/writing/hello-world");
 	await expect(page.locator("h1")).toHaveCount(1);
 	await expect(page.locator("h1")).toContainText("Hello, world");
-	await expect(page.locator("script")).toHaveCount(2);
+	// Two inline scripts (no-flash + interactions) plus the JSON-LD block.
+	await expect(page.locator("script")).toHaveCount(3);
 	await expect(page.locator("time[datetime]")).toHaveCount(1);
 	await expect(page.locator(".article-body")).toHaveCount(1);
 	const html = await page.locator(".article-body").innerHTML();

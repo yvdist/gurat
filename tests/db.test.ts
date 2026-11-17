@@ -220,3 +220,131 @@ describe("public repositories (real local D1)", () => {
 		expect(await getTranslations(db, null, undefined, NOW)).toEqual([]);
 	});
 });
+
+describe("getRelatedPosts (real local D1)", () => {
+	beforeEach(async () => {
+		await fixture();
+	});
+
+	it("returns visible tag-sharers, self excluded, newest first", async () => {
+		const { getRelatedPosts } = await import("../src/server/db");
+		const db = createDb(env.DB);
+		// p-en-2 shares t-essays with p-en-1 and t-notes with the draft/future
+		// posts (both invisible) — only p-en-1 qualifies.
+		const related = await getRelatedPosts(
+			db,
+			{ locale: "en", postId: "p-en-2", tagIds: ["t-essays", "t-notes"] },
+			NOW,
+		);
+		expect(related).toEqual([{ id: "p-en-1", slug: "first", title: "First" }]);
+	});
+
+	it("returns empty for untagged posts and invisible-only neighborhoods", async () => {
+		const { getRelatedPosts } = await import("../src/server/db");
+		const db = createDb(env.DB);
+		expect(
+			await getRelatedPosts(
+				db,
+				{ locale: "en", postId: "p-en-1", tagIds: [] },
+				NOW,
+			),
+		).toEqual([]);
+		// t-notes links p-en-2 to the draft + future posts only.
+		expect(
+			await getRelatedPosts(
+				db,
+				{ locale: "en", postId: "p-en-2", tagIds: ["t-notes"] },
+				NOW,
+			),
+		).toEqual([]);
+	});
+
+	it("caps results at 3, newest first", async () => {
+		const { getRelatedPosts } = await import("../src/server/db");
+		const db = createDb(env.DB);
+		for (let i = 0; i < 4; i++) {
+			await db.insert(posts).values({
+				id: `p-en-extra-${i}`,
+				locale: "en",
+				translationGroupId: null,
+				slug: `extra-${i}`,
+				title: `Extra ${i}`,
+				status: "published",
+				publishedAt: NOW - i * DAY,
+				contentJson: doc(`Extra ${i}`),
+				createdAt: NOW - i * DAY,
+				updatedAt: NOW - i * DAY,
+			});
+			await db
+				.insert(postTags)
+				.values({ postId: `p-en-extra-${i}`, tagId: "t-essays" });
+		}
+		const related = await getRelatedPosts(
+			db,
+			{ locale: "en", postId: "p-en-1", tagIds: ["t-essays"] },
+			NOW,
+		);
+		// "second" (fixture, NOW-1d) also shares t-essays; id ASC breaks the
+		// NOW-1d tie ahead of extra-1.
+		expect(related.map((r) => r.slug)).toEqual([
+			"extra-0",
+			"second",
+			"extra-1",
+		]);
+	});
+});
+
+describe("post search (real local D1 FTS5)", () => {
+	beforeEach(async () => {
+		await fixture();
+	});
+
+	it("indexes on publish and removes on unpublish", async () => {
+		const { createPostService, publishPostService, unpublishPostService } =
+			await import("../src/server/admin/service");
+		const { searchPosts, toMatchQuery } = await import(
+			"../src/server/search/fts"
+		);
+		const db = createDb(env.DB);
+		const created = await createPostService(db, {
+			locale: "en",
+			slug: "searchable",
+			title: "Searchable post",
+			excerpt: "",
+			contentJson: JSON.stringify({
+				type: "doc",
+				content: [
+					{
+						type: "heading",
+						attrs: { level: 2 },
+						content: [{ type: "text", text: "Zebra stripes" }],
+					},
+					{ type: "paragraph", content: [{ type: "text", text: "Body." }] },
+				],
+			}),
+			tagIds: [],
+		});
+		if (!created.ok) throw new Error("create failed");
+		const match = toMatchQuery("zebra");
+		if (match === null) throw new Error("match failed");
+		// Draft: invisible to search.
+		expect(await searchPosts(db, { locale: "en", match, now: NOW })).toEqual(
+			[],
+		);
+		const published = await publishPostService(db, created.value.id, {
+			publishedAt: NOW - DAY,
+		});
+		if (!published.ok) throw new Error("publish failed");
+		const hits = await searchPosts(db, { locale: "en", match, now: NOW });
+		expect(hits.map((h) => h.slug)).toEqual(["searchable"]);
+		// Other locale never matches.
+		expect(await searchPosts(db, { locale: "id", match, now: NOW })).toEqual(
+			[],
+		);
+		const unpublished = await unpublishPostService(db, created.value.id);
+		if (!unpublished.ok) throw new Error("unpublish failed");
+		expect(await searchPosts(db, { locale: "en", match, now: NOW })).toEqual(
+			[],
+		);
+	});
+});

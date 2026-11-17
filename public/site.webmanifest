@@ -1,0 +1,7 @@
+{
+	"name": "Gurat",
+	"short_name": "Gurat",
+	"start_url": "/",
+	"display": "standalone",
+	"icons": [{ "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" }]
+}

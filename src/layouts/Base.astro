@@ -47,6 +47,11 @@ interface Props {
 	headingClass?: string;
 	path: string;
 	noindex?: boolean;
+	ogImage?: string;
+	ogType?: "website" | "article";
+	publishedAt?: number;
+	updatedAt?: number;
+	jsonLd?: string;
 }
 
 const {
@@ -59,8 +64,15 @@ const {
 	headingClass,
 	path,
 	noindex = false,
+	ogImage = `${SITE.url}/og-default.png`,
+	ogType = "website",
+	publishedAt,
+	updatedAt,
+	jsonLd,
 } = Astro.props;
 const fullCanonical = `${SITE.url}${canonical}`;
+const ogLocale = locale === "id" ? "id_ID" : "en_US";
+const ogLocaleAlternate = locale === "id" ? "en_US" : "id_ID";
 ---
 
 <!doctype html>
@@ -78,6 +90,29 @@ const fullCanonical = `${SITE.url}${canonical}`;
 			))
 		}
 		<link rel="alternate" hreflang="x-default" href={`${SITE.url}${hreflangs.find((h) => h.locale === SITE.defaultLocale)?.href ?? canonical}`} />
+		<link rel="alternate" type="application/rss+xml" hreflang="en" href={`${SITE.url}/feed.xml`} title={`${SITE.name} (en)`} />
+		<link rel="alternate" type="application/rss+xml" hreflang="id" href={`${SITE.url}/id/feed.xml`} title={`${SITE.name} (id)`} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content={ogType} />
+		<meta property="og:url" content={fullCanonical} />
+		<meta property="og:site_name" content={SITE.name} />
+		<meta property="og:locale" content={ogLocale} />
+		<meta property="og:locale:alternate" content={ogLocaleAlternate} />
+		<meta property="og:image" content={ogImage} />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={ogImage} />
+		{ogType === "article" && publishedAt !== undefined && <meta property="article:published_time" content={new Date(publishedAt).toISOString()} />}
+		{ogType === "article" && updatedAt !== undefined && <meta property="article:modified_time" content={new Date(updatedAt).toISOString()} />}
+		{/* Server-serialized JSON-LD from validated post fields (JSON.stringify,
+		    never author HTML) — safe the same way ArticleBody's set:html is. */}
+		{jsonLd !== undefined && <script type="application/ld+json" set:html={jsonLd} />}
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="manifest" href="/site.webmanifest" />
 		<link
 			rel="preload"
 			href={bodoni400}
