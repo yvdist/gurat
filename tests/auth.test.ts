@@ -4,7 +4,7 @@ import type { Env } from "../src/lib/env";
 import {
 	AccessError,
 	assertSameOrigin,
-	assertSameOriginMultipart,
+	assertSameOriginNoJson,
 	clearJwksCache,
 	requireAdminApi,
 	requireAdminPage,
@@ -292,20 +292,20 @@ describe("guards", () => {
 			),
 		).not.toThrow();
 	});
-	it("multipart CSRF checks origin and fetch-site without JSON type", () => {
+	it("no-JSON CSRF checks origin and fetch-site without JSON type", () => {
 		const env = testEnv();
 		expect(() =>
-			assertSameOriginMultipart(req({ Origin: "https://evil.com" }), env),
+			assertSameOriginNoJson(req({ Origin: "https://evil.com" }), env),
 		).toThrow("csrf");
 		expect(() =>
-			assertSameOriginMultipart(
+			assertSameOriginNoJson(
 				req({ Origin: env.SITE_URL, "Sec-Fetch-Site": "cross-site" }),
 				env,
 			),
 		).toThrow("csrf");
 		// Multipart content type passes (boundaries are never JSON).
 		expect(() =>
-			assertSameOriginMultipart(
+			assertSameOriginNoJson(
 				req({
 					"Content-Type": "multipart/form-data; boundary=xxx",
 					Origin: env.SITE_URL,

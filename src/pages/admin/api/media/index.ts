@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
-	const g = await guard(request, { mutating: true, multipart: true });
+	const g = await guard(request, { mutating: true, nonJson: true });
 	if (g instanceof Response) return g;
 	// Multipart: files arrive via formData, not JSON.
 	const form = await request.formData().catch(() => null);
