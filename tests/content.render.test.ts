@@ -25,19 +25,23 @@ import paragraphJson from "./content/__golden__/paragraph.json?raw";
 function goldenHtml(json: string, locale: Locale = "en"): string {
 	const content: unknown = JSON.parse(json);
 	const doc = validateDoc({ type: "doc", content });
-	return renderDoc(doc, { locale, media: new Map() }).html;
+	return renderDoc(doc, { locale, media: new Map(), baseUrl: "" }).html;
 }
 
 const figureMedia: Media = {
 	id: "media-1",
-	r2KeyPrefix: "media-1",
-	mime: "image/jpeg",
-	width: 1200,
+	r2KeyPrefix: "media/media-1/",
+	mime: "image/webp",
+	width: 1600,
 	height: 800,
 	bytes: 1000,
 	altDefault: "Default alt",
-	dominantColor: null,
-	variantsJson: "[]",
+	dominantColor: "#112233",
+	variantsJson: JSON.stringify([
+		{ w: 480, key: "media/media-1/480.webp", bytes: 100, mime: "image/webp" },
+		{ w: 960, key: "media/media-1/960.webp", bytes: 200, mime: "image/webp" },
+		{ w: 1600, key: "media/media-1/1600.webp", bytes: 300, mime: "image/webp" },
+	]),
 	createdAt: 0,
 };
 
@@ -62,6 +66,7 @@ describe("renderer goldens", () => {
 		const { html } = renderDoc(doc, {
 			locale: "en",
 			media: new Map([[figureMedia.id, figureMedia]]),
+			baseUrl: "",
 		});
 		expect(html).toBe(figureHtml);
 	});
@@ -70,12 +75,180 @@ describe("renderer goldens", () => {
 		const content: unknown = JSON.parse(figureJson);
 		const doc = validateDoc({ type: "doc", content });
 		try {
-			renderDoc(doc, { locale: "en", media: new Map() });
+			renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
 			expect.unreachable("unknown mediaId must throw");
 		} catch (error) {
 			expect(error).toBeInstanceOf(RenderError);
 			expect((error as RenderError).path).toBe("content[0]");
 		}
+	});
+
+	it("throws RenderError for corrupt variants_json", () => {
+		const bad: Media = { ...figureMedia, variantsJson: "not-json" };
+		const content: unknown = JSON.parse(figureJson);
+		const doc = validateDoc({ type: "doc", content });
+		try {
+			renderDoc(doc, {
+				locale: "en",
+				media: new Map([[bad.id, bad]]),
+				baseUrl: "",
+			});
+			expect.unreachable("corrupt variants_json must throw");
+		} catch (error) {
+			expect(error).toBeInstanceOf(RenderError);
+			expect((error as RenderError).message).toContain("bad variants_json");
+		}
+	});
+});
+
+describe("renderer figure output", () => {
+	function figureDoc(
+		attrs: Record<string, string>,
+	): ReturnType<typeof validateDoc> {
+		return validateDoc({
+			type: "doc",
+			content: [{ type: "figure", attrs }],
+		});
+	}
+	const ctx = (media: Media, extra: Record<string, unknown> = {}) => ({
+		locale: "en" as const,
+		media: new Map([[media.id, media]]),
+		baseUrl: "",
+		...extra,
+	});
+
+	it("emits per-layout sizes", () => {
+		for (const [layout, sizes] of [
+			["inline", "(max-width: 768px) 100vw, 68ch"],
+			["wide", "(max-width: 1280px) 100vw, 1200px"],
+			["full", "100vw"],
+		] as const) {
+			const html = renderDoc(
+				figureDoc({ mediaId: "media-1", alt: "a", caption: "", layout }),
+				ctx(figureMedia),
+			).html;
+			expect(html).toContain(`sizes="${sizes}"`);
+			expect(html).toContain(`class="layout-${layout}"`);
+		}
+	});
+
+	it("first figure eager + fetchpriority, second lazy without fetchpriority", () => {
+		const doc = validateDoc({
+			type: "doc",
+			content: [
+				{
+					type: "figure",
+					attrs: {
+						mediaId: "media-1",
+						alt: "a",
+						caption: "",
+						layout: "inline",
+					},
+				},
+				{
+					type: "figure",
+					attrs: {
+						mediaId: "media-1",
+						alt: "b",
+						caption: "",
+						layout: "inline",
+					},
+				},
+			],
+		});
+		const html = renderDoc(doc, ctx(figureMedia)).html;
+		const imgs = html.split("<img");
+		expect(imgs[1]).toContain('loading="eager"');
+		expect(imgs[1]).toContain('fetchpriority="high"');
+		expect(imgs[2]).toContain('loading="lazy"');
+		expect(imgs[2]).not.toContain("fetchpriority");
+	});
+
+	it("cover media is eager even when not first", () => {
+		const other: Media = { ...figureMedia, id: "other", altDefault: "O" };
+		const doc = validateDoc({
+			type: "doc",
+			content: [
+				{
+					type: "figure",
+					attrs: { mediaId: "other", alt: "", caption: "", layout: "inline" },
+				},
+				{
+					type: "figure",
+					attrs: { mediaId: "media-1", alt: "", caption: "", layout: "inline" },
+				},
+			],
+		});
+		const html = renderDoc(doc, {
+			locale: "en",
+			media: new Map([
+				[figureMedia.id, figureMedia],
+				[other.id, other],
+			]),
+			baseUrl: "",
+			coverMediaId: "media-1",
+		}).html;
+		// Both eager: first by position, second by cover match.
+		expect(html.match(/loading="eager"/g)).toHaveLength(2);
+	});
+
+	it("escapes alt and caption; falls back to altDefault", () => {
+		const html = renderDoc(
+			figureDoc({
+				mediaId: "media-1",
+				alt: '"><script>alert(1)</script>',
+				caption: "<b>bold</b>",
+				layout: "inline",
+			}),
+			ctx(figureMedia),
+		).html;
+		expect(html).not.toContain("<script>");
+		expect(html).toContain("&lt;script&gt;");
+		expect(html).toContain("&lt;b&gt;bold&lt;/b&gt;");
+		const fallback = renderDoc(
+			figureDoc({ mediaId: "media-1", alt: "", caption: "", layout: "inline" }),
+			ctx(figureMedia),
+		).html;
+		expect(fallback).toContain('alt="Default alt"');
+	});
+
+	it("omits dominant style when absent or malformed; absolute baseUrl prefixes", () => {
+		const noColor: Media = { ...figureMedia, dominantColor: null };
+		expect(
+			renderDoc(
+				figureDoc({
+					mediaId: "media-1",
+					alt: "a",
+					caption: "",
+					layout: "inline",
+				}),
+				ctx(noColor),
+			).html,
+		).not.toContain("style=");
+		const badColor: Media = { ...figureMedia, dominantColor: "red" };
+		expect(
+			renderDoc(
+				figureDoc({
+					mediaId: "media-1",
+					alt: "a",
+					caption: "",
+					layout: "inline",
+				}),
+				ctx(badColor),
+			).html,
+		).not.toContain("style=");
+		const absolute = renderDoc(
+			figureDoc({
+				mediaId: "media-1",
+				alt: "a",
+				caption: "",
+				layout: "inline",
+			}),
+			ctx(figureMedia, { baseUrl: "https://media.example/" }),
+		).html;
+		expect(absolute).toContain(
+			'src="https://media.example/media/media-1/1600.webp"',
+		);
 	});
 });
 
@@ -95,7 +268,11 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(html).not.toContain("<script");
 		expect(html).toContain("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;");
 		expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
@@ -129,7 +306,11 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(html).toBe("<p>evildataproto</p>");
 		expect(html).not.toContain("<a");
 	});
@@ -160,7 +341,11 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(html).not.toContain('" onmouseover');
 		expect(html).toContain("&quot; onmouseover=&quot;alert(1)");
 		expect(html).toContain("<pre><code>y</code></pre>");
@@ -185,7 +370,11 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(html).toBe(
 			'<p><strong><a href="https://example.com" rel="noopener noreferrer">both</a></strong></p>',
 		);
@@ -217,7 +406,11 @@ describe("renderer XSS suite", () => {
 		};
 		for (const raw of [unknownNode, unknownMark]) {
 			try {
-				renderDoc(raw as never, { locale: "en", media: new Map() });
+				renderDoc(raw as never, {
+					locale: "en",
+					media: new Map(),
+					baseUrl: "",
+				});
 				expect.unreachable("unknown input must throw");
 			} catch (error) {
 				expect(error).toBeInstanceOf(RenderError);
@@ -247,7 +440,11 @@ describe("renderer XSS suite", () => {
 				},
 			],
 		});
-		const { html, toc } = renderDoc(doc, { locale: "en", media: new Map() });
+		const { html, toc } = renderDoc(doc, {
+			locale: "en",
+			media: new Map(),
+			baseUrl: "",
+		});
 		expect(toc.map((e) => e.id)).toEqual([
 			"getting-started",
 			"getting-started-2",
@@ -264,8 +461,8 @@ describe("renderer XSS suite", () => {
 				{ type: "paragraph", content: [{ type: "text", text: words }] },
 			],
 		});
-		const en = renderDoc(doc, { locale: "en", media: new Map() });
-		const id = renderDoc(doc, { locale: "id", media: new Map() });
+		const en = renderDoc(doc, { locale: "en", media: new Map(), baseUrl: "" });
+		const id = renderDoc(doc, { locale: "id", media: new Map(), baseUrl: "" });
 		expect(en.readingMinutes).toBe(2);
 		expect(id.readingMinutes).toBe(2);
 		const short = validateDoc({
@@ -273,7 +470,8 @@ describe("renderer XSS suite", () => {
 			content: [{ type: "paragraph", content: [{ type: "text", text: "hi" }] }],
 		});
 		expect(
-			renderDoc(short, { locale: "en", media: new Map() }).readingMinutes,
+			renderDoc(short, { locale: "en", media: new Map(), baseUrl: "" })
+				.readingMinutes,
 		).toBe(1);
 	});
 });
