@@ -6,6 +6,7 @@
 	"nav.tags": "Tag",
 	"nav.about": "Tentang",
 	"post.readingMinutes": "{minutes} mnt baca",
+	"post.updated": "diperbarui {date}",
 	"post.translation": "Juga dalam",
 	"feed.title": "Tulisan terbaru",
 	"feed.empty": "Belum ada tulisan.",

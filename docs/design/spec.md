@@ -14,7 +14,9 @@ Light: `--bg #ffffff`, `--surface #f7f8fa` (admin only, Phase 4),
 `--wash-lilac #dcd8ea`, `--card-plum #34305a`, `--avatar-ring #807c9b`.
 Dark: `--bg #0b0e13`, `--panel #070a0f`, `--raised #1a2130`,
 `--ink #e9ecf1`, `--muted #97a0ae`, `--line #232b36`,
-`--indigo-bright #5b6fd6`. Radius small (4–6 px pills/cards), hairline 1 px
+`--indigo-bright #8494ee` (owner-accepted correction 2026-11-17: mock
+`#5b6fd6` is 4.31:1 on `--bg`, fails AA small-text; `#8494ee` is 6.86:1;
+decorative indigo unchanged; see `decisions.md` §3). Radius small (4–6 px pills/cards), hairline 1 px
 borders, motion 120/200 ms ease-out hover only. Type: display "Bodoni Moda"
 400–600, H1 `clamp(2.75rem, 1.5rem + 5vw, 4.5rem)` tight leading, serif body
 "Newsreader" 1.0625 rem/1.75, mono "IBM Plex Mono" 0.75 rem uppercase tracking
@@ -44,7 +46,8 @@ serif title, mono `21 aug · 7 min`); right About card (avatar,
 ## A4. Post (dark mock; identical structure light)
 
 Breadcrumb mono, two pills, serif H1, italic serif lede, mono meta
-(`12 nov 2026 · updated 14 nov · 8 min read`, date format via existing
+(`12 nov 2026 · updated 14 nov · 8 min read` — `updated {date}` shows only
+when `updatedAt` differs from `publishedAt`; date via existing
 `formatPostDate`) + right translation link. Hero panel (raised, indigo
 semicircle arc, `aria-hidden`) + mono caption when a cover figure exists.
 Body grid ≥1280 px: 200 px TOC (`contents` + numbered mono links from

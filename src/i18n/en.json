@@ -6,6 +6,7 @@
 	"nav.tags": "Tags",
 	"nav.about": "About",
 	"post.readingMinutes": "{minutes} min read",
+	"post.updated": "updated {date}",
 	"post.translation": "Also in",
 	"feed.title": "Latest writing",
 	"feed.empty": "No posts yet.",

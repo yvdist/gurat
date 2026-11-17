@@ -132,6 +132,12 @@ const canonical =
 						<time datetime={post.publishedAt !== null ? new Date(post.publishedAt).toISOString() : undefined}>
 							{post.publishedAt !== null ? formatPostDate(post.publishedAt, locale) : ""}
 						</time>
+						{post.publishedAt !== null && post.updatedAt !== post.publishedAt && (
+							<span>
+								{" · "}
+								{t(locale, "post.updated").replace("{date}", formatPostDate(post.updatedAt, locale))}
+							</span>
+						)}
 						{" · "}
 						<span>{readingLabel}</span>
 					</span>
