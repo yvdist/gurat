@@ -13,7 +13,8 @@ export const GET: APIRoute = async ({ params }) => {
 	if (!import.meta.env.DEV) return new Response("Not Found", { status: 404 });
 	const id = params.id ?? "";
 	const file = params.file ?? "";
-	if (FILE_RE.exec(file) === null) return new Response("Not Found", { status: 404 });
+	if (FILE_RE.exec(file) === null)
+		return new Response("Not Found", { status: 404 });
 	const env = getEnv();
 	const obj = await env.MEDIA.get(`media/${id}/${file}`);
 	if (obj === null) return new Response("Not Found", { status: 404 });
