@@ -1,0 +1,44 @@
+---
+import { SITE } from "../config/site";
+import "../styles/tokens.css";
+import "../styles/admin.css";
+
+interface Props {
+	title: string;
+	email: string;
+	current: "posts" | "tags";
+	logoutUrl: string;
+}
+
+const { title, email, current, logoutUrl } = Astro.props;
+// Sign-out returns to the Access logout, then the public site.
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title} · admin · {SITE.name}</title>
+		<meta name="robots" content="noindex, nofollow" />
+	</head>
+	<body class="admin">
+		<div class="admin-shell">
+			<nav class="admin-side" aria-label="Admin">
+				<div class="admin-brand">余 <span class="mono">{SITE.name} admin</span></div>
+				<div class="admin-nav">
+					<a href="/admin" aria-current={current === "posts" ? "page" : undefined}>Posts</a>
+					<a href="/admin/tags" aria-current={current === "tags" ? "page" : undefined}>Tags</a>
+				</div>
+				<div class="admin-foot">
+					<a href="/">view site ↗</a>
+					<span>{email}</span>
+					<a href={logoutUrl}>sign out</a>
+				</div>
+			</nav>
+			<main class="admin-main">
+				<slot />
+			</main>
+		</div>
+	</body>
+</html>

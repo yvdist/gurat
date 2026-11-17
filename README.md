@@ -39,9 +39,31 @@ pnpm dev                         # workerd runtime + local D1 (dev/prod parity)
 
 - `src/config/site.ts` — name, URL, locales, timezone (single constant)
 - `src/lib/env.ts` — ONLY reader of the adapter env API (`cloudflare:workers`)
-- `src/server/db/` — Drizzle schema, repositories (visibility rule lives here), admin stubs
+- `src/server/db/` — Drizzle schema, repositories (visibility rule lives here), admin write path
 - `src/i18n/` — `en.json`/`id.json` + `t`/`localizePath`/`detectLocaleFromPath` helpers
 - `migrations/` — SQL applied by `wrangler d1 migrations apply`
 - `scripts/seed.ts` — emits seed SQL, applied via `wrangler d1 execute --local`
 - `tests/` — workerd integration tests (`db`, `i18n`) + Playwright smoke (`e2e/`)
 - `docs/decisions/` — ADRs; `docs/phase-reports/` — per-phase acceptance evidence
+
+## Admin access (Cloudflare Access)
+
+`/admin*` (pages and `/admin/api/*`) is protected by a Cloudflare Access
+application **and** by in-Worker JWT verification (defense in depth: the
+Worker rejects unauthenticated requests on any hostname, including
+`workers.dev` and preview URLs).
+
+Setup (owner, in the Cloudflare dashboard):
+
+1. Zero Trust → Access → Applications → Add: self-hosted, domain = the site
+   host, path = `/admin*`.
+2. Policy: allow the owner's email(s).
+3. Copy the **Application Audience (AUD) Tag** (Additional settings).
+4. Worker vars (dashboard → Workers → Settings → Variables; never commit):
+   `ACCESS_TEAM_DOMAIN=https://<team>.cloudflareaccess.com`,
+   `ACCESS_AUD=<AUD tag>`, `ADMIN_EMAILS=you@example.com`.
+5. Sign out: `https://<team>.cloudflareaccess.com/cdn-cgi/access/logout`.
+
+Local dev: copy `.dev.vars.example` to `.dev.vars` and set
+`ADMIN_DEV_BYPASS=1` (works only with `astro dev`, never in production
+builds — asserted by `tests/auth.test.ts`).

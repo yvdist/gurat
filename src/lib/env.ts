@@ -9,6 +9,14 @@ export interface Env {
 	DB: D1Database;
 	MEDIA: R2Bucket;
 	SITE_URL: string;
+	/** `https://<team>.cloudflareaccess.com` — Access JWT `iss` + JWKS base. */
+	ACCESS_TEAM_DOMAIN: string;
+	/** Application Audience (AUD) tag from the Access application. */
+	ACCESS_AUD: string;
+	/** Comma-separated owner emails allowed into `/admin`. */
+	ADMIN_EMAILS: string;
+	/** Local-only bypass flag; honored only when `import.meta.env.DEV`. */
+	ADMIN_DEV_BYPASS?: string;
 	[k: string]: unknown;
 }
 

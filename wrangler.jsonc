@@ -23,6 +23,9 @@
 		}
 	],
 	"vars": {
-		"SITE_URL": "https://gurat.yvdist.com"
+		"SITE_URL": "https://gurat.yvdist.com",
+		"ACCESS_TEAM_DOMAIN": "",
+		"ACCESS_AUD": "",
+		"ADMIN_EMAILS": ""
 	}
 }

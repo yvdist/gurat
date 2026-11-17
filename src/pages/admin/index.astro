@@ -1,0 +1,117 @@
+---
+import Admin from "../../layouts/Admin.astro";
+import { getEnv } from "../../lib/env";
+import { listAllTagsService } from "../../server/admin/service";
+import type { AccessIdentity } from "../../server/auth/access";
+import { requireAdminPage } from "../../server/auth/access";
+import { createDb, listAdminPosts } from "../../server/db";
+
+export const prerender = false;
+
+const env = getEnv();
+let identity: AccessIdentity;
+try {
+	identity = await requireAdminPage(
+		Astro.request,
+		env,
+		new URL(Astro.request.url),
+		{ isDev: import.meta.env.DEV },
+	);
+} catch (res) {
+	if (res instanceof Response) return res;
+	throw res;
+}
+
+const db = createDb(env.DB);
+const url = new URL(Astro.request.url);
+const status = url.searchParams.get("status") ?? "";
+const locale = url.searchParams.get("locale") ?? "";
+const tagId = url.searchParams.get("tag") ?? "";
+const q = url.searchParams.get("q") ?? "";
+const posts = await listAdminPosts(db, {
+	status: status === "draft" || status === "published" ? status : undefined,
+	locale: locale === "en" || locale === "id" ? locale : undefined,
+	tagId: tagId || undefined,
+	q: q || undefined,
+});
+const tags = await listAllTagsService(db);
+const now = Date.now();
+// Latest updated draft → "continue writing" panel.
+const continuePost = posts.find((p) => p.status === "draft") ?? null;
+// Translation indicator: group members excluding self.
+const groups = new Map<string, number>();
+for (const p of posts) {
+	if (!p.translationGroupId) continue;
+	groups.set(p.translationGroupId, (groups.get(p.translationGroupId) ?? 0) + 1);
+}
+const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
+---
+
+<Admin title="Posts" email={identity.email} current="posts" logoutUrl={logoutUrl}>
+	<h1>Posts</h1>
+	<p><a href="/admin/posts/new">+ new post</a></p>
+
+	{continuePost && (
+		<section aria-label="Continue writing">
+			<h2>Continue writing</h2>
+			<p>
+				<a href={`/admin/posts/${continuePost.id}`}>{continuePost.title || "(untitled)"}</a>
+				<span class="admin-status">updated {new Date(continuePost.updatedAt).toISOString()}</span>
+			</p>
+		</section>
+	)}
+
+	<form method="get" class="admin-filters" role="search">
+		<label class="admin-field">
+			<span>Status</span>
+			<select name="status">
+				<option value="">all</option>
+				<option value="draft" selected={status === "draft"}>draft</option>
+				<option value="published" selected={status === "published"}>published</option>
+			</select>
+		</label>
+		<label class="admin-field">
+			<span>Locale</span>
+			<select name="locale">
+				<option value="">all</option>
+				<option value="en" selected={locale === "en"}>en</option>
+				<option value="id" selected={locale === "id"}>id</option>
+			</select>
+		</label>
+		<label class="admin-field">
+			<span>Tag</span>
+			<select name="tag">
+				<option value="">all</option>
+				{tags.map((t) => (
+					<option value={t.id} selected={tagId === t.id}>{t.slug}</option>
+				))}
+			</select>
+		</label>
+		<label class="admin-field">
+			<span>Search</span>
+			<input type="search" name="q" value={q} />
+		</label>
+		<button type="submit">Filter</button>
+	</form>
+
+	<table class="admin-table">
+		<thead>
+			<tr><th>Title</th><th>Locale</th><th>Status</th><th>⇄</th><th>Updated</th></tr>
+		</thead>
+		<tbody>
+			{posts.map((p) => {
+				const scheduled = p.status === "published" && (p.publishedAt ?? 0) > now;
+				const linked = (p.translationGroupId && (groups.get(p.translationGroupId) ?? 1) > 1) ? "⇄" : "✕";
+				return (
+					<tr>
+						<td><a href={`/admin/posts/${p.id}`}>{p.title || "(untitled)"}</a></td>
+						<td>{p.locale}</td>
+						<td>{scheduled ? "scheduled" : p.status}</td>
+						<td title={p.translationGroupId ?? "no translation group"}>{linked}</td>
+						<td>{new Date(p.updatedAt).toISOString()}</td>
+					</tr>
+				);
+			})}
+		</tbody>
+	</table>
+</Admin>

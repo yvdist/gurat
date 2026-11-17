@@ -1,0 +1,126 @@
+import { type APIRequestContext, expect, test } from "@playwright/test";
+
+const SLUG = `e2e-${Date.now().toString(36)}`;
+
+async function bypassActive(request: APIRequestContext) {
+	const res = await request.get("/admin/api/tags");
+	return res.status() === 200;
+}
+
+test.beforeEach(async ({ request }) => {
+	test.skip(
+		!(await bypassActive(request)),
+		"needs ADMIN_DEV_BYPASS=1 + ADMIN_EMAILS + SITE_URL=http://localhost:4322 in .dev.vars",
+	);
+});
+
+test("create → autosave → preview → publish → 200 → unpublish → 404", async ({
+	page,
+	request,
+}) => {
+	await page.goto("/admin");
+	await expect(page.getByRole("heading", { name: "Posts" })).toBeVisible();
+
+	await page.getByRole("link", { name: "+ new post" }).click();
+	await expect(page).toHaveURL(/\/admin\/posts\/new$/);
+
+	await page.locator("#meta-slug").fill(SLUG);
+	await page.locator("#meta-title").fill("E2E Post");
+	await page.locator("#meta-excerpt").fill("E2E excerpt");
+
+	// Type into the Tiptap surface; autosave fires ~2 s after the update.
+	// The first save creates the row and swaps the URL to its id — waiting
+	// for that (not the initial "saved" text) proves the save landed.
+	const editor = page.locator(
+		".article-body .tiptap, .article-body [contenteditable]",
+	);
+	await editor.click();
+	await editor.pressSequentially("Hello from e2e. This is the body text.", {
+		delay: 10,
+	});
+	await expect(page).toHaveURL(/\/admin\/posts\/(?!new$)[^/]+$/, {
+		timeout: 15000,
+	});
+
+	// Preview renders the draft with public components.
+	const postId = page.url().split("/").pop() ?? "";
+	const preview = await request.get(`/admin/preview/${postId}`);
+	expect(preview.status()).toBe(200);
+	expect(await preview.text()).toContain("Hello from e2e");
+
+	// Publish → public URL 200.
+	await page.getByRole("button", { name: "Publish", exact: true }).click();
+	await page.waitForURL("/admin", { timeout: 15000 });
+	const pub = await request.get(`/writing/${SLUG}`);
+	expect(pub.status()).toBe(200);
+	expect(await pub.text()).toContain("Hello from e2e");
+
+	// Unpublish → 404.
+	await page.goto(`/admin/posts/${postId}`);
+	await page.getByRole("button", { name: "Unpublish", exact: true }).click();
+	await page.waitForURL("/admin", { timeout: 15000 });
+	expect((await request.get(`/writing/${SLUG}`)).status()).toBe(404);
+});
+
+test("two-tab conflict shows UI, never silently overwrites", async ({
+	page,
+	context,
+	request,
+}) => {
+	await page.goto("/admin/posts/new");
+	await page.locator("#meta-slug").fill(`${SLUG}-conflict`);
+	await page.locator("#meta-title").fill("Conflict Post");
+	const editor = page.locator(
+		".article-body .tiptap, .article-body [contenteditable]",
+	);
+	await editor.click();
+	const created = page.waitForResponse(
+		(r) =>
+			r.url().includes("/admin/api/posts") && r.request().method() === "POST",
+		{ timeout: 15000 },
+	);
+	await editor.pressSequentially("First version body text here.", {
+		delay: 10,
+	});
+	await created;
+	await expect(page).toHaveURL(/\/admin\/posts\/(?!new$)[^/]+$/);
+	const postId = page.url().split("/").pop() ?? "";
+
+	const tab2 = await context.newPage();
+	await tab2.goto(`/admin/posts/${postId}`);
+	const editor2 = tab2.locator(
+		".article-body .tiptap, .article-body [contenteditable]",
+	);
+	await editor2.click();
+	const saved2 = tab2.waitForResponse(
+		(r) =>
+			r.url().includes(`/admin/api/posts/${postId}`) &&
+			r.request().method() === "PUT" &&
+			r.status() === 200,
+		{ timeout: 15000 },
+	);
+	await editor2.press("ControlOrMeta+a");
+	await editor2.pressSequentially("Second tab version body text here.", {
+		delay: 10,
+	});
+	await saved2;
+	// First tab saves stale content → conflict panel, server keeps tab2 text.
+	const conflicted = page.waitForResponse(
+		(r) =>
+			r.url().includes(`/admin/api/posts/${postId}`) &&
+			r.request().method() === "PUT" &&
+			r.status() === 409,
+		{ timeout: 15000 },
+	);
+	await page
+		.locator(".article-body .tiptap, .article-body [contenteditable]")
+		.click();
+	await page.keyboard.press("a");
+	await conflicted;
+	await expect(page.getByRole("alert")).toContainText("Someone else saved");
+
+	const preview = await request.get(`/admin/preview/${postId}`);
+	expect(await preview.text()).toContain("Second tab version");
+	expect(await preview.text()).not.toContain("First version");
+	await tab2.close();
+});

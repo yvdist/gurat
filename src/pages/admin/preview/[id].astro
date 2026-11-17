@@ -1,0 +1,109 @@
+---
+import ArticleBody from "../../../components/ArticleBody.astro";
+import Byline from "../../../components/Byline.astro";
+import TagPill from "../../../components/TagPill.astro";
+import Toc from "../../../components/Toc.astro";
+import { SITE } from "../../../config/site";
+import { formatPostDate, localizePath } from "../../../i18n";
+import Base from "../../../layouts/Base.astro";
+import { getEnv } from "../../../lib/env";
+import { requireAdminPage } from "../../../server/auth/access";
+import { createDb, getPostById } from "../../../server/db";
+
+export const prerender = false;
+
+const env = getEnv();
+try {
+	await requireAdminPage(Astro.request, env, new URL(Astro.request.url), {
+		isDev: import.meta.env.DEV,
+	});
+} catch (res) {
+	if (res instanceof Response) return res;
+	throw res;
+}
+
+const db = createDb(env.DB);
+let loaded = null;
+try {
+	loaded = await getPostById(db, Astro.params.id ?? "");
+} catch {
+	loaded = null;
+}
+const post = loaded;
+if (post === null) {
+	Astro.response.status = 404;
+}
+const locale = (post?.locale ?? "en") as "en" | "id";
+const toc =
+	post !== null
+		? (JSON.parse(post.tocJson) as {
+				id: string;
+				text: string;
+				level: number;
+			}[])
+		: [];
+const minutes = post?.readingMinutes ?? 1;
+---
+
+{post === null ? (
+		<Base
+			title={`Not found — ${SITE.name}`}
+			description="Draft not found."
+			canonical={Astro.url.pathname}
+			hreflangs={[]}
+			locale="en"
+			path={Astro.url.pathname}
+			noindex
+		>
+			<p>Draft not found.</p>
+		</Base>
+	) : (
+		<Base
+			title={`${post.title || "(untitled)"} — ${SITE.name}`}
+			description={post.seoDescription ?? post.excerpt}
+			canonical={localizePath(`/writing/${post.slug}`, locale)}
+			hreflangs={[]}
+			locale={locale}
+			path={Astro.url.pathname}
+			noindex
+		>
+			<p class="admin-banner" role="note">
+				Draft preview — not public. <a href={`/admin/posts/${post.id}`}>Back to editor</a>
+			</p>
+			<div class="page">
+				{post.tags.length > 0 && (
+					<div class="pill-row">
+						{post.tags.slice(0, 2).map((tag) => (
+							<TagPill
+								locale={locale}
+								slug={tag.slug}
+								label={locale === "en" ? tag.labelEn : tag.labelId}
+							/>
+						))}
+					</div>
+				)}
+				<h1>{post.title || "(untitled)"}</h1>
+				<p class="post-lede">{post.excerpt}</p>
+				<div class="post-meta">
+					<span class="mono">
+						{post.publishedAt !== null ? (
+							<time datetime={new Date(post.publishedAt).toISOString()}>
+								{formatPostDate(post.publishedAt, locale)}
+							</time>
+						) : (
+							<span>unpublished draft</span>
+						)}
+						{" · "}
+						<span>{minutes} min</span>
+					</span>
+				</div>
+				<div class="post-grid">
+					<Toc locale={locale} entries={toc} />
+					<ArticleBody html={post.contentHtml} />
+					<aside class="post-sidenotes" aria-hidden="true" />
+				</div>
+				<Byline locale={locale} canonical={`${SITE.url}/preview`} />
+			</div>
+		</Base>
+	)
+}

@@ -1,9 +1,21 @@
-export type { NewPostInput, SavePostPatch } from "./admin";
+export type {
+	AdminListOptions,
+	AdminPost,
+	NewPostInput,
+	SavePostPatch,
+} from "./admin";
 export {
+	ConcurrencyError,
 	createPost,
-	NotImplementedError,
+	deletePost,
+	getPostById,
+	listAdminPosts,
+	NotFoundError,
+	PublishValidationError,
 	publishPost,
+	SlugConflictError,
 	savePost,
+	TagInUseError,
 	unpublishPost,
 } from "./admin";
 export type { Db } from "./client";
@@ -19,5 +31,5 @@ export {
 	visibilityFilter,
 } from "./posts";
 export type { Media, Post, PostMedia, PostTag, Tag } from "./schema";
-export type { TagWithCount } from "./tags";
-export { listTags } from "./tags";
+export type { NewTagInput, RenameTagPatch, TagWithCount } from "./tags";
+export { createTag, deleteTag, listTags, renameTag } from "./tags";
