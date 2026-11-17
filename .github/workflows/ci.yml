@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [phase-1]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -23,3 +23,53 @@ jobs:
       # from wrangler.jsonc before typechecking.
       - run: pnpm types
       - run: pnpm check
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.14.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install chromium --with-deps
+      # Seeded local D1 underlies every e2e project (public + axe + budgets).
+      - run: pnpm db:migrate:local
+      - run: pnpm db:seed:local && pnpm db:rerender
+      - run: pnpm e2e
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+      - run: pnpm exec playwright install chromium --with-deps
+      - run: pnpm db:migrate:local
+      - run: pnpm db:seed:local && pnpm db:rerender
+      - run: pnpm build
+      - run: |
+          pnpm preview --host 127.0.0.1 --port 4321 > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4321/healthz && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:4321/healthz
+      - run: CHROME_PATH=$(echo ~/.cache/ms-playwright/chromium-*/chrome-linux/chrome) node scripts/check-lighthouse.mjs
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.14.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --json | node scripts/check-audit.mjs
