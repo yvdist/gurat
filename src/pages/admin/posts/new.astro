@@ -1,0 +1,80 @@
+---
+import EditorIsland from "../../../islands/Editor.svelte";
+import Admin from "../../../layouts/Admin.astro";
+import { getEnv } from "../../../lib/env";
+import { listAllTagsService } from "../../../server/admin/service";
+import type { AccessIdentity } from "../../../server/auth/access";
+import { requireAdminPage } from "../../../server/auth/access";
+import { createDb } from "../../../server/db";
+
+export const prerender = false;
+
+const env = getEnv();
+let identity: AccessIdentity;
+try {
+	identity = await requireAdminPage(
+		Astro.request,
+		env,
+		new URL(Astro.request.url),
+		{ isDev: import.meta.env.DEV },
+	);
+} catch (res) {
+	if (res instanceof Response) return res;
+	throw res;
+}
+
+const db = createDb(env.DB);
+const tags = await listAllTagsService(db);
+const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
+const emptyDoc = JSON.stringify({ type: "doc", content: [] });
+---
+
+<Admin title="New post" email={identity.email} current="posts" logoutUrl={logoutUrl}>
+	<h1>New post</h1>
+	<p>The draft row is created on first save.</p>
+	<div class="admin-field">
+		<span>Locale</span>
+		<select id="meta-locale">
+			<option value="en">en</option>
+			<option value="id">id</option>
+		</select>
+	</div>
+	<div class="admin-field">
+		<span>Slug</span>
+		<input id="meta-slug" value="" maxlength={150} />
+	</div>
+	<div class="admin-field">
+		<span>Title</span>
+		<input id="meta-title" value="" maxlength={300} />
+	</div>
+	<div class="admin-field">
+		<span>Excerpt</span>
+		<textarea id="meta-excerpt" maxlength={500} />
+	</div>
+	<div class="admin-field">
+		<span>SEO description</span>
+		<textarea id="meta-seo" maxlength={320} />
+	</div>
+	<div class="admin-field">
+		<span>Tags</span>
+		<select id="meta-tags" multiple>
+			{tags.map((t) => (
+				<option value={t.id}>{t.slug}</option>
+			))}
+		</select>
+	</div>
+	<div class="admin-field">
+		<span>Published at (future = scheduled)</span>
+		<input id="meta-published" type="datetime-local" value="" />
+	</div>
+	<input id="meta-group" type="hidden" value="" />
+	<EditorIsland
+		client:only="svelte"
+		postId={null}
+		initialDoc={emptyDoc}
+		initialUpdatedAt={0}
+		locale="en"
+		groupId={null}
+		candidates={[]}
+	/>
+</Admin>

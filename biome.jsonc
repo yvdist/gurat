@@ -26,16 +26,16 @@
 			"linter": {
 				"rules": {
 					"correctness": {
-						// Biome can't see frontmatter use in Astro markup: both
-						// imports and frontmatter bindings consumed only by the
-						// template read as unused. Real dead code in .astro
-						// frontmatter is caught by astro check / review.
+						// Biome can't see frontmatter/runes use in component markup:
+						// both Astro frontmatter bindings and Svelte `$state`
+						// runes consumed only by the template read as unused.
+						// Real dead code is caught by astro check / review.
 						"noUnusedImports": "off",
 						"noUnusedVariables": "off"
 					}
 				}
 			},
-			"includes": ["**/*.astro", "*.astro"]
+			"includes": ["**/*.astro", "*.astro", "**/*.svelte", "*.svelte"]
 		}
 	]
 }

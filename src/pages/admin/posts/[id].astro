@@ -1,0 +1,115 @@
+---
+import EditorIsland from "../../../islands/Editor.svelte";
+import Admin from "../../../layouts/Admin.astro";
+import { getEnv } from "../../../lib/env";
+import { listAllTagsService } from "../../../server/admin/service";
+import type { AccessIdentity } from "../../../server/auth/access";
+import { requireAdminPage } from "../../../server/auth/access";
+import { createDb, getPostById, listAdminPosts } from "../../../server/db";
+
+export const prerender = false;
+
+const env = getEnv();
+let identity: AccessIdentity;
+try {
+	identity = await requireAdminPage(
+		Astro.request,
+		env,
+		new URL(Astro.request.url),
+		{ isDev: import.meta.env.DEV },
+	);
+} catch (res) {
+	if (res instanceof Response) return res;
+	throw res;
+}
+
+const db = createDb(env.DB);
+let post = null;
+try {
+	post = await getPostById(db, Astro.params.id ?? "");
+} catch {
+	post = null;
+}
+if (post === null) {
+	Astro.response.status = 404;
+}
+const tags = await listAllTagsService(db);
+const recent = await listAdminPosts(db, { limit: 50 });
+const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
+const publishedValue =
+	post?.publishedAt !== null && post?.publishedAt !== undefined
+		? new Date(post.publishedAt).toISOString().slice(0, 16)
+		: "";
+---
+
+{
+	post === null ? (
+		<Admin title="Not found" email={identity.email} current="posts" logoutUrl={logoutUrl}>
+			<p>Post not found.</p>
+		</Admin>
+	) : (
+		<Admin title={`Edit — ${post.title || "(untitled)"}`} email={identity.email} current="posts" logoutUrl={logoutUrl}>
+			<h1>Edit post</h1>
+			<p><a href={`/admin/preview/${post.id}`}>Preview</a></p>
+			{post.status === "published" && (
+				<p class="admin-banner" role="note">
+					Published post: changing the slug breaks existing links (no redirect manager).
+				</p>
+			)}
+			<div class="admin-field">
+				<span>Locale</span>
+				<select id="meta-locale">
+					<option value="en" selected={post.locale === "en"}>en</option>
+					<option value="id" selected={post.locale === "id"}>id</option>
+				</select>
+			</div>
+			<div class="admin-field">
+				<span>Slug</span>
+				<input id="meta-slug" value={post.slug} maxlength={150} />
+			</div>
+			<div class="admin-field">
+				<span>Title</span>
+				<input id="meta-title" value={post.title} maxlength={300} />
+			</div>
+			<div class="admin-field">
+				<span>Excerpt</span>
+				<textarea id="meta-excerpt" maxlength={500}>{post.excerpt}</textarea>
+			</div>
+			<div class="admin-field">
+				<span>SEO description</span>
+				<textarea id="meta-seo" maxlength={320}>{post.seoDescription ?? ""}</textarea>
+			</div>
+			<div class="admin-field">
+				<span>Tags</span>
+				<select id="meta-tags" multiple>
+					{tags.map((t) => (
+						<option value={t.id} selected={post.tags.some((pt) => pt.id === t.id)}>{t.slug}</option>
+					))}
+				</select>
+			</div>
+			<div class="admin-field">
+				<span>Published at (future = scheduled)</span>
+				<input id="meta-published" type="datetime-local" value={publishedValue} />
+			</div>
+			<input id="meta-group" type="hidden" value={post.translationGroupId ?? ""} />
+			<EditorIsland
+				client:only="svelte"
+				postId={post.id}
+				initialDoc={post.contentJson}
+				initialUpdatedAt={post.updatedAt}
+				locale={post.locale === "id" ? "id" : "en"}
+				groupId={post.translationGroupId}
+				candidates={recent
+					.filter((r) => r.id !== post.id && r.locale !== post.locale)
+					.map((r) => ({
+						id: r.id,
+						locale: r.locale === "id" ? "id" : "en",
+						title: r.title,
+						slug: r.slug,
+						groupId: r.translationGroupId,
+						updatedAt: r.updatedAt,
+					}))}
+			/>
+		</Admin>
+	)
+}

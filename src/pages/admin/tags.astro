@@ -1,0 +1,140 @@
+---
+import Admin from "../../layouts/Admin.astro";
+import { getEnv } from "../../lib/env";
+import {
+	createTagService,
+	deleteTagService,
+	listAllTagsService,
+	renameTagService,
+} from "../../server/admin/service";
+import type { AccessIdentity } from "../../server/auth/access";
+import { requireAdminPage } from "../../server/auth/access";
+import { createDb } from "../../server/db";
+
+export const prerender = false;
+
+const env = getEnv();
+let identity: AccessIdentity;
+try {
+	identity = await requireAdminPage(
+		Astro.request,
+		env,
+		new URL(Astro.request.url),
+		{ isDev: import.meta.env.DEV },
+	);
+} catch (res) {
+	if (res instanceof Response) return res;
+	throw res;
+}
+
+const db = createDb(env.DB);
+// Server-rendered forms (no client JS): POSTs land here, call the same
+// service the JSON API uses, and re-render with inline errors.
+let formError: string | null = null;
+if (Astro.request.method === "POST") {
+	// Same CSRF rule as the JSON API (spec 04 §4.1): the browser sends the
+	// Access cookie automatically, so form posts need an Origin check too.
+	const origin = Astro.request.headers.get("Origin") ?? "";
+	if (origin !== env.SITE_URL) {
+		formError = "csrf";
+	} else {
+		const data = await Astro.request.formData();
+		const action = String(data.get("action") ?? "");
+		const id = String(data.get("id") ?? "");
+		try {
+			if (action === "create") {
+				const result = await createTagService(db, {
+					slug: String(data.get("slug") ?? ""),
+					labelEn: String(data.get("labelEn") ?? ""),
+					labelId: String(data.get("labelId") ?? ""),
+				});
+				if (!result.ok) throw new Error(result.err.code);
+			} else if (action === "rename" && id !== "") {
+				const result = await renameTagService(db, id, {
+					slug: String(data.get("slug") ?? ""),
+					labelEn: String(data.get("labelEn") ?? ""),
+					labelId: String(data.get("labelId") ?? ""),
+				});
+				if (!result.ok) throw new Error(result.err.code);
+			} else if (action === "delete" && id !== "") {
+				const result = await deleteTagService(db, id, {
+					confirm: data.get("confirm") === "on",
+				});
+				if (!result.ok) {
+					throw new Error(
+						result.err.code === "tag-in-use"
+							? `tag-in-use (${result.err.detail ?? 0} posts) — tick confirm to delete anyway`
+							: result.err.code,
+					);
+				}
+			}
+		} catch (err) {
+			formError = err instanceof Error ? err.message : "request failed";
+		}
+	}
+}
+const tags = await listAllTagsService(db);
+const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
+---
+
+<Admin title="Tags" email={identity.email} current="tags" logoutUrl={logoutUrl}>
+	<h1>Tags</h1>
+
+	{formError !== null && <p class="admin-error" role="alert">{formError}</p>}
+
+	<section aria-label="Create tag">
+		<h2>Create</h2>
+		<form method="post">
+			<input type="hidden" name="action" value="create" />
+			<div class="admin-field">
+				<span>Slug (lowercase-hyphen)</span>
+				<input name="slug" required maxlength={64} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
+			</div>
+			<div class="admin-field">
+				<span>Label (EN)</span>
+				<input name="labelEn" required maxlength={120} />
+			</div>
+			<div class="admin-field">
+				<span>Label (ID)</span>
+				<input name="labelId" required maxlength={120} />
+			</div>
+			<button type="submit">Create tag</button>
+		</form>
+	</section>
+
+	<section aria-label="Existing tags">
+		<h2>Existing</h2>
+		<table class="admin-table">
+			<thead>
+				<tr><th>Slug</th><th>EN</th><th>ID</th><th>Posts</th><th>Actions</th></tr>
+			</thead>
+			<tbody>
+				{tags.map((t) => (
+					<tr>
+						<td>
+							<form method="post">
+								<input type="hidden" name="action" value="rename" />
+								<input type="hidden" name="id" value={t.id} />
+								<input name="slug" value={t.slug} required maxlength={64} aria-label={`Slug for ${t.slug}`} />
+								<input name="labelEn" value={t.labelEn} required maxlength={120} aria-label={`English label for ${t.slug}`} />
+								<input name="labelId" value={t.labelId} required maxlength={120} aria-label={`Indonesian label for ${t.slug}`} />
+								<button type="submit">Rename</button>
+							</form>
+						</td>
+						<td>{t.labelEn}</td>
+						<td>{t.labelId}</td>
+						<td>{t.useCount}</td>
+						<td>
+							<form method="post" onsubmit="return confirm('Delete this tag?')">
+								<input type="hidden" name="action" value="delete" />
+								<input type="hidden" name="id" value={t.id} />
+								<label><input type="checkbox" name="confirm" /> in use: delete anyway</label>
+								<button type="submit">Delete</button>
+							</form>
+						</td>
+					</tr>
+				))}
+			</tbody>
+		</table>
+	</section>
+</Admin>

@@ -1,4 +1,5 @@
 import cloudflare from "@astrojs/cloudflare";
+import svelte from "@astrojs/svelte";
 import { defineConfig } from "astro/config";
 
 // Docs: https://docs.astro.build/en/guides/integrations-guide/cloudflare/ (adapter v14.4.x)
@@ -7,6 +8,7 @@ import { defineConfig } from "astro/config";
 // Cloudflare Vite plugin (dev/prod parity, incl. local D1).
 export default defineConfig({
 	output: "server",
+	integrations: [svelte()],
 	adapter: cloudflare({
 		// No runtime image transforms in Phase 1; avoid auto-provisioning an
 		// IMAGES binding. Revisited when media lands (Phase 5).
