@@ -58,21 +58,19 @@ Ini memberi laptopmu izin mengelola Workers/D1/R2 milikmu. Cukup sekali
 2. Di kolom kanan halaman itu ada **Account ID** (deretan huruf-angka) →
    **salin**, simpan di catatan. Dipakai sebagai secret GitHub di §1.4.
 
-### 1.4. Buat API token (2 token) + simpan sebagai secret GitHub
+### 1.4. Buat 1 API token + simpan sebagai secret GitHub
 
-Token = kata sandi khusus robot GitHub Actions. Kita buat dua, sesuai
-prinsip akses seminimal mungkin:
+Token = kata sandi khusus robot GitHub Actions. Cukup **satu token**
+gabungan untuk deploy + backup (template "Edit Cloudflare Workers" sudah
+mencakup ketiganya; token backup terpisah tidak perlu).
 
 1. Di dash, klik **avatar/foto profil** (pojok kanan atas) → **My Profile**
    → tab **API Tokens** → **Create Token**.
-2. Pilih **Create Custom Token**, isi:
-   - **Token untuk backup** — Permissions: cari **D1** → **Read**; cari
-     **R2** (atau "Workers R2 Storage") → **Write**. Account Resources:
-     sertakan akunmu. (Nama menu bisa sedikit berbeda antar versi dash —
-     cari yang maknanya sama.)
-   - **Token untuk deploy** — Permissions: cari **Workers Scripts**
-     (atau "Workers") → **Edit**. Ini yang boleh meng-upload kode baru.
-3. **Create** → **salin tokennya sekarang** (hanya ditampilkan sekali).
+2. Pilih template **Edit Cloudflare Workers** (atau isi manual bila mau
+   ketat: **Workers Scripts** → **Edit**, **D1** → **Read**, **Workers R2
+   Storage** → **Edit**). Account Resources: sertakan akunmu. (Nama menu
+   bisa sedikit berbeda antar versi dash — cari yang maknanya sama.)
+3. **Create Token** → **salin tokennya sekarang** (hanya ditampilkan sekali).
 
 Lalu simpan ke GitHub:
 
@@ -80,12 +78,8 @@ Lalu simpan ke GitHub:
    menu kiri **Secrets and variables** → **Actions** →
    **New repository secret**.
 2. Buat dua secret:
-   - Name `CLOUDFLARE_API_TOKEN`, isi token deploy.
+   - Name `CLOUDFLARE_API_TOKEN`, isi token dari langkah 3.
    - Name `CLOUDFLARE_ACCOUNT_ID`, isi Account ID dari §1.3.
-3. (Catatan: workflow backup memakai secret yang sama
-   `CLOUDFLARE_API_TOKEN`. Karena token deploy berscope lebih luas dari
-   "D1 read + R2 write",owner yang ingin ketat bisa membuat token backup
-   terpisah dan menyimpannya sebagai secret tambahan — opsional.)
 
 | #   | Cek                                                                           | Sudah | Belum | Tanggal |
 | --- | ----------------------------------------------------------------------------- | ----- | ----- | ------- |
