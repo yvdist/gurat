@@ -26,7 +26,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec wrangler d1 export gurat --remote --output "gurat-$(date -u +%F).sql"
+      # `--table` scoping: D1 export cannot dump FTS5 virtual tables
+      # (`posts_fts`) — verified against pinned wrangler 4.156.1 on both
+      # local and remote. The exclusion is lossless: `posts_fts` is fully
+      # derived (structure from migration 0002, content from `pnpm db:rerender`
+      # during restore — see docs/runbook.md §2).
+      - run: pnpm exec wrangler d1 export gurat --remote --output "gurat-$(date -u +%F).sql" --table posts --table tags --table post_tags --table media --table post_media
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
