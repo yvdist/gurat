@@ -13,21 +13,21 @@ menautkannya, tidak menduplikasinya.
 
 ## 0. Peta besar: apa dikerjakan di mana (baca dulu 2 menit)
 
-| Pekerjaan                | Di mana                                                     | Alamat / cara buka                                              |
-| ------------------------ | ----------------------------------------------------------- | --------------------------------------------------------------- |
-| Menyimpan kode + menekan tombol deploy | **GitHub** (repo `yvdist/gurat`)              | `github.com/yvdist/gurat` → tab **Actions**                     |
-| Hosting, domain, DNS, database, gambar | **Cloudflare dashboard** (`dash`)            | `dash.cloudflare.com` (login dulu)                              |
-| Migrasi database         | **Terminal di laptop**                                      | `pnpm db:migrate:remote` (setelah `wrangler login`)             |
-| Memastikan situs jalan   | **Browser + terminal**                                      | buka URL situs, jalankan perintah `curl`                        |
+| Pekerjaan                              | Di mana                           | Alamat / cara buka                                  |
+| -------------------------------------- | --------------------------------- | --------------------------------------------------- |
+| Menyimpan kode + menekan tombol deploy | **GitHub** (repo `yvdist/gurat`)  | `github.com/yvdist/gurat` → tab **Actions**         |
+| Hosting, domain, DNS, database, gambar | **Cloudflare dashboard** (`dash`) | `dash.cloudflare.com` (login dulu)                  |
+| Migrasi database                       | **Terminal di laptop**            | `pnpm db:migrate:remote` (setelah `wrangler login`) |
+| Memastikan situs jalan                 | **Browser + terminal**            | buka URL situs, jalankan perintah `curl`            |
 
 Tiga hal yang sering membingungkan — diluruskan dulu:
 
 1. **Tidak ada GitHub Pages di sini.** GitHub hanya menyimpan kode dan
-   menyediakan tombol "deploy" (disebut *GitHub Actions*). Situsnya
+   menyediakan tombol "deploy" (disebut _GitHub Actions_). Situsnya
    di-host di **Cloudflare Workers**, bukan di GitHub.
 2. **Tidak ada tombol "Deploy" di dashboard Cloudflare yang perlu kamu
    klik.** Deploy dilakukan oleh robot GitHub Actions yang menjalankan
-   `wrangler deploy`. Dashboard Cloudflare dipakai untuk *pengaturan*
+   `wrangler deploy`. Dashboard Cloudflare dipakai untuk _pengaturan_
    (domain, variabel, Access), bukan untuk upload kode.
 3. **Urutan wajib setiap rilis:** migrasi database dulu (terminal) →
    tekan tombol deploy (GitHub). Tidak boleh dibalik.
@@ -87,10 +87,10 @@ Lalu simpan ke GitHub:
    "D1 read + R2 write",owner yang ingin ketat bisa membuat token backup
    terpisah dan menyimpannya sebagai secret tambahan — opsional.)
 
-| #   | Cek                                                                    | Sudah | Belum | Tanggal |
-| --- | ---------------------------------------------------------------------- | ----- | ----- | ------- |
-| 1.1 | Login dash bisa; `wrangler login` sukses                                |       |       |         |
-| 1.2 | Dua secret GitHub tersimpan (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) | |   |         |
+| #   | Cek                                                                           | Sudah | Belum | Tanggal |
+| --- | ----------------------------------------------------------------------------- | ----- | ----- | ------- |
+| 1.1 | Login dash bisa; `wrangler login` sukses                                      |       |       |         |
+| 1.2 | Dua secret GitHub tersimpan (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) |       |       |         |
 
 ## 2. Domain & DNS (kerjakan berurutan, spec 7.7)
 
@@ -102,9 +102,9 @@ Kalau `yvdist.com` sudah dipakai (portofolio, email, subdomain), catat
 A/AAAA/CNAME/MX/TXT/CAA beserta isinya. Ini jaring pengaman kalau ada
 yang keliru salin.
 
-| #   | Cek                                              | Sudah | Belum | Tanggal |
-| --- | ------------------------------------------------ | ----- | ----- | ------- |
-| 2.1 | Semua record DNS lama tercatat (screenshot)      |       |       |         |
+| #   | Cek                                         | Sudah | Belum | Tanggal |
+| --- | ------------------------------------------- | ----- | ----- | ------- |
+| 2.1 | Semua record DNS lama tercatat (screenshot) |       |       |         |
 
 ### 2.2. Masukkan domain ke Cloudflare
 
@@ -153,7 +153,7 @@ curl -sI https://yvdist.com | head -5
 | --- | ---------------------------------------------------------------- | ----- | ----- | ------- |
 | 2.2 | Domain di Cloudflare; nameserver diganti; situs lama masih jalan |       |       |         |
 | 2.3 | Bucket `gurat-media` + domain `media.yvdist.com` aktif           |       |       |         |
-| 2.4 | Bucket privat `gurat-backups` + lifecycle rule (12 terbaru)     |       |       |         |
+| 2.4 | Bucket privat `gurat-backups` + lifecycle rule (12 terbaru)      |       |       |         |
 
 ## 3. Pasang domain ke Worker (situsnya sendiri)
 
@@ -192,24 +192,24 @@ alamat sendiri:
    **Variables and Secrets** → bagian **Variables** → **Add variable**,
    satu per satu:
 
-| Var                  | Isi dengan                                              | Contoh                                |
-| -------------------- | ------------------------------------------------------- | ------------------------------------- |
-| `SITE_URL`           | Alamat situs (tanpa garis miring di akhir)              | `https://gurat.yvdist.com`            |
-| `MEDIA_BASE_URL`     | Domain media publik                                     | `https://media.yvdist.com`            |
-| `ACCESS_TEAM_DOMAIN` | Team domain dari §4.1 langkah 5                         | `https://<team>.cloudflareaccess.com` |
-| `ACCESS_AUD`         | AUD tag dari §4.1 langkah 4                             | `abc123…`                             |
-| `ADMIN_EMAILS`       | Email owner (koma bila >1)                              | `kamu@example.com`                    |
+| Var                  | Isi dengan                                 | Contoh                                |
+| -------------------- | ------------------------------------------ | ------------------------------------- |
+| `SITE_URL`           | Alamat situs (tanpa garis miring di akhir) | `https://gurat.yvdist.com`            |
+| `MEDIA_BASE_URL`     | Domain media publik                        | `https://media.yvdist.com`            |
+| `ACCESS_TEAM_DOMAIN` | Team domain dari §4.1 langkah 5            | `https://<team>.cloudflareaccess.com` |
+| `ACCESS_AUD`         | AUD tag dari §4.1 langkah 4                | `abc123…`                             |
+| `ADMIN_EMAILS`       | Email owner (koma bila >1)                 | `kamu@example.com`                    |
 
 (`KEEP_ORIGINALS` biarkan `false` — default dari `wrangler.jsonc`.)
 
 2. **Save.** Variabel langsung aktif untuk request berikutnya; kalau
    ragu, deploy ulang (§5) — tidak ada salahnya.
 
-| #   | Cek                                                              | Sudah | Belum | Tanggal |
-| --- | ---------------------------------------------------------------- | ----- | ----- | ------- |
-| 4.1 | Buka `https://<sub>.yvdist.com/admin` → diminta login Access      |       |       |         |
-| 4.2 | Login dengan email owner → halaman Posts terbuka                 |       |       |         |
-| 4.3 | Coba email lain (non-allowlist) → ditolak                        |       |       |         |
+| #   | Cek                                                          | Sudah | Belum | Tanggal |
+| --- | ------------------------------------------------------------ | ----- | ----- | ------- |
+| 4.1 | Buka `https://<sub>.yvdist.com/admin` → diminta login Access |       |       |         |
+| 4.2 | Login dengan email owner → halaman Posts terbuka             |       |       |         |
+| 4.3 | Coba email lain (non-allowlist) → ditolak                    |       |       |         |
 
 ## 5. Migrasi database, lalu tekan tombol deploy (setiap rilis)
 
@@ -222,7 +222,7 @@ pnpm db:migrate:remote
 ```
 
 Artinya: terapkan perubahan struktur database ke D1 produksi. Sifatnya
-*aditif* (hanya menambah, tidak menghapus), jadi aman dijalankan kapan
+_aditif_ (hanya menambah, tidak menghapus), jadi aman dijalankan kapan
 pun sebelum deploy. Tunggu sampai selesai tanpa error.
 
 **Langkah B — deploy (browser, GitHub):**
@@ -238,10 +238,10 @@ pun sebelum deploy. Tunggu sampai selesai tanpa error.
 5. Kalau merah: klik langkah yang gagal, baca log error paling bawah,
    perbaiki, ulangi. Jangan lanjut ke §6 sebelum hijau.
 
-| #   | Cek                                                        | Sudah | Belum | Tanggal |
-| --- | ---------------------------------------------------------- | ----- | ----- | ------- |
-| 5.1 | `pnpm db:migrate:remote` sukses                            |       |       |         |
-| 5.2 | Actions → `deploy` hijau                                   |       |       |         |
+| #   | Cek                             | Sudah | Belum | Tanggal |
+| --- | ------------------------------- | ----- | ----- | ------- |
+| 5.1 | `pnpm db:migrate:remote` sukses |       |       |         |
+| 5.2 | Actions → `deploy` hijau        |       |       |         |
 
 ## 6. Verifikasi pasca-deploy (browser + terminal)
 
@@ -278,14 +278,14 @@ satu URL ngawur (404), masing-masing dalam tema terang dan gelap.
 Buka DevTools → Console: **tidak boleh ada** baris merah
 `Content Security Policy`.
 
-| #   | Cek                                                                        | Sudah | Belum | Tanggal |
-| --- | -------------------------------------------------------------------------- | ----- | ----- | ------- |
-| 6.1 | CSP + header baseline ada di `/`, post EN/ID, `/healthz`                   |       |       |         |
-| 6.2 | `/healthz` = `{"ok":true}`, `no-store`, `noindex`                          |       |       |         |
-| 6.3 | Feed + sitemap benar                                                       |       |       |         |
-| 6.4 | Media `Cache-Control: immutable`                                           |       |       |         |
-| 6.5 | `/admin/api/*` 401 di `workers.dev` tanpa login                            |       |       |         |
-| 6.6 | Console bersih dari pelanggaran CSP (2 tema)                               |       |       |         |
+| #   | Cek                                                      | Sudah | Belum | Tanggal |
+| --- | -------------------------------------------------------- | ----- | ----- | ------- |
+| 6.1 | CSP + header baseline ada di `/`, post EN/ID, `/healthz` |       |       |         |
+| 6.2 | `/healthz` = `{"ok":true}`, `no-store`, `noindex`        |       |       |         |
+| 6.3 | Feed + sitemap benar                                     |       |       |         |
+| 6.4 | Media `Cache-Control: immutable`                         |       |       |         |
+| 6.5 | `/admin/api/*` 401 di `workers.dev` tanpa login          |       |       |         |
+| 6.6 | Console bersih dari pelanggaran CSP (2 tema)             |       |       |         |
 
 ## 7. Backup & restore
 
@@ -322,10 +322,10 @@ hilang, upload ulang sumbernya (keterbatasan yang diterima, ADR-005).
 4. Ulangi di `bing.com/webmasters` (bisa impor langsung dari Search
    Console — ada tombolnya).
 
-| #   | Cek                                                | Sudah | Belum | Tanggal |
-| --- | -------------------------------------------------- | ----- | ----- | ------- |
-| 8.1 | Search Console terverifikasi, sitemap disubmit     |       |       |         |
-| 8.2 | Bing Webmaster terverifikasi, sitemap disubmit     |       |       |         |
+| #   | Cek                                            | Sudah | Belum | Tanggal |
+| --- | ---------------------------------------------- | ----- | ----- | ------- |
+| 8.1 | Search Console terverifikasi, sitemap disubmit |       |       |         |
+| 8.2 | Bing Webmaster terverifikasi, sitemap disubmit |       |       |         |
 
 ## 9. Rollback (kalau deploy baru rusak)
 
@@ -340,14 +340,14 @@ Jangan panik — versi lama masih tersimpan di Cloudflare:
 
 ## 10. Checklist launch (spec 7.8 — dicek manual bersama asisten)
 
-| #    | Item                                                                                   | Sudah | Belum | Tanggal |
-| ---- | -------------------------------------------------------------------------------------- | ----- | ----- | ------- |
-| 10.1 | D1 produksi termigrasi; owner bisa sign in via Access; non-allowlist ditolak            |       |       |         |
-| 10.2 | Post nyata pertama terbit EN + ID, terjemahan tertaut; feed & sitemap benar            |       |       |         |
-| 10.3 | Search Console (+ Bing) terverifikasi, sitemap disubmit                                |       |       |         |
-| 10.4 | Workflow backup pernah hijau; restore teruji                                            |       |       |         |
-| 10.5 | README mendokumentasikan: dev lokal, deploy, migrasi, backup/restore, alur menulis     |       |       |         |
-| 10.6 | `docs/phase-reports/07.md` ditulis + ringkasan deviasi/limitasi                         |       |       |         |
+| #    | Item                                                                               | Sudah | Belum | Tanggal |
+| ---- | ---------------------------------------------------------------------------------- | ----- | ----- | ------- |
+| 10.1 | D1 produksi termigrasi; owner bisa sign in via Access; non-allowlist ditolak       |       |       |         |
+| 10.2 | Post nyata pertama terbit EN + ID, terjemahan tertaut; feed & sitemap benar        |       |       |         |
+| 10.3 | Search Console (+ Bing) terverifikasi, sitemap disubmit                            |       |       |         |
+| 10.4 | Workflow backup pernah hijau; restore teruji                                       |       |       |         |
+| 10.5 | README mendokumentasikan: dev lokal, deploy, migrasi, backup/restore, alur menulis |       |       |         |
+| 10.6 | `docs/phase-reports/07.md` ditulis + ringkasan deviasi/limitasi                    |       |       |         |
 
 ## 11. Tanya-jawab singkat
 
