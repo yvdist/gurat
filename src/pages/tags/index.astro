@@ -10,10 +10,10 @@ const locale: Locale = "en";
 const db = createDb(getEnv().DB);
 const tags = await listTags(db, locale);
 const TAG_KANJI: Record<string, string> = {
-	essays: "随筆",
-	notes: "技術",
-	tech: "映画",
-	journal: "音楽",
+	software: "技術",
+	film: "映画",
+	music: "音楽",
+	notes: "覚書",
 };
 const canonical = "/tags";
 ---

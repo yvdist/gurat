@@ -22,7 +22,7 @@ test("home links to posts with one h1 and reader head tags", async ({
 		page.locator('link[rel="alternate"][hreflang="x-default"]'),
 	).toHaveCount(1);
 	await page.getByRole("link", { name: "Hello, world" }).first().click();
-	await expect(page).toHaveURL(/\/writing\/hello-world$/);
+	await expect(page).toHaveURL(/\/writing\/no-014-photo-first$/);
 });
 
 test("post page shows translated content and switches locale", async ({
@@ -43,7 +43,7 @@ test("post page shows translated content and switches locale", async ({
 	expect(html).toContain("footnotes");
 	// Translation link leads to the Indonesian counterpart.
 	await page.getByRole("link", { name: "Bahasa Indonesia" }).click();
-	await expect(page).toHaveURL(/\/id\/writing\/halo-dunia$/);
+	await expect(page).toHaveURL(/\/id\/writing\/no-014-foto-dulu$/);
 	await expect(page.locator("html")).toHaveAttribute("lang", "id");
 	await expect(page.locator("h1")).toContainText("Halo, dunia");
 });

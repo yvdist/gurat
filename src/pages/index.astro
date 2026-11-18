@@ -16,13 +16,13 @@ const locale: Locale = "en";
 const db = createDb(getEnv().DB);
 const { items: posts } = await listPublishedPosts(db, { locale, limit: 10 });
 const tags = await listTags(db, locale);
-// Kanji accents per spec §A3: fixed map for the 4 seed slugs; other slugs
-// render mono slug only.
+// Kanji accents: fixed map for the 4 brief tags (software/技術, film/映画,
+// music/音楽, notes/覚書); other slugs render mono slug only.
 const TAG_KANJI: Record<string, string> = {
-	essays: "随筆",
-	notes: "技術",
-	tech: "映画",
-	journal: "音楽",
+	software: "技術",
+	film: "映画",
+	music: "音楽",
+	notes: "覚書",
 };
 const topTags = tags
 	.filter((tg) => tg.postCount > 0)
@@ -47,6 +47,11 @@ const primaryTag = (p: (typeof posts)[number]): string => {
 	if (tag === undefined) return "";
 	return locale === "en" ? tag.labelEn : tag.labelId;
 };
+const primaryKanji = (p: (typeof posts)[number]): string => {
+	const tag = p.tags[0];
+	if (tag === undefined) return "";
+	return TAG_KANJI[tag.slug] ?? tag.slug;
+};
 const pad = (n: number): string => String(n).padStart(3, "0");
 
 const description = t(locale, "site.intro");
@@ -65,7 +70,7 @@ const canonical = "/";
 		<section class="hero">
 			<div>
 				<p class="mono hero-eyebrow">
-					<span class="kanji">随筆</span>
+					<span class="kanji">{featured !== null ? primaryKanji(featured) : ""}</span>
 					<span aria-hidden="true"> · </span>
 					<span>{featured !== null ? primaryTag(featured) : ""}</span>
 				</p>

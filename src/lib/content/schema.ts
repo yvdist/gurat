@@ -109,13 +109,21 @@ export interface HorizontalRule {
 	type: "horizontalRule";
 }
 
+export type FigureLayout =
+	| "inline"
+	| "offset"
+	| "wide"
+	| "full"
+	| "pair"
+	| "triptych";
+
 export interface Figure {
 	type: "figure";
 	attrs: {
 		mediaId: string;
 		alt: string;
 		caption: string;
-		layout: "inline" | "wide" | "full";
+		layout: FigureLayout;
 	};
 }
 
@@ -261,6 +269,15 @@ const HorizontalRuleSchema = z
 	.object({ type: z.literal("horizontalRule") })
 	.strict();
 
+const FigureLayoutSchema = z.enum([
+	"inline",
+	"offset",
+	"wide",
+	"full",
+	"pair",
+	"triptych",
+]);
+
 const FigureSchema = z
 	.object({
 		type: z.literal("figure"),
@@ -269,7 +286,7 @@ const FigureSchema = z
 				mediaId: z.string(),
 				alt: z.string(),
 				caption: z.string(),
-				layout: z.enum(["inline", "wide", "full"]),
+				layout: FigureLayoutSchema,
 			})
 			.strict(),
 	})

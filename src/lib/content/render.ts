@@ -240,18 +240,22 @@ function codeClass(language: string): string {
 
 const SIZES_BY_LAYOUT: Record<Figure["attrs"]["layout"], string> = {
 	inline: "(max-width: 768px) 100vw, 68ch",
+	offset: "(max-width: 768px) 100vw, 68ch",
 	wide: "(max-width: 1280px) 100vw, 1200px",
 	full: "100vw",
+	pair: "(max-width: 768px) 50vw, 600px",
+	triptych: "(max-width: 768px) 33vw, 400px",
 };
 
 const DOMINANT_RE = /^#[0-9a-f]{6}$/i;
 
-function renderFigure(
+function renderFigureImg(
 	node: Figure,
 	ctx: RenderContext,
-	state: BlockState,
 	path: string,
-): { html: string; plain: string } {
+	sizes: string,
+	eager: boolean,
+): { img: string; plain: string } {
 	const mediaRow = ctx.media.get(node.attrs.mediaId);
 	if (mediaRow === undefined) {
 		throw new RenderError(path, `unknown mediaId ${node.attrs.mediaId}`);
@@ -286,10 +290,7 @@ function renderFigure(
 	const srcset = widths
 		.map((w) => `${variantUrl(mediaRow, w, ctx.baseUrl)} ${w}w`)
 		.join(", ");
-	const sizes = SIZES_BY_LAYOUT[node.attrs.layout];
-	const isFirst = state.figureCount === 0;
-	const isAboveFold = isFirst || ctx.coverMediaId === node.attrs.mediaId;
-	state.figureCount += 1;
+	const isAboveFold = eager || ctx.coverMediaId === node.attrs.mediaId;
 	const loading = isAboveFold
 		? ` loading="eager" fetchpriority="high"`
 		: ` loading="lazy"`;
@@ -305,14 +306,215 @@ function renderFigure(
 		` width="${mediaRow.width}" height="${mediaRow.height}"` +
 		` decoding="async"${loading}` +
 		` alt="${escapeHtml(alt)}"${style}>`;
-	const caption =
-		node.attrs.caption === ""
-			? ""
-			: `<figcaption>${escapeHtml(node.attrs.caption)}</figcaption>`;
+	return { img, plain: node.attrs.caption };
+}
+
+function figureCaption(caption: string, k: number, total: number): string {
+	if (caption === "") return "";
+	const no = `${String(k).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+	return `<figcaption><span class="fig-no">${no}</span>${escapeHtml(caption)}</figcaption>`;
+}
+
+function figureCaptionSide(caption: string, k: number, total: number): string {
+	if (caption === "") return "";
+	const no = `${String(k).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+	return `<figcaption class="side"><span class="fig-no">${no}</span>${escapeHtml(caption)}</figcaption>`;
+}
+
+// Offset: inline sizes with a side-caption figure class.
+function renderOffsetFigure(
+	node: Figure,
+	ctx: RenderContext,
+	state: BlockState,
+	k: number,
+	total: number,
+	path: string,
+): { html: string; plain: string } {
+	const isFirst = state.figureCount === 0;
+	state.figureCount += 1;
+	const { img } = renderFigureImg(
+		node,
+		ctx,
+		path,
+		SIZES_BY_LAYOUT.offset,
+		isFirst,
+	);
 	return {
-		html: `<figure class="layout-${node.attrs.layout}">${img}${caption}</figure>`,
+		html: `<figure class="layout-offset">${img}${figureCaptionSide(node.attrs.caption, k, total)}</figure>`,
 		plain: node.attrs.caption,
 	};
+}
+
+// Single-image figure (inline/wide/full): group counts 1, numbered k/N.
+function renderSingleFigure(
+	node: Figure,
+	ctx: RenderContext,
+	state: BlockState,
+	k: number,
+	total: number,
+	path: string,
+): { html: string; plain: string } {
+	const isFirst = state.figureCount === 0;
+	state.figureCount += 1;
+	const { img } = renderFigureImg(
+		node,
+		ctx,
+		path,
+		SIZES_BY_LAYOUT[node.attrs.layout],
+		isFirst,
+	);
+	return {
+		html: `<figure class="layout-${node.attrs.layout}">${img}${figureCaption(node.attrs.caption, k, total)}</figure>`,
+		plain: node.attrs.caption,
+	};
+}
+
+// Pair/triptych: consecutive same-layout nodes merge into one group figure.
+// Malformed runs never reach here — the block loop degrades them to
+// individual layout-inline singles. One group figcaption joins the
+// non-empty cell captions with " · ".
+function renderFigureGroup(
+	nodes: Figure[],
+	className: "layout-pair" | "layout-triptych",
+	cellSizes: string,
+	ctx: RenderContext,
+	state: BlockState,
+	k: number,
+	total: number,
+	basePath: string,
+): { html: string; plain: string } {
+	const isFirst = state.figureCount === 0;
+	state.figureCount += 1;
+	const cells = nodes
+		.map((n, i) => {
+			const { img } = renderFigureImg(
+				n,
+				ctx,
+				`${basePath}[${i}]`,
+				cellSizes,
+				isFirst,
+			);
+			return `<div class="fig-cell">${img}</div>`;
+		})
+		.join("");
+	const caption = figureCaption(
+		nodes
+			.map((n) => n.attrs.caption)
+			.filter((c) => c !== "")
+			.join(" · "),
+		k,
+		total,
+	);
+	return {
+		html: `<figure class="${className}">${cells}${caption}</figure>`,
+		plain: nodes.map((n) => n.attrs.caption).join("\n\n"),
+	};
+}
+
+// Group model: consecutive pair nodes (exactly 2) or triptych nodes
+// (exactly 3) form one numbered group. Anything else — a lone pair, a
+// 4-in-a-row spill, a mixed-layout run — degrades to individual
+// layout-inline singles. Every other layout is always a single group.
+type FigureGroup =
+	| { kind: "single"; node: Figure; index: number }
+	| { kind: "multi"; nodes: Figure[]; indices: number[] };
+
+function groupFigures(content: Block[]): FigureGroup[] {
+	const groups: FigureGroup[] = [];
+	let i = 0;
+	while (i < content.length) {
+		const node = content[i];
+		if (node === undefined || node.type !== "figure") {
+			i += 1;
+			continue;
+		}
+		const layout = node.attrs.layout;
+		if (layout === "pair" || layout === "triptych") {
+			const want = layout === "pair" ? 2 : 3;
+			const run: Figure[] = [node];
+			const indices: number[] = [i];
+			let j = i + 1;
+			while (
+				run.length < want &&
+				j < content.length &&
+				content[j]?.type === "figure" &&
+				(content[j] as Figure).attrs.layout === layout
+			) {
+				run.push(content[j] as Figure);
+				indices.push(j);
+				j += 1;
+			}
+			if (run.length === want) {
+				groups.push({ kind: "multi", nodes: run, indices });
+				i = j;
+			} else {
+				// Malformed run: each node renders as an inline single.
+				groups.push({ kind: "single", node, index: i });
+				i += 1;
+			}
+		} else {
+			groups.push({ kind: "single", node, index: i });
+			i += 1;
+		}
+	}
+	return groups;
+}
+
+// Figure render entry: numbering counts GROUPS (single/pair/triptych/full
+// each count 1): caption prefix `01 / 07`-style.
+
+function renderFigures(
+	content: Block[],
+	ctx: RenderContext,
+	state: BlockState,
+): Map<number, { html: string; plain: string }> {
+	const groups = groupFigures(content);
+	const total = groups.length;
+	const out = new Map<number, { html: string; plain: string }>();
+	groups.forEach((g, gi) => {
+		const k = gi + 1;
+		if (g.kind === "single") {
+			const layout = g.node.attrs.layout;
+			const path = `content[${g.index}]`;
+			const rendered =
+				layout === "offset"
+					? renderOffsetFigure(g.node, ctx, state, k, total, path)
+					: layout === "pair" || layout === "triptych"
+						? renderSingleFigure(
+								{ ...g.node, attrs: { ...g.node.attrs, layout: "inline" } },
+								ctx,
+								state,
+								k,
+								total,
+								path,
+							)
+						: renderSingleFigure(g.node, ctx, state, k, total, path);
+			out.set(g.index, rendered);
+		} else {
+			const className =
+				g.nodes[0]?.attrs.layout === "pair" ? "layout-pair" : "layout-triptych";
+			const cellSizes =
+				className === "layout-pair"
+					? SIZES_BY_LAYOUT.pair
+					: SIZES_BY_LAYOUT.triptych;
+			out.set(
+				g.indices[0] as number,
+				renderFigureGroup(
+					g.nodes,
+					className,
+					cellSizes,
+					ctx,
+					state,
+					k,
+					total,
+					`content[${g.indices[0]}]`,
+				),
+			);
+			for (const idx of g.indices.slice(1))
+				out.set(idx, { html: "", plain: "" });
+		}
+	});
+	return out;
 }
 
 interface FootnoteEntry {
@@ -375,6 +577,8 @@ function renderBlock(
 	ctx: RenderContext,
 	state: BlockState,
 	path: string,
+	figures?: Map<number, { html: string; plain: string }>,
+	index?: number,
 ): { html: string; plain: string } {
 	switch (node.type) {
 		case "paragraph":
@@ -427,8 +631,16 @@ function renderBlock(
 		}
 		case "horizontalRule":
 			return { html: "<hr>", plain: "" };
-		case "figure":
-			return renderFigure(node, ctx, state, path);
+		case "figure": {
+			// Group context (neighbors + totals) lives in the precomputed map.
+			// A lone figure without map context (nested use) renders inline.
+			if (figures !== undefined && index !== undefined) {
+				const hit = figures.get(index);
+				if (hit !== undefined) return hit;
+			}
+			const rendered = renderSingleFigure(node, ctx, state, 1, 1, path);
+			return rendered;
+		}
 		default:
 			throw new RenderError(path, "unknown block node");
 	}
@@ -452,8 +664,9 @@ export function renderDoc(doc: Doc, ctx: RenderContext): RenderResult {
 		footnotes: [],
 		figureCount: 0,
 	};
+	const figures = renderFigures(doc.content, ctx, state);
 	const parts = doc.content.map((b, i) =>
-		renderBlock(b, ctx, state, `content[${i}]`),
+		renderBlock(b, ctx, state, `content[${i}]`, figures, i),
 	);
 	let html = parts.map((p) => p.html).join("");
 	if (state.footnotes.length > 0) {

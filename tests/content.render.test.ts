@@ -9,6 +9,10 @@ import codeHtml from "./content/__golden__/code.html?raw";
 import codeJson from "./content/__golden__/code.json?raw";
 import figureHtml from "./content/__golden__/figure.html?raw";
 import figureJson from "./content/__golden__/figure.json?raw";
+import figurePairHtml from "./content/__golden__/figure-pair.html?raw";
+import figurePairJson from "./content/__golden__/figure-pair.json?raw";
+import figureTriptychHtml from "./content/__golden__/figure-triptych.html?raw";
+import figureTriptychJson from "./content/__golden__/figure-triptych.json?raw";
 import headingHtml from "./content/__golden__/heading.html?raw";
 import headingJson from "./content/__golden__/heading.json?raw";
 import linksHtml from "./content/__golden__/links.html?raw";
@@ -71,6 +75,21 @@ describe("renderer goldens", () => {
 		expect(html).toBe(figureHtml);
 	});
 
+	it.each([
+		{ name: "offset", json: figureOffsetJson, html: figureOffsetHtml },
+		{ name: "pair", json: figurePairJson, html: figurePairHtml },
+		{ name: "triptych", json: figureTriptychJson, html: figureTriptychHtml },
+	])("renders figure $name with synthetic media", ({ json, html }) => {
+		const content: unknown = JSON.parse(json);
+		const doc = validateDoc({ type: "doc", content });
+		const { html: actual } = renderDoc(doc, {
+			locale: "en",
+			media: new Map([[figureMedia.id, figureMedia]]),
+			baseUrl: "",
+		});
+		expect(actual).toBe(html);
+	});
+
 	it("throws RenderError for figure with unknown mediaId", () => {
 		const content: unknown = JSON.parse(figureJson);
 		const doc = validateDoc({ type: "doc", content });
@@ -118,18 +137,108 @@ describe("renderer figure output", () => {
 	});
 
 	it("emits per-layout sizes", () => {
-		for (const [layout, sizes] of [
-			["inline", "(max-width: 768px) 100vw, 68ch"],
-			["wide", "(max-width: 1280px) 100vw, 1200px"],
-			["full", "100vw"],
+		for (const [layout, sizes, cls] of [
+			["inline", "(max-width: 768px) 100vw, 68ch", "layout-inline"],
+			["offset", "(max-width: 768px) 100vw, 68ch", "layout-offset"],
+			["wide", "(max-width: 1280px) 100vw, 1200px", "layout-wide"],
+			["full", "100vw", "layout-full"],
+			// A lone pair/triptych degrades to an inline single (inline sizes).
+			["pair", "(max-width: 768px) 100vw, 68ch", "layout-inline"],
+			["triptych", "(max-width: 768px) 100vw, 68ch", "layout-inline"],
 		] as const) {
 			const html = renderDoc(
 				figureDoc({ mediaId: "media-1", alt: "a", caption: "", layout }),
 				ctx(figureMedia),
 			).html;
 			expect(html).toContain(`sizes="${sizes}"`);
-			expect(html).toContain(`class="layout-${layout}"`);
+			expect(html).toContain(`class="${cls}"`);
 		}
+	});
+	it("uses cell sizes inside pair/triptych groups", () => {
+		const fig = (caption: string, layout: string) => ({
+			type: "figure",
+			attrs: { mediaId: "media-1", alt: "a", caption, layout },
+		});
+		const pairHtml = renderDoc(
+			validateDoc({
+				type: "doc",
+				content: [fig("p1", "pair"), fig("p2", "pair")],
+			}),
+			ctx(figureMedia),
+		).html;
+		expect(pairHtml).toContain('sizes="(max-width: 768px) 50vw, 600px"');
+		const triHtml = renderDoc(
+			validateDoc({
+				type: "doc",
+				content: [
+					fig("t1", "triptych"),
+					fig("t2", "triptych"),
+					fig("t3", "triptych"),
+				],
+			}),
+			ctx(figureMedia),
+		).html;
+		expect(triHtml).toContain('sizes="(max-width: 768px) 33vw, 400px"');
+	});
+
+	it("numbers groups and merges pair/triptych runs", () => {
+		const pair = (id: string, caption: string, layout: string) => ({
+			type: "figure",
+			attrs: { mediaId: id, alt: "a", caption, layout },
+		});
+		// 7 groups: inline, offset, pair, triptych, wide, full, inline.
+		const doc = validateDoc({
+			type: "doc",
+			content: [
+				pair("media-1", "one", "inline"),
+				pair("media-1", "two", "offset"),
+				pair("media-1", "p1", "pair"),
+				pair("media-1", "p2", "pair"),
+				pair("media-1", "t1", "triptych"),
+				pair("media-1", "t2", "triptych"),
+				pair("media-1", "t3", "triptych"),
+				pair("media-1", "five", "wide"),
+				pair("media-1", "six", "full"),
+				pair("media-1", "seven", "inline"),
+			],
+		});
+		const html = renderDoc(doc, ctx(figureMedia)).html;
+		for (const k of ["01", "02", "03", "04", "05", "06", "07"]) {
+			expect(html).toContain(`${k} / 07`);
+		}
+		expect(html).toContain('class="layout-pair"');
+		expect(html).toContain('class="layout-triptych"');
+	});
+
+	it("degrades malformed pair/triptych runs to inline singles", () => {
+		const fig = (caption: string, layout: string) => ({
+			type: "figure",
+			attrs: { mediaId: "media-1", alt: "a", caption, layout },
+		});
+		// Lone pair + mixed-layout run: no group forms, two singles.
+		const lone = validateDoc({
+			type: "doc",
+			content: [fig("lone", "pair"), fig("other", "inline")],
+		});
+		const loneHtml = renderDoc(lone, ctx(figureMedia)).html;
+		expect(loneHtml).not.toContain("layout-pair");
+		expect(loneHtml).toContain("01 / 02");
+		expect(loneHtml).toContain("02 / 02");
+		// 4-in-a-row triptych spill: first 3 group, 4th degrades to inline.
+		const spill = validateDoc({
+			type: "doc",
+			content: [
+				fig("s1", "triptych"),
+				fig("s2", "triptych"),
+				fig("s3", "triptych"),
+				fig("s4", "triptych"),
+			],
+		});
+		const spillHtml = renderDoc(spill, ctx(figureMedia)).html;
+		expect(spillHtml).toContain('class="layout-triptych"');
+		expect(spillHtml).toContain('class="layout-inline"');
+		expect(spillHtml).toContain("01 / 02");
+		expect(spillHtml).toContain("02 / 02");
 	});
 
 	it("first figure eager + fetchpriority, second lazy without fetchpriority", () => {

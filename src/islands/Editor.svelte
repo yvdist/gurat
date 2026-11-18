@@ -1003,8 +1003,11 @@ onDestroy(() => {
 			<label>Layout
 				<select bind:value={pickerLayout} aria-label="Image layout">
 					<option value="inline">inline</option>
+					<option value="offset">offset</option>
 					<option value="wide">wide</option>
 					<option value="full">full</option>
+					<option value="pair">pair</option>
+					<option value="triptych">triptych</option>
 				</select>
 			</label>
 			{#if pickerError}<p class="admin-error">{pickerError}</p>{/if}

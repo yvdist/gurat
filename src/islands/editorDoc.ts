@@ -181,7 +181,11 @@ function stripBlock(node: unknown): Record<string, unknown> | null {
 					? (n.attrs as Record<string, unknown>)
 					: {};
 			const layout =
-				attrs.layout === "wide" || attrs.layout === "full"
+				attrs.layout === "wide" ||
+				attrs.layout === "full" ||
+				attrs.layout === "offset" ||
+				attrs.layout === "pair" ||
+				attrs.layout === "triptych"
 					? attrs.layout
 					: "inline";
 			return {

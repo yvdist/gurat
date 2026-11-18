@@ -90,8 +90,9 @@ test("post page carries absolute OG/Twitter/JSON-LD and symmetric hreflangs", as
 	await expect(
 		head.locator('link[type="application/rss+xml"][hreflang="id"]'),
 	).toHaveCount(1);
-	// Seeded posts share no EN tags: the related section is omitted, not empty.
-	await expect(page.locator(".related")).toHaveCount(0);
+	// NO.014 shares tag-software with NO.007/011/013: related lists them.
+	await expect(page.locator(".related")).toHaveCount(1);
+	await expect(page.locator(".related")).toContainText(/quiet discipline|Delete the dashboard|metronome/i);
 	// Home footer RSS text is now a real link to the locale feed.
 	await expect(page.locator(".site-footer .rss a")).toHaveAttribute(
 		"href",
@@ -107,16 +108,16 @@ test("search serves form-only without q, results with q, 400 on blank", async ({
 	await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
 	await expect(page.locator(".archive-row")).toHaveCount(0);
 
-	await page.goto("/search?q=structure");
+	await page.goto("/search?q=metronome");
 	await expect(page.locator(".archive-row").first()).toContainText(
-		"A very long title",
+		"The metronome and the heart",
 	);
 
 	const blank = await request.get("/search?q=%20%20");
 	expect(blank.status()).toBe(400);
 
-	await page.goto("/id/search?q=struktur");
+	await page.goto("/id/search?q=metronom");
 	await expect(page.locator(".archive-row").first()).toContainText(
-		"Tulisan kedua",
+		"Metronom dan detak jantung",
 	);
 });
