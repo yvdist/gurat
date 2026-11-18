@@ -114,13 +114,13 @@ Catatan jujur: ini perkiraan, bukan angka pas — kalau seminggu backup
 gagal, isinya 11; kalau ada dispatch manual, bisa 13. Itu tidak masalah.
 3. Sambungkan domain publik untuk media: buka bucket `gurat-media` →
 tab **Settings** → **Custom Domains** → **Connect Domain** →
-ketik `media.yvdist.com` → ikuti aktivasi. Tanpa ini, gambar tidak
+ketik `gurat-media.yvdist.com` → ikuti aktivasi. Tanpa ini, gambar tidak
 bisa diakses publik.
 
-| #   | Cek                                                      | Sudah | Belum | Tanggal |
-| --- | -------------------------------------------------------- | ----- | ----- | ------- |
-| 2.1 | Bucket `gurat-media` + domain `media.yvdist.com` aktif   |       |       |         |
-| 2.2 | Bucket privat `gurat-backups` + lifecycle rule (84 hari) |       |       |         |
+| #   | Cek                                                          | Sudah | Belum | Tanggal |
+| --- | ------------------------------------------------------------ | ----- | ----- | ------- |
+| 2.1 | Bucket `gurat-media` + domain `gurat-media.yvdist.com` aktif |       |       |         |
+| 2.2 | Bucket privat `gurat-backups` + lifecycle rule (84 hari)     |       |       |         |
 
 ## 3. Pasang domain ke Worker (situsnya sendiri)
 
@@ -162,7 +162,7 @@ alamat sendiri:
 | Var                  | Isi dengan                                 | Contoh                                |
 | -------------------- | ------------------------------------------ | ------------------------------------- |
 | `SITE_URL`           | Alamat situs (tanpa garis miring di akhir) | `https://gurat.yvdist.com`            |
-| `MEDIA_BASE_URL`     | Domain media publik                        | `https://media.yvdist.com`            |
+| `MEDIA_BASE_URL`     | Domain media publik                        | `https://gurat-media.yvdist.com`      |
 | `ACCESS_TEAM_DOMAIN` | Team domain dari §4.1 langkah 5            | `https://<team>.cloudflareaccess.com` |
 | `ACCESS_AUD`         | AUD tag dari §4.1 langkah 4                | `abc123…`                             |
 | `ADMIN_EMAILS`       | Email owner (koma bila >1)                 | `kamu@example.com`                    |
@@ -232,7 +232,7 @@ curl -s "https://$SUB/sitemap.xml" | head -5
 curl -s "https://$SUB/feed.xml" | head -5
 
 # 4. Gambar disajikan immutable dari domain media
-curl -sI "https://media.yvdist.com/media/<id>/480.webp" | grep -i "cache-control"
+curl -sI "https://gurat-media.yvdist.com/media/<id>/480.webp" | grep -i "cache-control"
 # (<id> = salah satu id media; lihat di /admin → Media → klik gambar)
 
 # 5. Admin aman di host mana pun: TANPA login harus 401
