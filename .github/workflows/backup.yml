@@ -1,10 +1,12 @@
 name: backup
 
-# Weekly D1 export to a private R2 bucket (spec 07 §7.5). Retention is a
-# bucket lifecycle rule (keep newest 12), managed once by the owner — not
-# per-run object listing (wrangler 4.156.1 exposes no list/delete-object
-# query; see docs/runbook.md). `workflow_dispatch` for ad-hoc snapshots
-# before risky operations.
+# Weekly D1 export to a private R2 bucket (spec 07 §7.5). Retention is an
+# age-based bucket lifecycle rule (84-day expiry ≈ 12 weekly backups),
+# configured once by the owner via
+# `wrangler r2 bucket lifecycle add gurat-backups backups-retention backups/ --expire-days 84`
+# — not per-run listing (wrangler 4.156.1 has no object-list query for
+# retention scripting). `workflow_dispatch` for ad-hoc snapshots before
+# risky operations.
 on:
   schedule:
     # Every Monday 02:00 WIB = Sunday 19:00 UTC.

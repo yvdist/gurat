@@ -100,20 +100,27 @@ Routing). Jangan hapus/ubah record yang tidak kamu buat di langkah ini.
      dideklarasikan di `wrangler.jsonc`).
    - Nama `gurat-backups` (bucket **privat** untuk backup database —
      jangan dihubungkan ke domain publik).
-2. Aturan retensi backup (simpan 12 terbaru): buka bucket
-   `gurat-backups` → cari pengaturan **Lifecycle** (letaknya bisa di tab
-   Settings, nama menunya kadang berubah) → tambah rule: prefix
-   `backups/`, simpan 12 objek terbaru. Kalau menu tidak ketemu, catat
-   dan tanyakan ke asisten — jangan asal klik.
-3. Sambungkan domain publik untuk media: buka bucket `gurat-media` →
-   tab **Settings** → **Custom Domains** → **Connect Domain** →
-   ketik `media.yvdist.com` → ikuti aktivasi. Tanpa ini, gambar tidak
-   bisa diakses publik.
+2. Aturan retensi backup: R2 lifecycle itu berbasis **umur file**, bukan
+   jumlah file — tidak ada opsi "simpan 12 terbaru". Karena backup jalan
+   mingguan, pakai kedaluwarsa 84 hari (≈12 backup terakhir). Perintahnya
+   sekali saja, di terminal laptop (sudah `wrangler login`):
 
-| #   | Cek                                                         | Sudah | Belum | Tanggal |
-| --- | ----------------------------------------------------------- | ----- | ----- | ------- |
-| 2.1 | Bucket `gurat-media` + domain `media.yvdist.com` aktif      |       |       |         |
-| 2.2 | Bucket privat `gurat-backups` + lifecycle rule (12 terbaru) |       |       |         |
+```sh
+pnpm exec wrangler r2 bucket lifecycle add gurat-backups backups-retention backups/ --expire-days 84
+```
+
+Verifikasi: `pnpm exec wrangler r2 bucket lifecycle list gurat-backups`.
+Catatan jujur: ini perkiraan, bukan angka pas — kalau seminggu backup
+gagal, isinya 11; kalau ada dispatch manual, bisa 13. Itu tidak masalah.
+3. Sambungkan domain publik untuk media: buka bucket `gurat-media` →
+tab **Settings** → **Custom Domains** → **Connect Domain** →
+ketik `media.yvdist.com` → ikuti aktivasi. Tanpa ini, gambar tidak
+bisa diakses publik.
+
+| #   | Cek                                                      | Sudah | Belum | Tanggal |
+| --- | -------------------------------------------------------- | ----- | ----- | ------- |
+| 2.1 | Bucket `gurat-media` + domain `media.yvdist.com` aktif   |       |       |         |
+| 2.2 | Bucket privat `gurat-backups` + lifecycle rule (84 hari) |       |       |         |
 
 ## 3. Pasang domain ke Worker (situsnya sendiri)
 
