@@ -134,15 +134,11 @@ export async function verifyAccess(
 
 	let payload: Record<string, unknown>;
 	try {
-		const verified = await jwtVerify(
-			token,
-			jwksForTeam(team),
-			{
-				issuer: team,
-				audience: env.ACCESS_AUD,
-				...(opts.now !== undefined ? { currentDate: new Date(opts.now) } : {}),
-			},
-		);
+		const verified = await jwtVerify(token, jwksForTeam(team), {
+			issuer: team,
+			audience: env.ACCESS_AUD,
+			...(opts.now !== undefined ? { currentDate: new Date(opts.now) } : {}),
+		});
 		payload = verified.payload as Record<string, unknown>;
 	} catch (err) {
 		const code =
