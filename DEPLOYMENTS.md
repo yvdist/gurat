@@ -67,8 +67,12 @@ mencakup ketiganya; token backup terpisah tidak perlu).
 1. Di dash, klik **avatar/foto profil** (pojok kanan atas) → **My Profile**
    → tab **API Tokens** → **Create Token**.
 2. Pilih template **Edit Cloudflare Workers** (atau isi manual bila mau
-   ketat: **Workers Scripts** → **Edit**, **D1** → **Read**, **Workers R2
-   Storage** → **Edit**). Account Resources: sertakan akunmu. (Nama menu
+   ketat: **Workers Scripts** → **Edit**, **D1** → **Edit**, **Workers R2
+   Storage** → **Edit**). Account Resources: sertakan akunmu. (Catatan:
+   **D1 harus Edit, bukan Read** — endpoint `/export` adalah operasi
+   write-level menurut maintainer Cloudflare
+   ([workers-sdk#16667](https://github.com/cloudflare/workers-sdk/issues/16667));
+   D1 Read cukup untuk query, tapi export selalu error 10000. Nama menu
    bisa sedikit berbeda antar versi dash — cari yang maknanya sama.)
 3. **Create Token** → **salin tokennya sekarang** (hanya ditampilkan sekali).
 
