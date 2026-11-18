@@ -238,6 +238,15 @@ describe("renderer figure output", () => {
 		// 4-in-a-row triptych spill: first 3 group, 4th degrades to inline.
 		const spill = validateDoc({
 			type: "doc",
+			content: [fig("lone", "pair"), fig("other", "inline")],
+		});
+		const loneHtml = renderDoc(lone, ctx(figureMedia)).html;
+		expect(loneHtml).not.toContain("layout-pair");
+		expect(loneHtml).toContain("01 / 02");
+		expect(loneHtml).toContain("02 / 02");
+		// 4-in-a-row triptych spill: first 3 group, 4th degrades to inline.
+		const spill = validateDoc({
+			type: "doc",
 			content: [
 				fig("s1", "triptych"),
 				fig("s2", "triptych"),
