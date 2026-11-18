@@ -326,14 +326,16 @@ describe("normalizeTeamDomain", () => {
 	});
 
 	it("adds https and trims dots, slashes, whitespace", () => {
-		expect(
-			normalizeTeamDomain("summer-cherry-2d3f.cloudflareaccess.com"),
-		).toBe("https://summer-cherry-2d3f.cloudflareaccess.com");
+		expect(normalizeTeamDomain("summer-cherry-2d3f.cloudflareaccess.com")).toBe(
+			"https://summer-cherry-2d3f.cloudflareaccess.com",
+		);
 		expect(
 			normalizeTeamDomain("summer-cherry-2d3f.cloudflareaccess.com."),
 		).toBe("https://summer-cherry-2d3f.cloudflareaccess.com");
 		expect(
-			normalizeTeamDomain("  https://summer-cherry-2d3f.cloudflareaccess.com/  "),
+			normalizeTeamDomain(
+				"  https://summer-cherry-2d3f.cloudflareaccess.com/  ",
+			),
 		).toBe("https://summer-cherry-2d3f.cloudflareaccess.com");
 	});
 
