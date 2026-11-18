@@ -21,13 +21,10 @@
 			"binding": "MEDIA",
 			"bucket_name": "gurat-media"
 		}
-	],
-	"vars": {
-		"SITE_URL": "https://gurat.yvdist.com",
-		"ACCESS_TEAM_DOMAIN": "",
-		"ACCESS_AUD": "",
-		"ADMIN_EMAILS": "",
-		"MEDIA_BASE_URL": "",
-		"KEEP_ORIGINALS": "false"
-	}
+	]
+	// No `vars` block: dashboard is the single source of truth for all
+	// vars (SITE_URL, ACCESS_*, ADMIN_EMAILS, MEDIA_BASE_URL,
+	// KEEP_ORIGINALS). A `vars` block here would overwrite dashboard
+	// values on every `wrangler deploy` (wiped ACCESS_* to "" on
+	// 2026-11-18). With `--keep-vars` + no block, deploys never touch vars.
 }

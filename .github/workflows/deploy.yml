@@ -22,7 +22,12 @@ jobs:
       - run: pnpm types
       - run: pnpm check
       - run: pnpm build
-      - run: pnpm exec wrangler deploy
+      # `--keep-vars`: never delete dashboard-managed vars on deploy.
+      # Without it, Wrangler deletes all vars then sets only those in
+      # wrangler.jsonc — which wiped ACCESS_*/ADMIN_EMAILS/MEDIA_BASE_URL
+      # to "" on 2026-11-18 (vars block intentionally removed from
+      # wrangler.jsonc; dashboard is the single source of truth).
+      - run: pnpm exec wrangler deploy --keep-vars
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
