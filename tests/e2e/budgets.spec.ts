@@ -7,7 +7,11 @@ import { expect, test } from "@playwright/test";
 // visible instead of silently eating the code budget.
 const HTML_CSS_BUDGET = 50 * 1024;
 const JS_BUDGET = 3 * 1024;
-const PAGES = ["/writing/hello-world", "/id/writing/halo-dunia", "/"] as const;
+const PAGES = [
+	"/writing/no-014-photo-first",
+	"/id/writing/no-014-foto-dulu",
+	"/",
+] as const;
 
 for (const path of PAGES) {
 	test(`budgets ${path}`, async ({ page }) => {

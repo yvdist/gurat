@@ -35,9 +35,9 @@ test("public pages carry baseline headers + hashed-script CSP", async ({
 }) => {
 	for (const path of [
 		"/",
-		"/writing/hello-world",
+		"/writing/no-014-photo-first",
 		"/id/",
-		"/id/writing/halo-dunia",
+		"/id/writing/no-014-foto-dulu",
 		"/sitemap.xml",
 	]) {
 		const res = await request.get(path);
@@ -88,8 +88,8 @@ test("no page emits a CSP violation in either theme", async ({ page }) => {
 		}, theme);
 		for (const path of [
 			"/",
-			"/writing/hello-world",
-			"/id/writing/halo-dunia",
+			"/writing/no-014-photo-first",
+			"/id/writing/no-014-foto-dulu",
 			"/tags",
 			"/nonexistent-page",
 		]) {

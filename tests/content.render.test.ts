@@ -9,6 +9,8 @@ import codeHtml from "./content/__golden__/code.html?raw";
 import codeJson from "./content/__golden__/code.json?raw";
 import figureHtml from "./content/__golden__/figure.html?raw";
 import figureJson from "./content/__golden__/figure.json?raw";
+import figureOffsetHtml from "./content/__golden__/figure-offset.html?raw";
+import figureOffsetJson from "./content/__golden__/figure-offset.json?raw";
 import figurePairHtml from "./content/__golden__/figure-pair.html?raw";
 import figurePairJson from "./content/__golden__/figure-pair.json?raw";
 import figureTriptychHtml from "./content/__golden__/figure-triptych.html?raw";
@@ -217,6 +219,15 @@ describe("renderer figure output", () => {
 		});
 		// Lone pair + mixed-layout run: no group forms, two singles.
 		const lone = validateDoc({
+			type: "doc",
+			content: [fig("lone", "pair"), fig("other", "inline")],
+		});
+		const loneHtml = renderDoc(lone, ctx(figureMedia)).html;
+		expect(loneHtml).not.toContain("layout-pair");
+		expect(loneHtml).toContain("01 / 02");
+		expect(loneHtml).toContain("02 / 02");
+		// 4-in-a-row triptych spill: first 3 group, 4th degrades to inline.
+		const spill = validateDoc({
 			type: "doc",
 			content: [fig("lone", "pair"), fig("other", "inline")],
 		});

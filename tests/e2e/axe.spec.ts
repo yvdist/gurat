@@ -7,13 +7,13 @@ import { expect, test } from "@playwright/test";
 const PAGES = [
 	"/",
 	"/writing",
-	"/writing/hello-world",
-	"/tags/essays",
+	"/writing/no-014-photo-first",
+	"/tags/software",
 	"/writing/no-such-post",
 	"/id/",
 	"/id/writing",
-	"/id/writing/halo-dunia",
-	"/id/tags/essays",
+	"/id/writing/no-014-foto-dulu",
+	"/id/tags/software",
 	"/id/writing/halaman-tidak-ada",
 ] as const;
 

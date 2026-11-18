@@ -21,16 +21,21 @@ test("home links to posts with one h1 and reader head tags", async ({
 	await expect(
 		page.locator('link[rel="alternate"][hreflang="x-default"]'),
 	).toHaveCount(1);
-	await page.getByRole("link", { name: "Hello, world" }).first().click();
+	await page
+		.getByRole("link", { name: "Photo first: notes on building this page" })
+		.first()
+		.click();
 	await expect(page).toHaveURL(/\/writing\/no-014-photo-first$/);
 });
 
 test("post page shows translated content and switches locale", async ({
 	page,
 }) => {
-	await page.goto("/writing/hello-world");
+	await page.goto("/writing/no-014-photo-first");
 	await expect(page.locator("h1")).toHaveCount(1);
-	await expect(page.locator("h1")).toContainText("Hello, world");
+	await expect(page.locator("h1")).toContainText(
+		"Photo first: notes on building this page",
+	);
 	// Two inline scripts (no-flash + interactions) plus the JSON-LD block.
 	await expect(page.locator("script")).toHaveCount(3);
 	await expect(page.locator("time[datetime]")).toHaveCount(1);
@@ -45,16 +50,26 @@ test("post page shows translated content and switches locale", async ({
 	await page.getByRole("link", { name: "Bahasa Indonesia" }).click();
 	await expect(page).toHaveURL(/\/id\/writing\/no-014-foto-dulu$/);
 	await expect(page.locator("html")).toHaveAttribute("lang", "id");
-	await expect(page.locator("h1")).toContainText("Halo, dunia");
+	await expect(page.locator("h1")).toContainText(
+		"Foto dulu: catatan membangun halaman ini",
+	);
 });
 
 test("tag page lists posts; unknown slugs 404 localized", async ({ page }) => {
-	await page.goto("/tags/essays");
+	await page.goto("/tags/software");
 	await expect(page.locator("h1")).toHaveCount(1);
-	await expect(page.getByRole("link", { name: "Hello, world" })).toBeVisible();
-	await page.goto("/id/tags/essays");
+	await expect(
+		page.getByRole("link", {
+			name: "Photo first: notes on building this page",
+		}),
+	).toBeVisible();
+	await page.goto("/id/tags/software");
 	await expect(page.locator("html")).toHaveAttribute("lang", "id");
-	await expect(page.getByRole("link", { name: "Halo, dunia" })).toBeVisible();
+	await expect(
+		page.getByRole("link", {
+			name: "Foto dulu: catatan membangun halaman ini",
+		}),
+	).toBeVisible();
 	const missingEn = await page.goto("/writing/no-such-post");
 	expect(missingEn?.status()).toBe(404);
 	await expect(page.locator("html")).toHaveAttribute("lang", "en");
@@ -67,10 +82,10 @@ test("tag page lists posts; unknown slugs 404 localized", async ({ page }) => {
 
 test("draft and future posts 404 in both locales", async ({ page }) => {
 	for (const url of [
-		"/writing/draft-post",
-		"/id/writing/draft-post",
-		"/writing/tulisan-mendatang",
-		"/id/writing/tulisan-mendatang",
+		"/writing/unfinished-draft",
+		"/id/writing/unfinished-draft",
+		"/writing/catatan-terjadwal",
+		"/id/writing/catatan-terjadwal",
 	]) {
 		const response = await page.goto(url);
 		expect(response?.status(), url).toBe(404);
@@ -93,7 +108,7 @@ test("theme toggle persists and post numbers resolve", async ({ page }) => {
 	await page.reload();
 	await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 	// Post page: breadcrumb number + prev/next links resolve 200.
-	await page.goto("/writing/hello-world");
+	await page.goto("/writing/no-014-photo-first");
 	await expect(
 		page.locator(".breadcrumb").getByText(/No\. \d{3}/),
 	).toBeVisible();
