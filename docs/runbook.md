@@ -23,7 +23,7 @@ UTC) plus on demand (`workflow_dispatch` — use before risky operations).
 
 Secrets (GitHub repo settings, never echoed, `set -x` off around use):
 
-- `CLOUDFLARE_API_TOKEN` — D1 read + R2 write + Workers deploy (one combined token).
+- `CLOUDFLARE_API_TOKEN` — **D1 Edit** (export = write-level op, [workers-sdk#16667](https://github.com/cloudflare/workers-sdk/issues/16667)) + R2 write + Workers deploy (one combined token).
 - `CLOUDFLARE_ACCOUNT_ID`.
 
 One-time owner setup (see DEPLOYMENTS.md §7): create the private bucket
