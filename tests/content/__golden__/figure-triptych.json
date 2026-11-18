@@ -1,0 +1,29 @@
+[
+	{
+		"type": "figure",
+		"attrs": {
+			"mediaId": "media-1",
+			"alt": "First frame",
+			"caption": "First",
+			"layout": "triptych"
+		}
+	},
+	{
+		"type": "figure",
+		"attrs": {
+			"mediaId": "media-1",
+			"alt": "Second frame",
+			"caption": "Second",
+			"layout": "triptych"
+		}
+	},
+	{
+		"type": "figure",
+		"attrs": {
+			"mediaId": "media-1",
+			"alt": "Third frame",
+			"caption": "Third",
+			"layout": "triptych"
+		}
+	}
+]

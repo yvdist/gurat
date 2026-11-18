@@ -6,9 +6,9 @@ import { expect, test } from "@playwright/test";
 // only on intentional visual change.
 const pages = [
 	{ name: "home", path: "/" },
-	{ name: "post", path: "/writing/hello-world" },
+	{ name: "post", path: "/writing/no-014-photo-first" },
 	{ name: "archive", path: "/writing" },
-	{ name: "tag", path: "/tags/essays" },
+	{ name: "tag", path: "/tags/software" },
 	{ name: "notfound", path: "/writing/no-such-post" },
 ] as const;
 

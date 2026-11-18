@@ -17,10 +17,10 @@ const db = createDb(getEnv().DB);
 const { items: posts } = await listPublishedPosts(db, { locale, limit: 10 });
 const tags = await listTags(db, locale);
 const TAG_KANJI: Record<string, string> = {
-	essays: "随筆",
-	notes: "技術",
-	tech: "映画",
-	journal: "音楽",
+	software: "技術",
+	film: "映画",
+	music: "音楽",
+	notes: "覚書",
 };
 const topTags = tags
 	.filter((tg) => tg.postCount > 0)
@@ -45,6 +45,11 @@ const primaryTag = (p: (typeof posts)[number]): string => {
 	if (tag === undefined) return "";
 	return tag.labelId;
 };
+const primaryKanji = (p: (typeof posts)[number]): string => {
+	const tag = p.tags[0];
+	if (tag === undefined) return "";
+	return TAG_KANJI[tag.slug] ?? tag.slug;
+};
 const pad = (n: number): string => String(n).padStart(3, "0");
 
 const description = t(locale, "site.intro");
@@ -63,7 +68,7 @@ const canonical = "/id";
 		<section class="hero">
 			<div>
 				<p class="mono hero-eyebrow">
-					<span class="kanji">随筆</span>
+					<span class="kanji">{featured !== null ? primaryKanji(featured) : ""}</span>
 					<span aria-hidden="true"> · </span>
 					<span>{featured !== null ? primaryTag(featured) : ""}</span>
 				</p>

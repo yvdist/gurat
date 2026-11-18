@@ -158,6 +158,23 @@ describe("editor round-trip", () => {
 		expect(rendered.readingMinutes).toBeGreaterThanOrEqual(1);
 	});
 
+	it("passes new figure layouts through the bridge unchanged", () => {
+		for (const layout of ["offset", "pair", "triptych"] as const) {
+			const doc = tiptapToDoc({
+				type: "doc",
+				content: [
+					{
+						type: "figure",
+						attrs: { mediaId: "m-1", alt: "Alt", caption: "Cap", layout },
+					},
+				],
+			} as never);
+			expect(doc.content[0]).toMatchObject({ type: "figure" });
+			if (doc.content[0]?.type !== "figure") continue;
+			expect(doc.content[0].attrs.layout).toBe(layout);
+		}
+	});
+
 	it("strips Tiptap noise (target/rel/class, unknown marks, bad hrefs)", () => {
 		const noisy = {
 			type: "doc",
