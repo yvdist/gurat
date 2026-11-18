@@ -11,9 +11,9 @@ test("EN and ID feeds validate as RSS with public posts only", async ({
 	expect(en.headers()["content-type"]).toContain("application/rss+xml");
 	const enXml = await en.text();
 	expect(enXml).toContain("<rss version=");
-	expect(enXml).toContain("/writing/hello-world");
-	expect(enXml).toContain("/writing/second-post");
-	expect(enXml).not.toContain("draft-post");
+	expect(enXml).toContain("/writing/no-014-photo-first");
+	expect(enXml).toContain("/writing/no-013-metronome-heart");
+	expect(enXml).not.toContain("unfinished-draft");
 	const etag = en.headers().etag;
 	expect(etag).toBeTruthy();
 	const cached = await request.get("/feed.xml", {
@@ -24,8 +24,8 @@ test("EN and ID feeds validate as RSS with public posts only", async ({
 	const id = await request.get("/id/feed.xml");
 	expect(id.status()).toBe(200);
 	const idXml = await id.text();
-	expect(idXml).toContain("/id/writing/halo-dunia");
-	expect(idXml).not.toContain("tulisan-mendatang");
+	expect(idXml).toContain("/id/writing/no-014-foto-dulu");
+	expect(idXml).not.toContain("catatan-terjadwal");
 	expect(idXml).toContain("<language>id</language>");
 });
 
@@ -36,10 +36,10 @@ test("sitemap lists public URLs with alternates; robots points at it", async ({
 	expect(sm.status()).toBe(200);
 	const xml = await sm.text();
 	expect(xml).toContain('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"');
-	expect(xml).toContain("/writing/hello-world");
-	expect(xml).toContain("/id/writing/halo-dunia");
-	expect(xml).not.toContain("draft-post");
-	expect(xml).not.toContain("tulisan-mendatang");
+	expect(xml).toContain("/writing/no-014-photo-first");
+	expect(xml).toContain("/id/writing/no-014-foto-dulu");
+	expect(xml).not.toContain("unfinished-draft");
+	expect(xml).not.toContain("catatan-terjadwal");
 	expect(xml).toContain('hreflang="id"');
 	expect(xml).toContain("x-default");
 
