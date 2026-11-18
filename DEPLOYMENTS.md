@@ -86,47 +86,14 @@ Lalu simpan ke GitHub:
 | 1.1 | Login dash bisa; `wrangler login` sukses                                      |       |       |         |
 | 1.2 | Dua secret GitHub tersimpan (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) |       |       |         |
 
-## 2. Domain & DNS (kerjakan berurutan, spec 7.7)
+## 2. Tambah host baru di Cloudflare (tanpa menyentuh yang sudah jalan)
 
-### 2.1. Foto dulu DNS yang ada (jangan dilewati!)
+Asumsi: `yvdist.com` **sudah live di Cloudflare** (nameserver sudah
+`*.ns.cloudflare.com`). Bagian ini hanya _menambah_ dua hostname + dua
+bucket — tidak mengubah record yang ada (porto, subdomain lain, Email
+Routing). Jangan hapus/ubah record yang tidak kamu buat di langkah ini.
 
-Kalau `yvdist.com` sudah dipakai (portofolio, email, subdomain), catat
-**semua** record DNS-nya sekarang — dari panel tempat domain dibeli
-(registrar) atau dari DNS lama. Screenshot + tulis: tiap record
-A/AAAA/CNAME/MX/TXT/CAA beserta isinya. Ini jaring pengaman kalau ada
-yang keliru salin.
-
-| #   | Cek                                         | Sudah | Belum | Tanggal |
-| --- | ------------------------------------------- | ----- | ----- | ------- |
-| 2.1 | Semua record DNS lama tercatat (screenshot) |       |       |         |
-
-### 2.2. Masukkan domain ke Cloudflare
-
-1. Di dash (`dash.cloudflare.com`) → halaman utama akun → **Add domain**
-   (atau **Add a website**).
-2. Ketik `yvdist.com` → pilih paket **Free** → **Continue**.
-3. Cloudflare memindai DNS yang ada → tampil daftar record → **periksa
-   satu per satu cocok dengan catatan §2.1** (terutama MX/TXT email;
-   yang targetnya platform lain set proxynya **DNS only**/abu-abu).
-4. Cloudflare menampilkan **2 nameserver** (mis. `xxx.ns.cloudflare.com`)
-   → salin.
-5. Buka situs **tempat kamu membeli domain** (registrar) → pengaturan
-   nameserver domainmu → ganti ke dua nameserver Cloudflare → simpan.
-6. Kembali ke dash → **Done / Check nameservers**. Propagasi bisa
-   hitungan menit sampai ±24 jam.
-7. Verifikasi: buka `Websites` → `yvdist.com` → **DNS** → **Records** —
-   semua record lama ada. Buka situs portofolio + subdomain lain di
-   browser: masih jalan.
-
-Perintah cek dari terminal (ganti nama domain sesuai):
-
-```sh
-dig +short yvdist.com
-nslookup yvdist.com
-curl -sI https://yvdist.com | head -5
-```
-
-### 2.3. Siapkan dua bucket R2 (media + backup)
+### 2.1. Siapkan dua bucket R2 (media + backup)
 
 1. Dash → menu kiri **R2** → **Create bucket**:
    - Nama `gurat-media` (bucket gambar situs; binding `MEDIA` sudah
@@ -143,11 +110,10 @@ curl -sI https://yvdist.com | head -5
    ketik `media.yvdist.com` → ikuti aktivasi. Tanpa ini, gambar tidak
    bisa diakses publik.
 
-| #   | Cek                                                              | Sudah | Belum | Tanggal |
-| --- | ---------------------------------------------------------------- | ----- | ----- | ------- |
-| 2.2 | Domain di Cloudflare; nameserver diganti; situs lama masih jalan |       |       |         |
-| 2.3 | Bucket `gurat-media` + domain `media.yvdist.com` aktif           |       |       |         |
-| 2.4 | Bucket privat `gurat-backups` + lifecycle rule (12 terbaru)      |       |       |         |
+| #   | Cek                                                         | Sudah | Belum | Tanggal |
+| --- | ----------------------------------------------------------- | ----- | ----- | ------- |
+| 2.1 | Bucket `gurat-media` + domain `media.yvdist.com` aktif      |       |       |         |
+| 2.2 | Bucket privat `gurat-backups` + lifecycle rule (12 terbaru) |       |       |         |
 
 ## 3. Pasang domain ke Worker (situsnya sendiri)
 
