@@ -1,42 +1,62 @@
 ---
-// Prev/next cards (spec §A4): figure, mono ← previous · No. {n}, serif titles.
 import type { Locale } from "../config/site";
 import { localizePath, t } from "../i18n";
+// Closing nav: PREVIOUS / RELATED / NEXT thumbnail cards (3-col). Each card
+// carries a cover thumb (smallestVariantUrl, lazy) or a title-only row when
+// the post has no cover. Reuses .prevnext-card classes.
+import { smallestVariantUrl } from "../lib/content/render";
+import { getEnv } from "../lib/env";
 
-export interface AdjacentPost {
+export interface ClosingCard {
 	slug: string;
 	title: string;
 	postNo: string;
+	coverId: string | null;
 }
 
 interface Props {
 	locale: Locale;
-	prev: AdjacentPost | null;
-	next: AdjacentPost | null;
+	prev: ClosingCard | null;
+	related: ClosingCard | null;
+	next: ClosingCard | null;
+	covers: Map<string, Media>;
 }
 
-const { locale, prev, next } = Astro.props;
+const { locale, prev, related, next, covers } = Astro.props;
+const baseUrl = getEnv().MEDIA_BASE_URL;
+const cards: { card: ClosingCard; label: string }[] = [
+	...(prev !== null ? [{ card: prev, label: t(locale, "post.prev") }] : []),
+	...(related !== null
+		? [{ card: related, label: t(locale, "post.related") }]
+		: []),
+	...(next !== null ? [{ card: next, label: t(locale, "post.next") }] : []),
+];
 ---
 
 {
-	(prev !== null || next !== null) && (
+	cards.length > 0 && (
 		<nav class="prevnext" aria-label={t(locale, "post.contents")}>
-			{prev !== null && (
-				<a class="prevnext-card" href={localizePath(`/writing/${prev.slug}`, locale)}>
-					<p class="mono">
-						{t(locale, "post.prev")} · No. {prev.postNo}
-					</p>
-					<p class="prevnext-title">{prev.title}</p>
-				</a>
-			)}
-			{next !== null && (
-				<a class="prevnext-card" href={localizePath(`/writing/${next.slug}`, locale)}>
-					<p class="mono">
-						{t(locale, "post.next")} · No. {next.postNo}
-					</p>
-					<p class="prevnext-title">{next.title}</p>
-				</a>
-			)}
+			{cards.map(({ card, label }) => {
+				const media = card.coverId !== null ? covers.get(card.coverId) : undefined;
+				return (
+					<a class="prevnext-card" href={localizePath(`/writing/${card.slug}`, locale)}>
+						{media !== undefined && (
+							<img
+								src={smallestVariantUrl(media, baseUrl)}
+								width={media.width}
+								height={media.height}
+								decoding="async"
+								loading="lazy"
+								alt=""
+							/>
+						)}
+						<p class="mono">
+							{label} · No. {card.postNo}
+						</p>
+						<p class="prevnext-title">{card.title}</p>
+					</a>
+				);
+			})}
 		</nav>
 	)
 }

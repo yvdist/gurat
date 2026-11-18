@@ -4,12 +4,15 @@
 // rendered bytes and therefore the hashes below: the e2e CSP-violation
 // listener (`tests/e2e/hardening.spec.ts`) fails closed on drift.
 
-// Rendered `<script type="module">` bytes in `Base.astro`, hashed with
-// `sha256` over the exact served content (verified stable across rebuilds):
-// [0] theme no-flash (head), [1] theme/locale/copy interactions (body).
+// Rendered `<script type="module">` bytes, hashed with `sha256` over the
+// exact served content (verified stable across rebuilds):
+// [0] theme no-flash (head), [1] theme/menu/copy interactions (body),
+// [2] archive filter pills (writing index pages only — harmless to allow
+// globally; hash-only scripts, never 'unsafe-inline').
 const PUBLIC_SCRIPT_HASHES = [
 	"sha256-dSwg7v9xTCFke3R+41nP4qD5rE6ZATNcPk7sz5ezGzo=",
-	"sha256-dAHpaqBtPUz0woM0pVlnViqkNcCTLEALJYVOiG/qU2w=",
+	"sha256-kYp0tNaRAr0Yzje5Vr4q+iHQYhJOGNra4PMDuOTy2q8=",
+	"sha256-jXKUlkI8wuQbKndzQZBsccnIUWOmK/kmNuERq53aXEc=",
 ] as const;
 
 // `style-src 'unsafe-inline'` is decided, not open: `CoverImg.astro`

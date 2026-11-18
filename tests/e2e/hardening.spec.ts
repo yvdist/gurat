@@ -43,12 +43,16 @@ test("public pages carry baseline headers + hashed-script CSP", async ({
 		const res = await request.get(path);
 		expect(res.status(), `GET ${path}`).toBe(200);
 		const csp = expectBaseline(res.headers());
-		// Pinned Base.astro script hashes; never 'unsafe-inline' for scripts.
+		// Pinned script hashes (Base head + body, archive filter); never
+		// 'unsafe-inline' for scripts.
 		expect(csp).toContain(
 			"'sha256-dSwg7v9xTCFke3R+41nP4qD5rE6ZATNcPk7sz5ezGzo='",
 		);
 		expect(csp).toContain(
-			"'sha256-dAHpaqBtPUz0woM0pVlnViqkNcCTLEALJYVOiG/qU2w='",
+			"'sha256-kYp0tNaRAr0Yzje5Vr4q+iHQYhJOGNra4PMDuOTy2q8='",
+		);
+		expect(csp).toContain(
+			"'sha256-jXKUlkI8wuQbKndzQZBsccnIUWOmK/kmNuERq53aXEc='",
 		);
 		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
 	}
@@ -77,7 +81,7 @@ test("no page emits a CSP violation in either theme", async ({ page }) => {
 			violations.push(`pageerror: ${err.message}`);
 		}
 	});
-	for (const theme of ["light", "dark", "auto"] as const) {
+	for (const theme of ["light", "dark"] as const) {
 		await page.goto("/");
 		await page.evaluate((t) => {
 			try {

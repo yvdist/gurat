@@ -1,0 +1,31 @@
+---
+// Shared wordmark: lowercase Newsreader "gurat" with a hand-drawn SVG
+// underline stroke (sampled from the Home reference PNG — same asset in
+// header, overlay, footer). Dark prop forces warm-white ink for the
+// always-near-black overlay (overlay is NOT themed).
+interface Props {
+	dark?: boolean;
+}
+
+const { dark = false } = Astro.props;
+---
+
+<span class:list={["wordmark", dark && "wordmark-dark"]}>
+	<span class="wordmark-name">gurat</span>
+	<svg
+		class="wordmark-stroke"
+		viewBox="0 0 72 6"
+		width="72"
+		height="6"
+		aria-hidden="true"
+		focusable="false"
+	>
+		<path
+			d="M2 4.2 C 14 2.6, 26 4.8, 38 3.4 S 60 2.8, 70 3.9"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.6"
+			stroke-linecap="round"
+		/>
+	</svg>
+</span>

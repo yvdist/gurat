@@ -1,7 +1,7 @@
 // Browser-only share-image generator (spec 06 §6.4). Never imported by
 // workerd code (same rule as mediaClient.ts). Renders the post title on a
-// 1200×630 canvas in the hero-panel palette (navy + pale circle, no new
-// design) and returns a PNG blob for upload to `PUT .../og`.
+// 1200×630 canvas in the monochrome shell palette (near-black ground + pale
+// circle, no new design) and returns a PNG blob for upload to `PUT .../og`.
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 const MAX_LINES = 3;
@@ -47,15 +47,15 @@ export async function generateOgImage(title: string): Promise<Blob> {
 	canvas.height = OG_HEIGHT;
 	const ctx = canvas.getContext("2d");
 	if (ctx === null) throw new Error("2d context unavailable");
-	// Navy ground + pale circle accent (hero-panel palette).
-	ctx.fillStyle = "#1f2b3f";
+	// Near-black ground (#0a0a0a sampled dark) + pale circle accent.
+	ctx.fillStyle = "#0a0a0a";
 	ctx.fillRect(0, 0, OG_WIDTH, OG_HEIGHT);
 	ctx.fillStyle = "rgba(232, 222, 203, 0.16)";
 	ctx.beginPath();
 	ctx.arc(OG_WIDTH - 140, OG_HEIGHT - 120, 340, 0, Math.PI * 2);
 	ctx.fill();
 	ctx.fillStyle = "#f4efe4";
-	ctx.font = '600 76px "Bodoni Moda", Georgia, serif';
+	ctx.font = "600 76px Newsreader, Georgia, serif";
 	ctx.textBaseline = "alphabetic";
 	const lines = wrapLines(ctx, title, OG_WIDTH - 160);
 	const lineHeight = 92;

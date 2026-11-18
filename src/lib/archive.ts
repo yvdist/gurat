@@ -62,3 +62,58 @@ export function tagHreflangs(slug: string): HreflangLink[] {
 		href: localizePath(`/tags/${slug}`, locale),
 	}));
 }
+// Listing-surface cover resolution (archive rows, tag strips, about
+// portrait). Seed posts carry no `cover_media_id`, so covers resolve from
+// body figures: explicit cover first, else the first figure in the stored
+// editor doc, else null — callers render a title-only row, never a
+// placeholder box.
+export interface FigureRef {
+	mediaId: string;
+	alt: string;
+	caption: string;
+}
+
+// All figure references in document order (empty array on bad JSON).
+export function figureRefs(contentJson: string): FigureRef[] {
+	const found: FigureRef[] = [];
+	try {
+		const walk = (node: unknown): void => {
+			if (typeof node !== "object" || node === null) return;
+			const n = node as {
+				type?: unknown;
+				attrs?: unknown;
+				content?: unknown;
+			};
+			if (
+				n.type === "figure" &&
+				typeof n.attrs === "object" &&
+				n.attrs !== null
+			) {
+				const attrs = n.attrs as Record<string, unknown>;
+				const mediaId = attrs.mediaId;
+				if (typeof mediaId === "string" && mediaId !== "") {
+					found.push({
+						mediaId,
+						alt: typeof attrs.alt === "string" ? attrs.alt : "",
+						caption: typeof attrs.caption === "string" ? attrs.caption : "",
+					});
+				}
+			}
+			if (Array.isArray(n.content)) for (const child of n.content) walk(child);
+		};
+		walk(JSON.parse(contentJson) as unknown);
+	} catch {
+		return [];
+	}
+	return found;
+}
+
+export function listingCoverId(post: {
+	coverMediaId: string | null;
+	contentJson: string;
+}): string | null {
+	if (post.coverMediaId !== null && post.coverMediaId !== "") {
+		return post.coverMediaId;
+	}
+	return figureRefs(post.contentJson).at(0)?.mediaId ?? null;
+}

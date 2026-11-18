@@ -51,10 +51,12 @@ const canonical = `/id/tags/${tagSlug}`;
 			canonical={Astro.url.pathname}
 			hreflangs={[]}
 			locale={notFoundLocale}
-			heading={t(notFoundLocale, "notfound.title")}
 			path={Astro.url.pathname}
 		>
-			<p>{t(notFoundLocale, "notfound.body")}</p>
+			<div class="page">
+				<h1>{t(notFoundLocale, "notfound.title")}</h1>
+				<p>{t(notFoundLocale, "notfound.body")}</p>
+			</div>
 		</Base>
 	) : (
 		<Base
@@ -63,10 +65,10 @@ const canonical = `/id/tags/${tagSlug}`;
 			canonical={canonical}
 			hreflangs={tagHreflangs(tagSlug)}
 			locale={locale}
-			heading={tagLabel}
 			path={canonical}
 		>
 			<div class="page">
+				<h1>{tagLabel}</h1>
 				{posts.length === 0 ? (
 					<p>{t(locale, "feed.empty")}</p>
 				) : (

@@ -2,8 +2,7 @@
 import ArticleBody from "../../components/ArticleBody.astro";
 import Byline from "../../components/Byline.astro";
 import CoverImg from "../../components/CoverImg.astro";
-import PrevNext from "../../components/PrevNext.astro";
-import RelatedPosts from "../../components/RelatedPosts.astro";
+import PrevNext, { type ClosingCard } from "../../components/PrevNext.astro";
 import TagPill from "../../components/TagPill.astro";
 import Toc from "../../components/Toc.astro";
 import { type Locale, SITE } from "../../config/site";
@@ -14,7 +13,7 @@ import {
 	t,
 } from "../../i18n";
 import Base from "../../layouts/Base.astro";
-import { postHreflangs } from "../../lib/archive";
+import { listingCoverId, postHreflangs } from "../../lib/archive";
 import { getEnv } from "../../lib/env";
 import {
 	createDb,
@@ -44,16 +43,12 @@ const translations =
 	post !== null
 		? await getTranslations(db, post.translationGroupId, post.id)
 		: [];
-const cover =
-	post?.coverMediaId !== null && post?.coverMediaId !== undefined
-		? await getMediaById(db, post.coverMediaId)
-		: null;
+// Hero cover: explicit cover first, else the first figure in the stored
+// editor doc (seed sets no cover_media_id) — the hero never renders empty.
+const coverId =
+	post?.coverMediaId ?? (post !== null ? listingCoverId(post) : null);
+const cover = coverId === null ? null : await getMediaById(db, coverId);
 const translation = translations.find((tr) => tr.locale !== locale);
-const otherLocale: Locale = "id";
-const translationHref =
-	translation !== undefined
-		? localizePath(`/writing/${translation.slug}`, translation.locale)
-		: localizePath("/", otherLocale);
 const minutes = post?.readingMinutes ?? 1;
 const readingLabel = t(locale, "post.readingMinutes").replace(
 	"{minutes}",
@@ -87,7 +82,7 @@ const prevNo =
 	adjacent.prev !== null ? pad(adjacentNos.get(adjacent.prev.id) ?? 1) : "";
 const nextNo =
 	adjacent.next !== null ? pad(adjacentNos.get(adjacent.next.id) ?? 1) : "";
-const related =
+const relatedRows =
 	post !== null
 		? await getRelatedPosts(db, {
 				locale,
@@ -95,6 +90,47 @@ const related =
 				tagIds: post.tags.map((tag) => tag.id),
 			})
 		: [];
+// Closing cards: RELATED is the first related post (threshold: any shared
+// tag), preserving the tag-sharing list contract the tests assert on.
+const relatedNos = await getPostNos(
+	db,
+	locale,
+	relatedRows.map((r) => r.id),
+);
+const toCard = (
+	row: {
+		slug: string;
+		title: string;
+		coverMediaId: string | null;
+		id: string;
+	} | null,
+	no: string,
+): ClosingCard | null =>
+	row === null
+		? null
+		: {
+				slug: row.slug,
+				title: row.title,
+				postNo: no,
+				coverId: row.coverMediaId,
+			};
+const prevCard = toCard(adjacent.prev, prevNo);
+const nextCard = toCard(adjacent.next, nextNo);
+const relatedCard =
+	relatedRows.length > 0 && relatedRows[0] !== undefined
+		? toCard(relatedRows[0], pad(relatedNos.get(relatedRows[0].id) ?? 1))
+		: null;
+const coverIds = new Set<string>();
+for (const card of [prevCard, nextCard, relatedCard]) {
+	if (card?.coverId !== null && card?.coverId !== undefined) {
+		coverIds.add(card.coverId);
+	}
+}
+const covers = new Map<string, Media>();
+for (const id of coverIds) {
+	const media = await getMediaById(db, id);
+	if (media !== null) covers.set(id, media);
+}
 const canonical = post !== null ? `/writing/${post.slug}` : Astro.url.pathname;
 // og:image resolution (exact): per-post generated key else static fallback.
 const ogBase = getEnv().MEDIA_BASE_URL || SITE.url;
@@ -127,10 +163,12 @@ const jsonLd =
 			canonical={Astro.url.pathname}
 			hreflangs={[]}
 			locale={notFoundLocale}
-			heading={t(notFoundLocale, "notfound.title")}
 			path={Astro.url.pathname}
 		>
-			<p>{t(notFoundLocale, "notfound.body")}</p>
+			<div class="page">
+				<h1>{t(notFoundLocale, "notfound.title")}</h1>
+				<p>{t(notFoundLocale, "notfound.body")}</p>
+			</div>
 		</Base>
 	) : (
 		<Base
@@ -147,17 +185,51 @@ const jsonLd =
 			jsonLd={jsonLd}
 		>
 			<div class="page">
-				<p class="mono breadcrumb">
-					<a href={localizePath("/writing", locale)}>writing</a>
-					{" / "}
-					{primaryTag !== undefined && (
-						<span>{locale === "en" ? primaryTag.labelEn : primaryTag.labelId} / </span>
+				<header class="post-head">
+					<p class="mono post-eyebrow">
+						NO. {postNo}
+						{" · "}
+						<time datetime={post.publishedAt !== null ? new Date(post.publishedAt).toISOString() : undefined}>
+							{post.publishedAt !== null ? formatPostDate(post.publishedAt, locale) : ""}
+						</time>
+						{" · "}
+						<span>{readingLabel}</span>
+						{primaryTag !== undefined && (
+							<span>
+								{" · "}
+								{locale === "en" ? primaryTag.labelEn : primaryTag.labelId}
+							</span>
+						)}
+					</p>
+					<h1>{post.title}</h1>
+					<p class="post-lede">{post.excerpt}</p>
+					<p class="mono post-byline">
+						{t(locale, "post.writtenBy").replace("{name}", SITE.name)}
+					</p>
+					{translation !== undefined && (
+						<a
+							class="mono post-translation"
+							href={localizePath(`/writing/${translation.slug}`, translation.locale)}
+						>
+							{translation.locale === "id"
+								? t("id", "post.translationId")
+								: t("en", "post.translationEn")}
+						</a>
 					)}
-					<span class="crumb-no">No. {postNo}</span>
-				</p>
+				</header>
+				{cover !== null && (
+					<div class="post-cover">
+						<CoverImg media={cover} baseUrl={getEnv().MEDIA_BASE_URL} />
+					</div>
+				)}
+				<div class="post-grid">
+					<Toc locale={locale} entries={toc} />
+					<ArticleBody html={post.contentHtml} />
+					<aside class="post-sidenotes" aria-hidden="true" />
+				</div>
 				{post.tags.length > 0 && (
-					<div class="pill-row">
-						{post.tags.slice(0, 2).map((tag) => (
+					<div class="post-tags">
+						{post.tags.map((tag) => (
 							<TagPill
 								locale={locale}
 								slug={tag.slug}
@@ -166,48 +238,18 @@ const jsonLd =
 						))}
 					</div>
 				)}
-				{cover !== null && <CoverImg media={cover} baseUrl={getEnv().MEDIA_BASE_URL} />}
-				<h1>{post.title}</h1>
-				<p class="post-lede">{post.excerpt}</p>
-				<div class="post-meta">
-					<span class="mono">
-						<time datetime={post.publishedAt !== null ? new Date(post.publishedAt).toISOString() : undefined}>
-							{post.publishedAt !== null ? formatPostDate(post.publishedAt, locale) : ""}
-						</time>
-						{post.publishedAt !== null && post.updatedAt !== post.publishedAt && (
-							<span>
-								{" · "}
-								{t(locale, "post.updated").replace("{date}", formatPostDate(post.updatedAt, locale))}
-							</span>
-						)}
-						{" · "}
-						<span>{readingLabel}</span>
-					</span>
-					<a class="mono" href={translationHref}>
-						{translation !== undefined
-							? translation.locale === "en"
-								? "English"
-								: "Bahasa Indonesia"
-							: t(otherLocale, "nav.home")}
-					</a>
-				</div>
-				<figure>
-					<div class="hero-panel" aria-hidden="true">
-						<div class="arc" />
-					</div>
-				</figure>
-				<div class="post-grid">
-					<Toc locale={locale} entries={toc} />
-					<ArticleBody html={post.contentHtml} />
-					<aside class="post-sidenotes" aria-hidden="true" />
-				</div>
-				<Byline locale={locale} canonical={`${SITE.url}${canonical}`} />
+				<Byline
+					locale={locale}
+					canonical={`${SITE.url}${canonical}`}
+					email={t(locale, "about.contactEmail")}
+				/>
 				<PrevNext
 					locale={locale}
-					prev={adjacent.prev !== null ? { slug: adjacent.prev.slug, title: adjacent.prev.title, postNo: prevNo } : null}
-					next={adjacent.next !== null ? { slug: adjacent.next.slug, title: adjacent.next.title, postNo: nextNo } : null}
+					prev={prevCard}
+					related={relatedCard}
+					next={nextCard}
+					covers={covers}
 				/>
-				<RelatedPosts locale={locale} related={related} />
 			</div>
 		</Base>
 	)

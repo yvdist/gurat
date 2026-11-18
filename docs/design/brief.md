@@ -176,12 +176,12 @@ Clean-empty rule: **hide empty sections, never render "No posts yet" boxes.**
 Applies to home Latest/Topics/Archive/About-preview, archive groups, tags
 rows, and admin utility panels alike.
 
-| Posts | Home | Archive | Tags | About | Admin |
-|---|---|---|---|---|---|
-| 0 | Masthead + feature slot hidden; index/topics/archive/About-preview hidden; footer only | Title + filters hidden; nothing listed | Title only, zero rows | Bio + sections as written (static page) | Metrics `0`; CONTINUE WRITING hidden; NEEDS ATTENTION hidden |
-| 1 | Feature = the post; index single row; topics single badge; archive single row | Single group, single row, no year split | Single row + 3 thumbs (same cover) | As written | Metrics live; list single row |
-| 3 | Feature + 2 index rows; topics per present tags | Groups as dated; filters live | Rows per present tags only | As written | Full panels |
-| 20 | Feature + paginated index (`ALL WRITING →`); topics top-4 by count; archive 5 latest + year groups | Year groups + pagination; hover previews throughout | All four rows + thumbs; overflow hidden per row | As written | Paginated lists |
+| Posts | Home                                                                                               | Archive                                             | Tags                                            | About                                   | Admin                                                        |
+| ----- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- | --------------------------------------- | ------------------------------------------------------------ |
+| 0     | Masthead + feature slot hidden; index/topics/archive/About-preview hidden; footer only             | Title + filters hidden; nothing listed              | Title only, zero rows                           | Bio + sections as written (static page) | Metrics `0`; CONTINUE WRITING hidden; NEEDS ATTENTION hidden |
+| 1     | Feature = the post; index single row; topics single badge; archive single row                      | Single group, single row, no year split             | Single row + 3 thumbs (same cover)              | As written                              | Metrics live; list single row                                |
+| 3     | Feature + 2 index rows; topics per present tags                                                    | Groups as dated; filters live                       | Rows per present tags only                      | As written                              | Full panels                                                  |
+| 20    | Feature + paginated index (`ALL WRITING →`); topics top-4 by count; archive 5 latest + year groups | Year groups + pagination; hover previews throughout | All four rows + thumbs; overflow hidden per row | As written                              | Paginated lists                                              |
 
 Draft/scheduled posts never appear on public surfaces (`visibilityFilter`);
 admin lists them with status badges. Missing-translation metric counts

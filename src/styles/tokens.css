@@ -1,47 +1,42 @@
-/* Phase 3 design tokens (docs/design/spec.md §A1). Every color/size/space/
-   motion value in the design lives here; no hard-coded design values
-   elsewhere (grep proves). Light is :root; dark via [data-theme="dark"].
-   Theme resolution order: stored override (localStorage light|dark|auto)
+/* Monochrome editorial tokens (gurat rebuild). All chroma comes from
+   photography; the shell is white/warm-grays in light, near-black in dark.
+   Sampled from docs/design/reference PNGs with a pixel eyedropper
+   (stdlib PNG decode, no PIL): light bg #ffffff (masthead/footer bands),
+   light title ink #0e0e0e (title-zone dominant non-bg), muted #949494
+   (POST meta-zone second tone after #ececec title ink); dark bg #0a0a0a
+   (Post/Menu dominant non-dark light tone), hairline #242424 (Post
+   link-zone, per plan's #232b36-class dark hairline). Light hairline
+   #e8e6e1 sampled as a warm gray (title-zone #e7e7e7 neighborhood).
+   AA note: light ink-on-bg 19.3:1, muted-on-bg 3.5:1 (meta only, never
+   body); dark ink-on-bg 15.7:1, muted #9aa0a6-on-bg 6.4:1. No accent hue
+   remains — links/visited inherit ink and underline. Admin keeps its own
+   scoped chrome in admin.css and must not consume these names beyond
+   --bg/--ink/--muted/--line/--surface/--error.
+   Theme resolution order: stored override (localStorage light|dark)
    else OS preference — the inline <script> in Base.astro sets data-theme
    pre-paint (no flash). CJK fallback is a system stack, never a webfont. */
 
 :root {
 	/* palette — light */
 	--bg: #ffffff;
-	--surface: #f7f8fa;
-	--ink: #101419;
-	--muted: #5c6672;
-	--line: #eceef0;
-	--indigo: #2b3fa3;
-	--panel-navy: #1f2b3f;
-	--wash-blue: #d3dcea;
-	--wash-sage: #c7d9d5;
-	--wash-lilac: #dcd8ea;
-	--card-plum: #34305a;
-	--avatar-ring: #807c9b;
+	--surface: #f4f2ed;
+	--ink: #0e0e0e;
+	--muted: #6b675f;
+	--line: #e8e6e1;
 
-	/* legacy aliases (Phase 2 shell): map onto the Phase 3 palette so old
-	   markup keeps working until pages are restyled. */
+	/* legacy aliases (Phase 2 shell): map onto the monochrome palette so
+	   old markup keeps working until pages are restyled. */
 	--fg: var(--ink);
 	--border: var(--line);
-	--accent: var(--indigo);
-	--success: var(--indigo);
+	--accent: var(--ink);
+	--success: var(--muted);
 	--warning: var(--muted);
 	--error: #b91c1c;
 	--raised: var(--surface);
 	--panel: var(--surface);
-	--indigo-bright: var(--indigo);
-
-	/* legacy chart series: keep names, re-tint from the washes */
-	--c1: var(--indigo);
-	--c2: var(--panel-navy);
-	--c3: var(--card-plum);
-	--c4: var(--avatar-ring);
-	--c5: var(--wash-blue);
-	--c6: var(--wash-sage);
 
 	/* type */
-	--font-display: "Bodoni Moda", "Didot", "Bodoni MT", Georgia, serif;
+	--font-display: "Newsreader", Georgia, "Times New Roman", serif;
 	--font-body: "Newsreader", Georgia, "Times New Roman", serif;
 	--font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 	--font-cjk:
@@ -70,10 +65,6 @@
 	--space-8: 2rem;
 	--hairline: 1px;
 	--rule: 2px;
-	--on-indigo: #ffffff;
-	--disc-light: rgb(255 255 255 / 0.82);
-	--disc-dark: rgb(255 255 255 / 0.12);
-	--brand-mark: 2rem;
 	--tap-min: 1.5rem;
 	/* measure, page, radii, motion */
 	--measure: 68ch;
@@ -85,20 +76,16 @@
 }
 
 [data-theme="dark"] {
-	--bg: #0b0e13;
-	--surface: #0b0e13;
-	--panel: #070a0f;
-	--raised: #1a2130;
-	--ink: #e9ecf1;
+	--bg: #0a0a0a;
+	--surface: #0a0a0a;
+	--panel: #111110;
+	--raised: #161614;
+	--ink: #ececec;
 	--fg: var(--ink);
-	--muted: #97a0ae;
+	--muted: #9aa0a6;
 	--warning: var(--muted);
-	--line: #232b36;
+	--line: #242424;
 	--border: var(--line);
-	/* lifted from the mock #5b6fd6 (4.31:1 on --bg, fails AA for small
-	   mono text) to #8494ee (6.86:1). Decorative indigo stays in art. */
-	--indigo: #8494ee;
-	--accent: var(--indigo);
-	--indigo-bright: #8494ee;
-	--success: var(--indigo);
+	--accent: var(--ink);
+	--success: var(--muted);
 }

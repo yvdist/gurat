@@ -94,11 +94,14 @@ test("draft and future posts 404 in both locales", async ({ page }) => {
 
 test("theme toggle persists and post numbers resolve", async ({ page }) => {
 	await page.goto("/");
-	// Post numbers render zero-padded on cards and rows.
-	await expect(page.getByText(/^No\. \d{3}$/).first()).toBeVisible();
-	// Theme toggle: three buttons, exactly one pressed.
+	// Post numbers render zero-padded in the featured eyebrow (scoped to
+	// main: the menu overlay carries its own hidden LATEST number).
+	await expect(page.locator("main .feature-eyebrow")).toContainText(
+		/NO\. \d{3}/,
+	);
+	// Theme control: two buttons (LIGHT / DARK, no AUTO), exactly one pressed.
 	const toggle = page.getByRole("group", { name: "Theme" });
-	await expect(toggle.getByRole("button")).toHaveCount(3);
+	await expect(toggle.getByRole("button")).toHaveCount(2);
 	await toggle.getByRole("button", { name: "dark" }).click();
 	await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 	await expect(toggle.getByRole("button", { name: "dark" })).toHaveAttribute(
@@ -107,10 +110,10 @@ test("theme toggle persists and post numbers resolve", async ({ page }) => {
 	);
 	await page.reload();
 	await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-	// Post page: breadcrumb number + prev/next links resolve 200.
+	// Post page: centered header eyebrow carries the number + closing cards.
 	await page.goto("/writing/no-014-photo-first");
 	await expect(
-		page.locator(".breadcrumb").getByText(/No\. \d{3}/),
+		page.locator(".post-eyebrow").getByText(/NO\. \d{3}/),
 	).toBeVisible();
 	const prevNext = page.locator(".prevnext a");
 	if ((await prevNext.count()) > 0) {

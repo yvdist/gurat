@@ -1,0 +1,30 @@
+---
+// Two-button LIGHT / DARK theme control (no AUTO — reference binding).
+// Stored override light|dark; unset = prefers-color-scheme. Shared by
+// footer + menu overlay; class hook `js-theme` syncs aria-pressed.
+// Labels use theme.light/theme.dark keys (EN: "light"/"dark").
+import type { Locale } from "../config/site";
+import { t } from "../i18n";
+
+interface Props {
+	locale: Locale;
+	id?: string;
+	dark?: boolean;
+}
+
+const { locale, id, dark = false } = Astro.props;
+---
+
+<div
+	class:list={["theme-ctl", dark && "theme-ctl-dark"]}
+	role="group"
+	aria-label={t(locale, "theme.label")}
+	id={id}
+>
+	<button type="button" data-theme-value="light" aria-pressed="false">
+		{t(locale, "theme.light")}
+	</button>
+	<button type="button" data-theme-value="dark" aria-pressed="false">
+		{t(locale, "theme.dark")}
+	</button>
+</div>
