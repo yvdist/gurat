@@ -2,19 +2,55 @@
 import type { Locale } from "../../config/site";
 import { localizePath, t } from "../../i18n";
 import Base from "../../layouts/Base.astro";
-import { rootHreflangs } from "../../lib/archive";
+import { listingCoverId, rootHreflangs } from "../../lib/archive";
+import { smallestVariantUrl } from "../../lib/content/render";
 import { getEnv } from "../../lib/env";
-import { createDb, listTags } from "../../server/db";
+import {
+	createDb,
+	getMediaById,
+	listPublishedPosts,
+	listTags,
+} from "../../server/db";
 
 const locale: Locale = "en";
 const db = createDb(getEnv().DB);
 const tags = await listTags(db, locale);
+// Clean-empty rule: rows with zero visible posts hidden.
+const visible = tags.filter((tag) => tag.postCount > 0);
 const TAG_KANJI: Record<string, string> = {
 	software: "技術",
 	film: "映画",
 	music: "音楽",
 	notes: "覚書",
 };
+const baseUrl = getEnv().MEDIA_BASE_URL;
+// 3 latest covers per visible tag (title-only row when a slot is coverless).
+const strips = new Map<
+	string,
+	{ src: string; alt: string; width: number; height: number }[]
+>();
+for (const tag of visible) {
+	const { items } = await listPublishedPosts(db, {
+		locale,
+		tagSlug: tag.slug,
+		limit: 3,
+	});
+	const thumbs: { src: string; alt: string; width: number; height: number }[] =
+		[];
+	for (const p of items) {
+		const id = listingCoverId(p);
+		if (id === null) continue;
+		const media = await getMediaById(db, id);
+		if (media === null) continue;
+		thumbs.push({
+			src: smallestVariantUrl(media, baseUrl),
+			alt: media.altDefault,
+			width: media.width,
+			height: media.height,
+		});
+	}
+	strips.set(tag.slug, thumbs);
+}
 const canonical = "/tags";
 ---
 
@@ -24,20 +60,40 @@ const canonical = "/tags";
 	canonical={canonical}
 	hreflangs={rootHreflangs(canonical)}
 	locale={locale}
-	heading={t(locale, "tags.title")}
 	path={canonical}
 >
 	<div class="page">
+		<h1>{t(locale, "tags.title")}</h1>
+		<p class="mono topics-eyebrow">{t(locale, "tags.browseByTopic")}</p>
 		{
-			tags.length === 0 ? (
+			visible.length === 0 ? (
 				<p>{t(locale, "feed.empty")}</p>
 			) : (
-				<div class="topic-grid">
-					{tags.map((tag) => (
-						<a class="topic" href={localizePath(`/tags/${tag.slug}`, locale)}>
-							<p class="mono kanji">{TAG_KANJI[tag.slug] ?? tag.slug}</p>
-							<h3>{locale === "en" ? tag.labelEn : tag.labelId}</h3>
-							<p class="mono">{tag.postCount}</p>
+				<div class="topic-rows">
+					{visible.map((tag) => (
+						<a
+							class="topic-row"
+							href={localizePath(`/tags/${tag.slug}`, locale)}
+						>
+							<span class="mono topic-count">
+								{TAG_KANJI[tag.slug] ?? tag.slug} ·{" "}
+								{t(locale, "archive.count").replace("{n}", String(tag.postCount))}
+							</span>
+							<span class="topic-name">
+								{locale === "en" ? tag.labelEn : tag.labelId}
+							</span>
+							<span class="topic-strip" aria-hidden="true">
+								{(strips.get(tag.slug) ?? []).map((thumb) => (
+									<img
+										src={thumb.src}
+										alt=""
+										loading="lazy"
+										decoding="async"
+										width={thumb.width}
+										height={thumb.height}
+									/>
+								))}
+							</span>
 						</a>
 					))}
 				</div>

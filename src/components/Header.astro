@@ -1,9 +1,11 @@
 ---
-// Site header (spec §A2): logo lockup (indigo square + SITE.name wordmark),
-// right mono nav + en/id segmented switch + theme toggle.
-import { type Locale, SITE } from "../config/site";
+// Site header: gurat lowercase Newsreader wordmark (shared Wordmark) with
+// hand-drawn underline stroke left; right mono nav WRITING ABOUT MENU +.
+// MENU + is a <button aria-expanded> opening the overlay (Step 3b).
+import type { Locale } from "../config/site";
 import { localizePath, t } from "../i18n";
-import ThemeToggle from "./ThemeToggle.astro";
+import MenuOverlay from "./MenuOverlay.astro";
+import Wordmark from "./Wordmark.astro";
 
 interface Props {
 	locale: Locale;
@@ -11,14 +13,12 @@ interface Props {
 }
 
 const { locale, path } = Astro.props;
-const otherLocale: Locale = locale === "en" ? "id" : "en";
 ---
 
 <header class="site-header">
 	<div class="page">
-		<a class="brand" href={localizePath("/", locale)}>
-			<span class="brand-mark" aria-hidden="true">余</span>
-			<span class="brand-name">{SITE.name}</span>
+		<a class="brand" href={localizePath("/", locale)} aria-label="gurat — home">
+			<Wordmark />
 		</a>
 		<nav class="site-nav" aria-label={t(locale, "nav.primary")}>
 			<ul class="nav-links">
@@ -26,25 +26,19 @@ const otherLocale: Locale = locale === "en" ? "id" : "en";
 					<a href={localizePath("/writing", locale)}>{t(locale, "nav.writing")}</a>
 				</li>
 				<li>
-					<a href={localizePath("/tags", locale)}>{t(locale, "nav.tags")}</a>
-				</li>
-				<li>
 					<a href={localizePath("/about", locale)}>{t(locale, "nav.about")}</a>
 				</li>
 			</ul>
-			<div class="seg" role="group" aria-label="Language">
-				<button
-					type="button"
-					aria-pressed={locale === "en" ? "true" : "false"}
-					data-locale-href={localizePath(path, "en")}>en</button
-				>
-				<button
-					type="button"
-					aria-pressed={locale === "id" ? "true" : "false"}
-					data-locale-href={localizePath(path, otherLocale)}>id</button
-				>
-			</div>
-			<ThemeToggle locale={locale} />
+			<button
+				type="button"
+				class="menu-open"
+				aria-expanded="false"
+				aria-controls="menu-overlay"
+				data-menu-open
+			>
+				{t(locale, "menu.open")}
+			</button>
 		</nav>
 	</div>
 </header>
+<MenuOverlay locale={locale} path={path} />

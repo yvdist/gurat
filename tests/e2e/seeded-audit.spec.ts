@@ -52,3 +52,30 @@ for (const theme of ["light", "dark"] as const) {
 		}
 	}
 }
+
+// Overlay states (additive): after each page capture, open MENU + and
+// capture the overlay at 1440 + 390, both themes.
+for (const theme of ["light", "dark"] as const) {
+	for (const vp of [
+		{ name: "390", width: 390, height: 844 },
+		{ name: "1440", width: 1440, height: 900 },
+	] as const) {
+		test(`seeded overlay ${vp.name} ${theme}`, async ({ page }) => {
+			await page.goto("/");
+			await page.addInitScript((t) => {
+				localStorage.setItem("gurat-theme", t);
+			}, theme);
+			await page.setViewportSize({ width: vp.width, height: vp.height });
+			await page.goto("/");
+			await page.getByRole("button", { name: "MENU +" }).click();
+			await expect(page.locator("#menu-overlay")).toBeVisible();
+			await page.addStyleTag({
+				content: "astro-dev-toolbar { display: none !important; }",
+			});
+			await page.screenshot({
+				path: `docs/design/audit/seeded/overlay-${vp.name}-${theme}.png`,
+				fullPage: true,
+			});
+		});
+	}
+}

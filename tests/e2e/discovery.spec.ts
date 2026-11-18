@@ -90,14 +90,15 @@ test("post page carries absolute OG/Twitter/JSON-LD and symmetric hreflangs", as
 	await expect(
 		head.locator('link[type="application/rss+xml"][hreflang="id"]'),
 	).toHaveCount(1);
-	// NO.014 shares tag-software with NO.007/011/013: related lists them.
-	await expect(page.locator(".related")).toHaveCount(1);
-	await expect(page.locator(".related")).toContainText(/quiet discipline|Delete the dashboard|metronome/i);
-	// Home footer RSS text is now a real link to the locale feed.
-	await expect(page.locator(".site-footer .rss a")).toHaveAttribute(
-		"href",
-		"/feed.xml",
+	// NO.014 shares tag-software with NO.007/011/013: the RELATED closing
+	// card lists them.
+	await expect(page.locator(".prevnext")).toContainText(
+		/quiet discipline|Delete the dashboard|metronome/i,
 	);
+	// Home footer RSS text is now a real link to the locale feed.
+	await expect(
+		page.locator('.site-footer .foot-nav a[href="/feed.xml"]'),
+	).toHaveAttribute("href", "/feed.xml");
 });
 
 test("search serves form-only without q, results with q, 400 on blank", async ({

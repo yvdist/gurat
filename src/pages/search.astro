@@ -26,11 +26,11 @@ const canonical = "/search";
 	canonical={canonical}
 	hreflangs={rootHreflangs(canonical)}
 	locale={locale}
-	heading={t(locale, "search.title")}
 	path={canonical}
 	noindex
 >
 	<div class="page">
+		<h1>{t(locale, "search.title")}</h1>
 		<form method="get" action={localizePath("/search", locale)} role="search">
 			<label>{t(locale, "search.label")}
 				<input type="search" name="q" value={q ?? ""} maxlength={100} />

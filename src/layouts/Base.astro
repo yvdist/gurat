@@ -7,12 +7,9 @@ import { t } from "../i18n";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import "../styles/article.css";
-// Self-hosted faces: display (latin), body (latin + latin-ext for ID glyphs),
-// mono labels (latin). Kanji accents render in the system CJK stack from
+// Self-hosted faces: Newsreader (latin + latin-ext for ID glyphs) + IBM Plex
+// Mono labels (latin). Kanji accents render in the system CJK stack from
 // --font-cjk — never a CJK webfont. font-display: swap via fontsource.
-import "@fontsource/bodoni-moda/latin-400.css";
-import "@fontsource/bodoni-moda/latin-400-italic.css";
-import "@fontsource/bodoni-moda/latin-500.css";
 import "@fontsource/newsreader/latin-400.css";
 import "@fontsource/newsreader/latin-400-italic.css";
 import "@fontsource/newsreader/latin-500.css";
@@ -22,13 +19,11 @@ import "@fontsource/newsreader/latin-ext-500.css";
 import "@fontsource/ibm-plex-mono/latin-400.css";
 import "@fontsource/ibm-plex-mono/latin-500.css";
 
-// Preload the faces first paint actually uses: display 400 + 500 (h1–h4
-// render weight 500), body latin 400 + latin-ext 400 (ID glyphs arrive in
-// the ext file; late swap reflows above-fold text — measured ID-post CLS
-// 0.17 without it), mono 400 (inline <code>). All same-origin, no CSP
-// change.
-import bodoni400 from "@fontsource/bodoni-moda/files/bodoni-moda-latin-400-normal.woff2?url";
-import bodoni500 from "@fontsource/bodoni-moda/files/bodoni-moda-latin-500-normal.woff2?url";
+// Preload the faces first paint actually uses: Newsreader 400 (body + titles
+// render weight 500 inherits the latin file below), latin-ext 400 (ID glyphs
+// arrive in the ext file; late swap reflows above-fold text — measured
+// ID-post CLS 0.17 without it), mono 400 (inline <code>). All same-origin,
+// no CSP change.
 import plexmono400 from "@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url";
 import newsreader400 from "@fontsource/newsreader/files/newsreader-latin-400-normal.woff2?url";
 import newsreaderExt400 from "@fontsource/newsreader/files/newsreader-latin-ext-400-normal.woff2?url";
@@ -43,8 +38,6 @@ interface Props {
 	canonical: string;
 	hreflangs: Hreflang[];
 	locale: Locale;
-	heading?: string;
-	headingClass?: string;
 	path: string;
 	noindex?: boolean;
 	ogImage?: string;
@@ -60,8 +53,6 @@ const {
 	canonical,
 	hreflangs,
 	locale,
-	heading,
-	headingClass,
 	path,
 	noindex = false,
 	ogImage = `${SITE.url}/og-default.png`,
@@ -115,13 +106,6 @@ const ogLocaleAlternate = locale === "id" ? "en_US" : "id_ID";
 		<link rel="manifest" href="/site.webmanifest" />
 		<link
 			rel="preload"
-			href={bodoni400}
-			as="font"
-			type="font/woff2"
-			crossorigin
-		/>
-		<link
-			rel="preload"
 			href={newsreader400}
 			as="font"
 			type="font/woff2"
@@ -130,13 +114,6 @@ const ogLocaleAlternate = locale === "id" ? "en_US" : "id_ID";
 		<link
 			rel="preload"
 			href={plexmono400}
-			as="font"
-			type="font/woff2"
-			crossorigin
-		/>
-		<link
-			rel="preload"
-			href={bodoni500}
 			as="font"
 			type="font/woff2"
 			crossorigin
@@ -166,64 +143,120 @@ const ogLocaleAlternate = locale === "id" ? "en_US" : "id_ID";
 		<a class="skip-link" href="#main">{t(locale, "nav.skip")}</a>
 		<Header locale={locale} path={path} />
 		<main id="main">
-			{heading !== undefined && <h1 class={headingClass}>{heading}</h1>}
 			<slot />
 		</main>
 		<Footer locale={locale} />
 		<script>
 			(function () {
 				var r = document.documentElement;
-				const sync = function (t: string): void {
+				var sync = function (t: string): void {
 					document
-						.querySelectorAll(".theme-seg [data-theme-value]")
-						.forEach(function (b) {
+						.querySelectorAll("[data-theme-value]")
+						.forEach(function (b: Element): void {
 							b.setAttribute(
 								"aria-pressed",
 								String(b.getAttribute("data-theme-value") === t),
 							);
 						});
 				};
-				const set = function (t: string): void {
+				var set = function (t: string): void {
 					try {
 						localStorage.setItem("gurat-theme", t);
 					} catch (e) {}
-					r.dataset.theme =
-						t === "auto"
-							? matchMedia("(prefers-color-scheme: dark)").matches
-								? "dark"
-								: "light"
-							: t;
+					r.dataset.theme = t;
 					sync(t);
 				};
-				var init = null;
+				var init: string | null = null;
 				try {
 					init = localStorage.getItem("gurat-theme");
 				} catch (e) {}
-				sync(init || "auto");
+				sync(
+					init === "light" || init === "dark"
+						? init
+						: matchMedia("(prefers-color-scheme: dark)").matches
+							? "dark"
+							: "light",
+				);
 				document
-					.querySelectorAll(".theme-seg [data-theme-value]")
-					.forEach(function (b) {
-						b.addEventListener("click", function () {
+					.querySelectorAll("[data-theme-value]")
+					.forEach(function (b: Element): void {
+						b.addEventListener("click", function (): void {
 							var v = b.getAttribute("data-theme-value");
 							if (v) set(v);
 						});
 					});
-				document
-					.querySelectorAll("[data-locale-href]")
-					.forEach(function (b) {
-						b.addEventListener("click", function () {
-							var href = b.getAttribute("data-locale-href");
-							if (href) location.href = href;
-						});
+				var overlay = document.querySelector("[data-menu-overlay]");
+				var openers = document.querySelectorAll(
+					"[data-menu-open][aria-expanded]",
+				);
+				var lastFocus: Element | null = null;
+				var openMenu = function (): void {
+					if (overlay === null) return;
+					lastFocus = document.activeElement;
+					overlay.removeAttribute("hidden");
+					document.body.style.overflow = "hidden";
+					openers.forEach(function (o: Element): void {
+						o.setAttribute("aria-expanded", "true");
 					});
-				var c = document.querySelector("[data-copy-link]");
-				if (c) {
-					var target = c;
+					var c = overlay.querySelector("[data-menu-close]");
+					if (c instanceof HTMLElement) c.focus();
+				};
+				var closeMenu = function (): void {
+					if (overlay === null) return;
+					overlay.setAttribute("hidden", "");
+					document.body.style.overflow = "";
+					openers.forEach(function (o: Element): void {
+						o.setAttribute("aria-expanded", "false");
+					});
+					if (lastFocus instanceof HTMLElement) lastFocus.focus();
+				};
+				openers.forEach(function (o: Element): void {
+					o.addEventListener("click", openMenu);
+				});
+				if (overlay !== null) {
+					var ov = overlay;
+					ov.querySelectorAll("[data-menu-close]").forEach(function (
+						b: Element,
+					): void {
+						b.addEventListener("click", closeMenu);
+					});
+					document.addEventListener("keydown", function (e: Event): void {
+						if (!(e instanceof KeyboardEvent)) return;
+						if (e.key !== "Escape" || ov.hasAttribute("hidden")) return;
+						closeMenu();
+					});
+					ov.addEventListener("keydown", function (e: Event): void {
+						if (!(e instanceof KeyboardEvent)) return;
+						if (e.key !== "Tab") return;
+						var f = ov.querySelectorAll("a[href], button:not([disabled])");
+						if (f.length === 0) return;
+						var first = f[0];
+						var last = f[f.length - 1];
+						if (
+							e.shiftKey &&
+							document.activeElement === first &&
+							last instanceof HTMLElement
+						) {
+							e.preventDefault();
+							last.focus();
+						} else if (
+							!e.shiftKey &&
+							document.activeElement === last &&
+							first instanceof HTMLElement
+						) {
+							e.preventDefault();
+							first.focus();
+						}
+					});
+				}
+				var copy = document.querySelector("[data-copy-link]");
+				if (copy !== null) {
+					var target: Element = copy;
 					var u = target.getAttribute("data-copy-link");
 					var done = target.getAttribute("data-copied") || "copied";
-					target.addEventListener("click", function () {
+					target.addEventListener("click", function (): void {
 						if (navigator.clipboard && u) {
-							navigator.clipboard.writeText(u).then(function () {
+							navigator.clipboard.writeText(u).then(function (): void {
 								target.textContent = done;
 							});
 						}

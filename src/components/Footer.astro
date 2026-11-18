@@ -1,8 +1,11 @@
 ---
-// Site footer (spec §A2): hairline, mono © {year} {name}, center 余白,
-// rss links to the locale feed (Phase 6).
+// Site footer: gurat wordmark left; center mono TAGS RSS EN / ID LIGHT / DARK
+// (ThemeControl inline, locale = plain links); right © 2026. Unified grid
+// left edge shared with header wordmark, H1s, rows.
 import { type Locale, SITE } from "../config/site";
 import { localizePath, t } from "../i18n";
+import ThemeControl from "./ThemeControl.astro";
+import Wordmark from "./Wordmark.astro";
 
 interface Props {
 	locale: Locale;
@@ -14,8 +17,18 @@ const year = new Date().getFullYear();
 
 <footer class="site-footer">
 	<div class="page">
-		<p class="rights">{t(locale, "footer.rights").replace("{year}", String(year)).replace("{name}", SITE.name)}</p>
-		<p class="accent" aria-hidden="true">余白</p>
-		<p class="rss"><a href={localizePath("/feed.xml", locale)} type="application/rss+xml">{t(locale, "footer.rss")}</a></p>
+		<a class="brand" href={localizePath("/", locale)} aria-label="gurat — home">
+			<Wordmark />
+		</a>
+		<nav class="foot-nav" aria-label={t(locale, "nav.primary")}>
+			<a href={localizePath("/tags", locale)}>{t(locale, "nav.tags")}</a>
+			<a href={localizePath("/feed.xml", locale)} type="application/rss+xml">RSS</a>
+			<span class="foot-sep" aria-hidden="true">/</span>
+			<a href={localizePath("/", "en")} aria-current={locale === "en" ? "page" : undefined}>EN</a>
+			<span aria-hidden="true"> / </span>
+			<a href={localizePath("/", "id")} aria-current={locale === "id" ? "page" : undefined}>ID</a>
+			<ThemeControl locale={locale} />
+		</nav>
+		<p class="rights mono">© {year} {SITE.name}</p>
 	</div>
 </footer>

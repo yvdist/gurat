@@ -99,7 +99,8 @@ export function variantUrl(
 	width: number,
 	baseUrl: string,
 ): string {
-	const prefix = baseUrl.replace(/\/+$/, "");
+	// Unset MEDIA_BASE_URL (local preview) = same-origin /media/... route.
+	const prefix = (baseUrl ?? "").replace(/\/+$/, "");
 	return `${prefix}/media/${mediaRow.id}/${width}.webp`;
 }
 
@@ -153,12 +154,14 @@ function renderMark(mark: Mark, inner: string, path: string): string {
 		case "link": {
 			const href = mark.attrs.href;
 			if (!isAllowedHref(href)) return inner;
+			const fnRef = /^#fn-(\d+)$/.exec(href);
+			const id = fnRef !== null ? ` id="fnref-${fnRef[1]}"` : "";
 			const title =
 				mark.attrs.title !== undefined
 					? ` title="${escapeHtml(mark.attrs.title)}"`
 					: "";
 			const rel = isExternalHref(href) ? ' rel="noopener noreferrer"' : "";
-			return `<a href="${escapeHtml(href)}"${title}${rel}>${inner}</a>`;
+			return `<a${id} href="${escapeHtml(href)}"${title}${rel}>${inner}</a>`;
 		}
 		default:
 			throw new RenderError(path, "unknown mark");
@@ -180,10 +183,7 @@ function renderInlineText(
 
 // Sidenote: inline span with an escaped label; numbering k is document order
 // (pre-order traversal). Wide screens float it into the sidenote column via
-// CSS; narrow screens show it as an inline marginal block. Inline footnote
-// references are sidenote spans whose content links `#fn-{k}` — the author
-// pairs them with the footnote blocks below; the renderer does not
-// cross-validate.
+// CSS; narrow screens show it as an inline marginal block.
 function renderSidenote(
 	node: Sidenote,
 	state: BlockState,
@@ -624,8 +624,13 @@ function renderBlock(
 			return renderListItems(node.content, ctx, state, `${path}.content`, "ol");
 		case "codeBlock": {
 			const body = (node.content ?? []).map((t) => escapeHtml(t.text)).join("");
+			const lang = node.attrs.language;
+			const dataLang =
+				lang !== "" && LANGUAGE_RE.test(lang)
+					? ` data-language="${escapeHtml(lang)}"`
+					: "";
 			return {
-				html: `<pre><code${codeClass(node.attrs.language)}>${body}</code></pre>`,
+				html: `<pre${dataLang}><code${codeClass(node.attrs.language)}>${body}</code></pre>`,
 				plain: (node.content ?? []).map((t) => t.text).join(""),
 			};
 		}

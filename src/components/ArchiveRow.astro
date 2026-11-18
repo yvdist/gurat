@@ -1,0 +1,59 @@
+---
+import type { Locale } from "../config/site";
+import { smallestVariantUrl } from "../lib/content/render";
+import type { Media } from "../server/db/schema";
+
+// Archive/tag row: NO. NNN · serif title · TAG · DATE · MIN + CSS-only
+// hover cover preview (row-embedded img shown on :hover/:focus-within,
+// positioned right; @media(hover:none) shows nothing — zero JS).
+interface Props {
+	locale: Locale;
+	postNo: string;
+	slug: string;
+	title: string;
+	publishedAt: number | null;
+	minutesLabel: string;
+	tagLabel: string;
+	tagSlug: string;
+	cover: Media | null;
+	baseUrl: string;
+}
+
+const {
+	locale,
+	postNo,
+	slug,
+	title,
+	publishedAt,
+	minutesLabel,
+	tagLabel,
+	tagSlug,
+	cover,
+	baseUrl,
+} = Astro.props;
+---
+<div class="archive-row" data-tag={tagSlug}>
+	<span class="mono row-no">NO. {postNo}</span>
+	<a class="row-title" href={localizePath(`/writing/${slug}`, locale)}>{title}</a>
+	<span class="mono row-tag">{tagLabel}</span>
+	<time
+		class="mono"
+		datetime={publishedAt !== null ? new Date(publishedAt).toISOString() : undefined}
+	>
+		{publishedAt !== null ? formatPostDate(publishedAt, locale) : ""}
+	</time>
+	<span class="mono row-min">{minutesLabel}</span>
+	{
+		cover !== null && (
+			<img
+				class="row-preview"
+				src={smallestVariantUrl(cover, baseUrl)}
+				alt=""
+				aria-hidden="true"
+				loading="lazy"
+				width={cover.width}
+				height={cover.height}
+			/>
+		)
+	}
+</div>

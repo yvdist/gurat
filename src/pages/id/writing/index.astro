@@ -1,19 +1,38 @@
 ---
+import ArchiveRow from "../../../components/ArchiveRow.astro";
 import type { Locale } from "../../../config/site";
-import { formatPostDate, localizePath, t } from "../../../i18n";
+import { t } from "../../../i18n";
 import Base from "../../../layouts/Base.astro";
-import { groupByYear, rootHreflangs } from "../../../lib/archive";
+import {
+	groupByYear,
+	listingCoverId,
+	rootHreflangs,
+} from "../../../lib/archive";
 import { getEnv } from "../../../lib/env";
-import { createDb, getPostNos, listPublishedPosts } from "../../../server/db";
+import {
+	createDb,
+	getMediaById,
+	getPostNos,
+	listPublishedPosts,
+	listTags,
+} from "../../../server/db";
+import type { Media } from "../../../server/db/schema";
 
 const locale: Locale = "id";
 const db = createDb(getEnv().DB);
+// ?all=1 renders both locales on the ID route (canonical stays the route).
+const showAll = Astro.url.searchParams.get("all") === "1";
 const cursor = Astro.url.searchParams.get("cursor") ?? undefined;
-const { items: posts, nextCursor } = await listPublishedPosts(db, {
-	locale,
-	limit: 20,
-	cursor,
-});
+const [idPage, enPage] = showAll
+	? await Promise.all([
+			listPublishedPosts(db, { locale: "id", limit: 20, cursor }),
+			listPublishedPosts(db, { locale: "en", limit: 20, cursor }),
+		])
+	: [await listPublishedPosts(db, { locale, limit: 20, cursor }), null];
+const posts = [...idPage.items, ...(enPage?.items ?? [])].sort(
+	(a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0),
+);
+const nextCursor = showAll ? null : idPage.nextCursor;
 const groups = groupByYear(posts);
 const nos = await getPostNos(
 	db,
@@ -21,6 +40,30 @@ const nos = await getPostNos(
 	posts.map((p) => p.id),
 );
 const pad = (n: number): string => String(n).padStart(3, "0");
+const covers = new Map<string, Media | null>();
+for (const p of posts) {
+	const id = listingCoverId(p);
+	covers.set(p.id, id === null ? null : await getMediaById(db, id));
+}
+const yearCounts = new Map<string, number>();
+for (const g of groups) yearCounts.set(g.year, g.posts.length);
+const years = groups.map((g) => g.year);
+const minYear = years.length > 0 ? years[years.length - 1] : "";
+const maxYear = years.length > 0 ? years[0] : "";
+const range =
+	minYear === ""
+		? ""
+		: minYear === maxYear
+			? maxYear
+			: `${minYear} — ${maxYear}`;
+const countLabel = t(locale, "archive.count").replace(
+	"{n}",
+	String(posts.length),
+);
+const minutesUnit = t(locale, "archive.minutesUnit");
+const allTags = await listTags(db, locale);
+const tagSlugs = ["all", ...allTags.map((tag) => tag.slug)];
+const baseUrl = getEnv().MEDIA_BASE_URL;
 const canonical = "/id/writing";
 ---
 
@@ -30,46 +73,130 @@ const canonical = "/id/writing";
 	canonical={canonical}
 	hreflangs={rootHreflangs(canonical)}
 	locale={locale}
-	heading={t(locale, "writing.title")}
 	path={canonical}
 >
 	<div class="page">
+		<h1>{t(locale, "writing.title")}</h1>
 		{
 			posts.length === 0 ? (
 				<p>{t(locale, "feed.empty")}</p>
 			) : (
-				groups.map((g) => (
-					<section aria-label={g.year}>
-						<div class="section-head">
-							<h2>{t(locale, "home.archive")}</h2>
-							<span class="mono">{g.year}</span>
-						</div>
-						{g.posts.map((p) => (
-							<div class="archive-row">
-								<span class="mono row-no">No. {pad(nos.get(p.id) ?? 1)}</span>
-								<a href={localizePath(`/writing/${p.slug}`, locale)}>{p.title}</a>
-								<time
-									class="mono"
-									datetime={
-										p.publishedAt !== null
-											? new Date(p.publishedAt).toISOString()
-											: undefined
-									}
-								>
-									{p.publishedAt !== null ? formatPostDate(p.publishedAt, locale) : ""}
-								</time>
-							</div>
+				<>
+					<p class="mono archive-count">
+						{countLabel}
+						{range !== "" && ` · ${range}`}
+					</p>
+					<div class="filter-bar" role="group" aria-label={t(locale, "archive.count")}>
+						{tagSlugs.map((slug) => (
+							<button
+								type="button"
+								class="filter-pill"
+								data-filter-tag={slug}
+								aria-pressed={slug === "all" ? "true" : "false"}
+							>
+								{slug === "all"
+									? t(locale, "archive.all")
+									: (allTags.find((tag) => tag.slug === slug)?.labelId ?? slug)}
+							</button>
 						))}
-					</section>
-				))
-			)
-		}
-		{
-			nextCursor !== null && (
-				<a href={`${canonical}?cursor=${encodeURIComponent(nextCursor)}`} rel="next">
-					{t(locale, "writing.next")}
-				</a>
+						<span class="filter-sep" aria-hidden="true">/</span>
+						<a class="filter-link" href="/writing">
+							EN
+						</a>
+						<a
+							class="filter-link"
+							href="/id/writing"
+							aria-current={showAll ? undefined : "page"}
+						>
+							ID
+						</a>
+						<a
+							class="filter-link"
+							href="/id/writing?all=1"
+							aria-current={showAll ? "page" : undefined}
+						>
+							ALL
+						</a>
+					</div>
+					{groups.map((g) => (
+						<section class="year-group" aria-label={g.year} data-year={g.year}>
+							<div class="section-head">
+								<h2>{g.year}</h2>
+								<span class="mono">
+									{t(locale, "archive.count").replace(
+										"{n}",
+										String(yearCounts.get(g.year) ?? g.posts.length),
+									)}
+								</span>
+							</div>
+							{g.posts.map((p) => {
+								const primary = p.tags[0];
+								return (
+									<ArchiveRow
+										locale={locale}
+										postNo={pad(nos.get(p.id) ?? 1)}
+										slug={p.slug}
+										title={p.title}
+										publishedAt={p.publishedAt}
+										minutesLabel={`${p.readingMinutes} ${minutesUnit}`}
+										tagLabel={
+											primary === undefined ? "" : primary.labelId
+										}
+										tagSlug={primary?.slug ?? ""}
+										cover={covers.get(p.id) ?? null}
+										baseUrl={baseUrl}
+									/>
+								);
+							})}
+						</section>
+					))}
+					{nextCursor !== null && (
+						<a
+							href={`${canonical}?cursor=${encodeURIComponent(nextCursor)}`}
+							rel="next"
+						>
+							{t(locale, "writing.next")}
+						</a>
+					)}
+				</>
 			)
 		}
 	</div>
+	<script>
+		(function () {
+			var bar = document.querySelector(".filter-bar");
+			if (bar === null) return;
+			var pills = bar.querySelectorAll("[data-filter-tag]");
+			var apply = function (tag: string): void {
+				pills.forEach(function (pill: Element): void {
+					pill.setAttribute(
+						"aria-pressed",
+						String(pill.getAttribute("data-filter-tag") === tag),
+					);
+				});
+				document.querySelectorAll(".archive-row[data-tag]").forEach(function (
+					row: Element,
+				): void {
+					var rowTag = row.getAttribute("data-tag") ?? "";
+					var show = tag === "all" || rowTag === tag;
+					if (show) row.removeAttribute("hidden");
+					else row.setAttribute("hidden", "");
+				});
+				document.querySelectorAll(".year-group").forEach(function (
+					group: Element,
+				): void {
+					var visible = group.querySelectorAll(
+						'.archive-row[data-tag]:not([hidden])',
+					);
+					if (visible.length === 0) group.setAttribute("hidden", "");
+					else group.removeAttribute("hidden");
+				});
+			};
+			pills.forEach(function (pill: Element): void {
+				pill.addEventListener("click", function (): void {
+					apply(pill.getAttribute("data-filter-tag") ?? "all");
+				});
+			});
+		})();
+	</script>
 </Base>

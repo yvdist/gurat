@@ -40,8 +40,8 @@ describe("publicCsp", () => {
 		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
 		expect(csp).not.toContain("data:");
 		expect(csp).not.toContain("https://");
-		// Exactly the two pinned Base.astro script hashes.
-		expect(csp.match(/sha256-/g)).toHaveLength(2);
+		// Exactly the three pinned script hashes (Base head + body, archive filter).
+		expect(csp.match(/sha256-/g)).toHaveLength(3);
 	});
 
 	it("appends the media origin to img-src only", () => {

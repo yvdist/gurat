@@ -40,11 +40,11 @@
 	font-size: var(--font-size-h4);
 }
 
-/* pullquote: italic serif + left indigo rule (spec §6) */
+/* pullquote: italic serif, hairline rule, no color accent (spec §6) */
 .article-body .pullquote {
 	margin-inline: 0;
 	padding-inline-start: var(--space-4);
-	border-inline-start: var(--rule) solid var(--indigo);
+	border-inline-start: var(--rule) solid var(--line);
 	font-family: var(--font-display);
 	font-style: italic;
 	font-size: var(--font-size-pullquote);
@@ -67,10 +67,12 @@
 	margin-block-start: var(--space-2);
 }
 
-/* code: raised panel, uncolored mono (no syntax highlighting, ADR-003) */
+/* code: quiet mono panel + language label, uncolored per ADR-003 */
 .article-body pre {
+	position: relative;
 	overflow-x: auto;
 	padding: var(--space-4);
+	padding-top: var(--space-6);
 	background: var(--surface);
 	border: var(--hairline) solid var(--line);
 	border-radius: var(--radius);
@@ -80,6 +82,18 @@
 	background: var(--raised);
 }
 
+.article-body pre[data-language]::before {
+	content: attr(data-language);
+	position: absolute;
+	top: var(--space-2);
+	right: var(--space-3);
+	font-family: var(--font-mono);
+	font-size: var(--font-size-meta);
+	text-transform: uppercase;
+	letter-spacing: var(--tracking-meta);
+	color: var(--muted);
+}
+
 .article-body code {
 	font-family: var(--font-mono);
 	font-size: var(--font-size-small);
@@ -87,8 +101,55 @@
 
 .article-body figure {
 	margin-inline: 0;
+	margin-block: var(--space-6);
 }
 
+.article-body figure img {
+	width: 100%;
+}
+
+/* five figure treatments: inline/offset stay in-flow, wide bleeds modestly
+   past the measure, full bleeds viewport-wide, pair/triptych grid cells */
+.article-body .layout-wide {
+	margin-inline: calc(var(--space-6) * -1);
+}
+.article-body .layout-full {
+	margin-inline: calc(50% - 50vw);
+}
+
+.article-body .layout-pair {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--space-4);
+}
+
+.article-body .layout-triptych {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: var(--space-4);
+}
+
+.article-body .layout-offset {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 220px;
+	gap: var(--space-4);
+	align-items: end;
+}
+
+.article-body .layout-pair figcaption,
+.article-body .layout-triptych figcaption {
+	grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+	.article-body .layout-pair,
+	.article-body .layout-triptych,
+	.article-body .layout-offset {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* biome-ignore lint/style/noDescendingSpecificity: base caption type rule — layout rules above set only grid/margin, no property overlap */
 .article-body figcaption {
 	color: var(--muted);
 	font-family: var(--font-mono);
@@ -98,11 +159,15 @@
 	margin-block-start: var(--space-2);
 }
 
+.article-body figcaption .fig-no {
+	margin-right: var(--space-2);
+}
+
 /* sidenotes: right column ≥1280px, inline marginal below (spec §6) */
 .article-body .sidenote-label {
 	font-family: var(--font-mono);
 	font-size: var(--font-size-meta);
-	color: var(--indigo);
+	color: var(--ink);
 	margin-right: var(--space-1);
 }
 

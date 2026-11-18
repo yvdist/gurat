@@ -3,9 +3,21 @@ import type { Locale } from "../config/site";
 import { SITE } from "../config/site";
 import { t } from "../i18n";
 import Base from "../layouts/Base.astro";
-import { rootHreflangs } from "../lib/archive";
+import { listingCoverId, rootHreflangs } from "../lib/archive";
+import { smallestVariantUrl } from "../lib/content/render";
+import { getEnv } from "../lib/env";
+import { createDb, getMediaById, listPublishedPosts } from "../server/db";
 
 const locale: Locale = "en";
+const db = createDb(getEnv().DB);
+// Portrait: no seeded fixture alt mentions window/light, so per brief the
+// fallback applies — the featured (latest) post's listing cover.
+const { items } = await listPublishedPosts(db, { locale, limit: 1 });
+const featured = items[0] ?? null;
+const portraitId = featured === null ? null : listingCoverId(featured);
+const portrait =
+	portraitId === null ? null : await getMediaById(db, portraitId);
+const baseUrl = getEnv().MEDIA_BASE_URL;
 const canonical = "/about";
 ---
 
@@ -18,9 +30,45 @@ const canonical = "/about";
 	path={canonical}
 >
 	<div class="page">
-		<div class="center-page">
-			<h1>{t(locale, "about.title")}</h1>
-			<p>{t(locale, "site.intro")}</p>
+		<div class="about-grid">
+			{
+				portrait !== null && (
+					<img
+						class="about-portrait"
+						src={smallestVariantUrl(portrait, baseUrl)}
+						alt={portrait.altDefault}
+						width={portrait.width}
+						height={portrait.height}
+						loading="lazy"
+						decoding="async"
+					/>
+				)
+			}
+			<div class="about-body">
+				<h1 class="mono about-eyebrow">{t(locale, "about.title")}</h1>
+				<p class="about-bio">{t(locale, "about.bio")}</p>
+				<dl class="about-rows">
+					<div>
+						<dt class="mono">{t(locale, "about.writingIn")}</dt>
+						<dd>{t(locale, "about.languages")}</dd>
+					</div>
+					<div>
+						<dt class="mono">{t(locale, "about.elsewhere")}</dt>
+						<dd>
+							{t(locale, "about.portfolio")} — {t(locale, "about.github")}
+						</dd>
+					</div>
+					<div>
+						<dt class="mono">{t(locale, "about.writeToMe")}</dt>
+						<dd>{t(locale, "about.contactEmail")}</dd>
+					</div>
+					<div>
+						<dt class="mono">{t(locale, "about.follow")}</dt>
+						<dd>rss</dd>
+					</div>
+				</dl>
+				<p class="mono about-colophon">{t(locale, "about.colophon")}</p>
+			</div>
 		</div>
 	</div>
 </Base>

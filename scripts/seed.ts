@@ -55,7 +55,6 @@ const bold = (): SeedMark => ({ type: "bold" });
 const italic = (): SeedMark => ({ type: "italic" });
 const code = (): SeedMark => ({ type: "code" });
 const link = (href: string): SeedMark => ({ type: "link", attrs: { href } });
-const br = (): SeedInline => ({ type: "hardBreak" });
 
 // --- block builders --------------------------------------------------------
 

@@ -236,7 +236,9 @@ describe("getRelatedPosts (real local D1)", () => {
 			{ locale: "en", postId: "p-en-2", tagIds: ["t-essays", "t-notes"] },
 			NOW,
 		);
-		expect(related).toEqual([{ id: "p-en-1", slug: "first", title: "First" }]);
+		expect(related).toEqual([
+			{ id: "p-en-1", slug: "first", title: "First", coverMediaId: null },
+		]);
 	});
 
 	it("returns empty for untagged posts and invisible-only neighborhoods", async () => {

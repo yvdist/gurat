@@ -1,24 +1,23 @@
 ---
-// Byline box (spec §A4): avatar, Written by {name}, copy link + rss.
+// Byline box: written-by line + COPY LINK / RSS / EMAIL action row.
+// Clipboard script already lives in Base (`[data-copy-link]`); EMAIL is a
+// plain mailto: link to the owner contact address.
 import { type Locale, SITE } from "../config/site";
-import { t } from "../i18n";
+import { localizePath, t } from "../i18n";
 
 interface Props {
 	locale: Locale;
 	canonical: string;
+	email: string;
 }
 
-const { locale, canonical } = Astro.props;
+const { locale, canonical, email } = Astro.props;
 ---
 
 <div class="byline">
-	<div class="byline-who">
-		<span class="byline-avatar" aria-hidden="true">余</span>
-		<p>
-			{t(locale, "post.writtenBy").replace("{name}", SITE.name)}{" "}
-			<span class="mono">[save link]</span>
-		</p>
-	</div>
+	<p>
+		{t(locale, "post.writtenBy").replace("{name}", SITE.name)}
+	</p>
 	<div class="byline-actions">
 		<button
 			type="button"
@@ -28,6 +27,7 @@ const { locale, canonical } = Astro.props;
 		>
 			{t(locale, "post.copyLink")}
 		</button>
-		<span class="mono rss-text">{t(locale, "footer.rss")}</span>
+		<a class="mono" href={localizePath("/feed.xml", locale)}>{t(locale, "post.rss")}</a>
+		<a class="mono" href={`mailto:${email}`}>{t(locale, "post.email")}</a>
 	</div>
 </div>

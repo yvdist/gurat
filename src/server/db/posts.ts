@@ -260,14 +260,25 @@ export async function getAdjacentPosts(
 	id: string,
 	now: number = Date.now(),
 ): Promise<{
-	prev: { id: string; slug: string; title: string } | null;
-	next: { id: string; slug: string; title: string } | null;
+	prev: {
+		id: string;
+		slug: string;
+		title: string;
+		coverMediaId: string | null;
+	} | null;
+	next: {
+		id: string;
+		slug: string;
+		title: string;
+		coverMediaId: string | null;
+	} | null;
 }> {
 	const visible = await db
 		.select({
 			id: posts.id,
 			slug: posts.slug,
 			title: posts.title,
+			coverMediaId: posts.coverMediaId,
 			publishedAt: posts.publishedAt,
 		})
 		.from(posts)
@@ -281,11 +292,21 @@ export async function getAdjacentPosts(
 		prev:
 			prev === undefined
 				? null
-				: { id: prev.id, slug: prev.slug, title: prev.title },
+				: {
+						id: prev.id,
+						slug: prev.slug,
+						title: prev.title,
+						coverMediaId: prev.coverMediaId,
+					},
 		next:
 			next === undefined
 				? null
-				: { id: next.id, slug: next.slug, title: next.title },
+				: {
+						id: next.id,
+						slug: next.slug,
+						title: next.title,
+						coverMediaId: next.coverMediaId,
+					},
 	};
 }
 
@@ -293,6 +314,7 @@ export interface RelatedPost {
 	id: string;
 	slug: string;
 	title: string;
+	coverMediaId: string | null;
 }
 
 // Related posts (spec 06 §6.5): visible posts sharing ≥1 tag, self excluded,
@@ -322,6 +344,7 @@ export async function getRelatedPosts(
 			id: posts.id,
 			slug: posts.slug,
 			title: posts.title,
+			coverMediaId: posts.coverMediaId,
 		})
 		.from(posts)
 		.where(

@@ -1,0 +1,103 @@
+---
+// Full-viewport menu overlay: always near-black warm (#0a0a0a sampled from
+// the Menu reference PNG), NOT themed. Top row gurat + CLOSE ×; oversized
+// Newsreader links 01 Writing / 02 Tags / 03 About / 04 RSS with hairlines;
+// EN / ID row (links / ↔ /id/); LIGHT / DARK row (ThemeControl, gurat-theme);
+// LATEST featured block (newest post cover via smallestVariantUrl + title
+// link); footer © 2026 / GURAT — ESSAYS AND NOTES. Esc closes; focus trap
+// is a single Tab loop; opening sets aria-expanded + body{overflow:hidden}.
+import type { Locale } from "../config/site";
+import { localizePath, t } from "../i18n";
+import { smallestVariantUrl } from "../lib/content/render";
+import { getEnv } from "../lib/env";
+import { createDb, getPostNos, listPublishedPosts } from "../server/db";
+import ThemeControl from "./ThemeControl.astro";
+import Wordmark from "./Wordmark.astro";
+
+interface Props {
+	locale: Locale;
+	path: string;
+}
+
+const { locale } = Astro.props;
+const db = createDb(getEnv().DB);
+const { items } = await listPublishedPosts(db, { locale, limit: 1 });
+const latest = items[0] ?? null;
+const latestCover =
+	latest?.coverMediaId !== null && latest?.coverMediaId !== undefined
+		? await (await import("../server/db")).getMediaById(db, latest.coverMediaId)
+		: null;
+const latestNo =
+	latest !== null
+		? ((await getPostNos(db, locale, [latest.id])).get(latest.id) ?? 1)
+		: 1;
+const pad = (n: number): string => String(n).padStart(3, "0");
+const mediaBase = getEnv().MEDIA_BASE_URL;
+const year = new Date().getFullYear();
+---
+
+<div class="menu-overlay" id="menu-overlay" data-menu-overlay hidden>
+	<div class="menu-inner">
+		<div class="menu-top">
+			<span class="menu-brand"><Wordmark dark /></span>
+			<button
+				type="button"
+				class="menu-close"
+				data-menu-close
+				aria-controls="menu-overlay"
+			>
+				{t(locale, "menu.close")}
+			</button>
+		</div>
+		<nav class="menu-links" aria-label={t(locale, "nav.primary")}>
+			<a href={localizePath("/writing", locale)}>
+				<span class="menu-num" aria-hidden="true">01</span>
+				<span>{t(locale, "nav.writing")}</span>
+			</a>
+			<a href={localizePath("/tags", locale)}>
+				<span class="menu-num" aria-hidden="true">02</span>
+				<span>{t(locale, "nav.tags")}</span>
+			</a>
+			<a href={localizePath("/about", locale)}>
+				<span class="menu-num" aria-hidden="true">03</span>
+				<span>{t(locale, "nav.about")}</span>
+			</a>
+			<a href={localizePath("/feed.xml", locale)}>
+				<span class="menu-num" aria-hidden="true">04</span>
+				<span>RSS</span>
+			</a>
+		</nav>
+		<div class="menu-rows">
+			<p class="menu-row">
+				<a href={localizePath("/", "en")} aria-current={locale === "en" ? "page" : undefined}>EN</a>
+				<span aria-hidden="true"> / </span>
+				<a href={localizePath("/", "id")} aria-current={locale === "id" ? "page" : undefined}>ID</a>
+			</p>
+			<ThemeControl locale={locale} dark />
+		</div>
+		{
+			latest !== null && (
+				<a
+					class="menu-latest"
+					href={localizePath(`/writing/${latest.slug}`, locale)}
+				>
+					<span class="mono">
+						{t(locale, "menu.latest")} · NO. {pad(latestNo)}
+					</span>
+					{latestCover !== null && (
+						<img
+							src={smallestVariantUrl(latestCover, mediaBase)}
+							alt={latestCover.altDefault}
+							width={latestCover.width}
+							height={latestCover.height}
+							loading="lazy"
+							decoding="async"
+						/>
+					)}
+					<span class="menu-latest-title">{latest.title}</span>
+				</a>
+			)
+		}
+		<p class="menu-foot mono">© {year} / GURAT — ESSAYS AND NOTES</p>
+	</div>
+</div>
