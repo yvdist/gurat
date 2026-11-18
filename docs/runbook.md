@@ -15,18 +15,19 @@ UTC) plus on demand (`workflow_dispatch` — use before risky operations).
 2. Uploads to the private bucket `gurat-backups` under
    `backups/gurat-YYYY-MM-DD.sql` (`wrangler r2 object put
    gurat-backups/backups/<file> --file <file> --remote`).
-3. Retention is a bucket lifecycle rule (keep newest 12), configured once
-   by the owner — not per-run listing (wrangler 4.156.1 has no object-list
-   query for retention scripting).
+3. Retention is an age-based bucket lifecycle rule (84-day expiry on prefix
+   `backups/` ≈ 12 weekly backups), configured once by the owner:
+   `wrangler r2 bucket lifecycle add gurat-backups backups-retention
+   backups/ --expire-days 84` — not per-run listing (wrangler 4.156.1 has no
+   object-list query for retention scripting).
 
 Secrets (GitHub repo settings, never echoed, `set -x` off around use):
 
-- `CLOUDFLARE_API_TOKEN` — least privilege: D1 read + R2 write only.
+- `CLOUDFLARE_API_TOKEN` — D1 read + R2 write + Workers deploy (one combined token).
 - `CLOUDFLARE_ACCOUNT_ID`.
 
 One-time owner setup (see DEPLOYMENTS.md §7): create the private bucket
-`gurat-backups`, add the lifecycle rule (prefix `backups/`, keep 12
-newest), store both secrets.
+`gurat-backups`, add the lifecycle rule above, store both secrets.
 
 ## 2. Restore — tested procedure
 
