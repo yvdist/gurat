@@ -59,12 +59,41 @@ export function clearJwksCache(): void {
 	jwksByTeam.clear();
 }
 
+/**
+ * Normalize `ACCESS_TEAM_DOMAIN` so trivial typos are never fatal:
+ * surrounding whitespace, trailing `.`/`/`, missing `https://`.
+ * Returns the canonical `https://<team>.cloudflareaccess.com` or `""`
+ * when the value is empty/garbage (callers then fail closed as
+ * `access-not-configured`, never a confusing `invalid-token`).
+ */
+export function normalizeTeamDomain(raw: unknown): string {
+	if (typeof raw !== "string") return "";
+	let v = raw.trim().replace(/[.]+$/, "").replace(/\/+$/, "");
+	if (v === "") return "";
+	if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) v = `https://${v}`;
+	let url: URL;
+	try {
+		url = new URL(v);
+	} catch {
+		return "";
+	}
+	if (url.protocol !== "https:") return "";
+	if (!url.hostname.endsWith(".cloudflareaccess.com")) return "";
+	url.pathname = "/";
+	url.search = "";
+	url.hash = "";
+	return url.toString().replace(/\/$/, "");
+}
+
+function teamDomain(env: Env): string {
+	return normalizeTeamDomain(env.ACCESS_TEAM_DOMAIN);
+}
+
 function devBypassEmails(env: Env): string[] {
 	return env.ADMIN_EMAILS.split(",")
 		.map((s) => s.trim().toLowerCase())
 		.filter((s) => s.length > 0);
 }
-
 const ADMIN_ROBOTS_TAG = "noindex, nofollow";
 const ADMIN_CACHE_CONTROL = "no-store";
 
@@ -98,7 +127,8 @@ export async function verifyAccess(
 	const token = request.headers.get("Cf-Access-Jwt-Assertion");
 	if (!token) throw new AccessError(401, "missing-token");
 
-	if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) {
+	const team = teamDomain(env);
+	if (team === "" || !env.ACCESS_AUD) {
 		throw new AccessError(403, "access-not-configured");
 	}
 
@@ -106,9 +136,9 @@ export async function verifyAccess(
 	try {
 		const verified = await jwtVerify(
 			token,
-			jwksForTeam(env.ACCESS_TEAM_DOMAIN),
+			jwksForTeam(team),
 			{
-				issuer: env.ACCESS_TEAM_DOMAIN,
+				issuer: team,
 				audience: env.ACCESS_AUD,
 				...(opts.now !== undefined ? { currentDate: new Date(opts.now) } : {}),
 			},
@@ -155,7 +185,7 @@ export async function requireAdminPage(
 		return await verifyAccess(request, env, opts);
 	} catch (err) {
 		if (err instanceof AccessError && err.status === 401) {
-			const team = env.ACCESS_TEAM_DOMAIN || "https://login.invalid";
+			const team = teamDomain(env) || "https://login.invalid";
 			// Production always configures the team domain; local dev uses the
 			// bypass so this fallback is unreachable in practice.
 			const headers = withAdminHeaders(

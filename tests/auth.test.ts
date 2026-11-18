@@ -6,6 +6,7 @@ import {
 	assertSameOrigin,
 	assertSameOriginNoJson,
 	clearJwksCache,
+	normalizeTeamDomain,
 	requireAdminApi,
 	requireAdminPage,
 	verifyAccess,
@@ -314,5 +315,45 @@ describe("guards", () => {
 				env,
 			),
 		).not.toThrow();
+	});
+});
+
+describe("normalizeTeamDomain", () => {
+	it("accepts the canonical form unchanged", () => {
+		expect(
+			normalizeTeamDomain("https://summer-cherry-2d3f.cloudflareaccess.com"),
+		).toBe("https://summer-cherry-2d3f.cloudflareaccess.com");
+	});
+
+	it("adds https and trims dots, slashes, whitespace", () => {
+		expect(
+			normalizeTeamDomain("summer-cherry-2d3f.cloudflareaccess.com"),
+		).toBe("https://summer-cherry-2d3f.cloudflareaccess.com");
+		expect(
+			normalizeTeamDomain("summer-cherry-2d3f.cloudflareaccess.com."),
+		).toBe("https://summer-cherry-2d3f.cloudflareaccess.com");
+		expect(
+			normalizeTeamDomain("  https://summer-cherry-2d3f.cloudflareaccess.com/  "),
+		).toBe("https://summer-cherry-2d3f.cloudflareaccess.com");
+	});
+
+	it("rejects non-https, wrong hosts, and garbage", () => {
+		expect(normalizeTeamDomain("")).toBe("");
+		expect(normalizeTeamDomain(null)).toBe("");
+		expect(
+			normalizeTeamDomain("http://summer-cherry-2d3f.cloudflareaccess.com"),
+		).toBe("");
+		expect(normalizeTeamDomain("https://evil.example.com")).toBe("");
+		expect(normalizeTeamDomain("not a url")).toBe("");
+	});
+
+	it("fails closed as access-not-configured on garbage team domain", async () => {
+		const err = await verifyAccess(
+			req({ "Cf-Access-Jwt-Assertion": "x" }),
+			testEnv({ ACCESS_TEAM_DOMAIN: "not a url" }),
+			{ isDev: false },
+		).catch((e) => e);
+		expect(err).toBeInstanceOf(AccessError);
+		expect(err.code).toBe("access-not-configured");
 	});
 });
