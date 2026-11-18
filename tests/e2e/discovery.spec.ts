@@ -54,11 +54,11 @@ test("sitemap lists public URLs with alternates; robots points at it", async ({
 test("post page carries absolute OG/Twitter/JSON-LD and symmetric hreflangs", async ({
 	page,
 }) => {
-	await page.goto("/writing/hello-world");
+	await page.goto("/writing/no-014-photo-first");
 	const head = page.locator("head");
 	await expect(head.locator('meta[property="og:title"]')).toHaveAttribute(
 		"content",
-		/Hello, world/,
+		/Photo first/,
 	);
 	await expect(head.locator('meta[name="twitter:card"]')).toHaveAttribute(
 		"content",
@@ -82,7 +82,7 @@ test("post page carries absolute OG/Twitter/JSON-LD and symmetric hreflangs", as
 	const idHref = await head
 		.locator('link[rel="alternate"][hreflang="id"]:not([type])')
 		.getAttribute("href");
-	expect(idHref).toContain("/id/writing/halo-dunia");
+	expect(idHref).toContain("/id/writing/no-014-foto-dulu");
 	// Feed autodiscovery for both locales on every page.
 	await expect(
 		head.locator('link[type="application/rss+xml"][hreflang="en"]'),
