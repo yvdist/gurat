@@ -17,10 +17,23 @@ const DRAFT_ONLY =
 
 const localeSchema = z.enum(["en", "id"]);
 
+const RETRY_HINTS: Partial<Record<ServiceError["code"], string>> = {
+	"slug-conflict":
+		"That slug is taken in this locale. Call list-posts with q=<slug> to see the owner, then retry with a different slug.",
+	concurrency:
+		"The post changed since you read it. Call get-post for the latest expectedUpdatedAt, merge your edits, retry.",
+};
+
 function errText(err: ServiceError): string {
-	return err.detail !== undefined
-		? `${err.code}(${err.status}): ${err.detail}`
-		: `${err.code}(${err.status})`;
+	if (err.code === "bad-request" && err.detail === "tagIds") {
+		return "bad-request(400): tagIds. One or more tagIds do not exist. Call list-tags for the locale to get valid ids, then retry.";
+	}
+	const base =
+		err.detail !== undefined
+			? `${err.code}(${err.status}): ${err.detail}`
+			: `${err.code}(${err.status})`;
+	const hint = RETRY_HINTS[err.code];
+	return hint ? `${base}. ${hint}` : base;
 }
 
 function errorResult(err: ServiceError) {

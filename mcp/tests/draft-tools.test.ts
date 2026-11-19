@@ -74,6 +74,36 @@ describe("draft tools", () => {
 		expect(text).toContain("content.1");
 	});
 
+	it("duplicate slug returns a retry hint", async () => {
+		const slug = `dup-${Date.now()}`;
+		await createDraft("First", { slug } as Record<string, unknown>);
+		const { body } = await rpcJson(testEnv(), "tools/call", {
+			name: "create-draft",
+			arguments: { locale: "en", slug, title: "Second", contentJson: doc("Second") },
+		});
+		const { text, isError } = toolResult(body);
+		expect(isError).toBe(true);
+		expect(text).toMatch(/slug-conflict\(409\)/);
+		expect(text).toContain("retry with a different slug");
+	});
+
+	it("unknown tagIds return a retry hint", async () => {
+		const { body } = await rpcJson(testEnv(), "tools/call", {
+			name: "create-draft",
+			arguments: {
+				locale: "en",
+				slug: `tags-${Date.now()}`,
+				title: "Tags",
+				contentJson: doc("Tags"),
+				tagIds: ["no-such-tag"],
+			},
+		});
+		const { text, isError } = toolResult(body);
+		expect(isError).toBe(true);
+		expect(text).toMatch(/bad-request\(400\): tagIds/);
+		expect(text).toContain("list-tags");
+	});
+
 	it("update-draft rejects stale expectedUpdatedAt", async () => {
 		const post = await createDraft("Concurrency probe");
 		const { body } = await rpcJson(testEnv(), "tools/call", {
