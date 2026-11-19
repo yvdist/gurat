@@ -53,11 +53,18 @@ describe("publicCsp", () => {
 });
 
 describe("adminCsp", () => {
-	it("allows same-origin scripts only", () => {
+	it("allows same-origin scripts only in production", () => {
 		const csp = adminCsp();
 		expect(csp).toContain("script-src 'self'");
 		expect(csp).not.toContain("sha256-");
 		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
 		expect(csp).toContain("frame-ancestors 'none'");
+	});
+
+	it("allows the pinned Astro dev scripts in dev only", () => {
+		const csp = adminCsp(true);
+		expect(csp).toContain("script-src 'self'");
+		expect(csp.match(/sha256-/g)).toHaveLength(3);
+		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
 	});
 });

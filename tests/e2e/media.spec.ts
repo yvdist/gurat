@@ -168,10 +168,17 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 
 		// 3. New post → picker: Insert disabled until alt is provided.
 		await page.goto("/admin/posts/new");
-		await page.locator("#meta-slug").fill(SLUG);
 		await page.locator("#meta-title").fill("E2E Media Post");
+		await page.getByRole("button", { name: "DETAILS" }).click();
+		await page.locator("#meta-slug").fill(SLUG);
 		await page.locator("#meta-excerpt").fill("E2E media excerpt");
-		await page.getByRole("button", { name: "Insert image" }).click();
+		const slashEditor = page.locator(".article-body .tiptap");
+		await slashEditor.click();
+		await slashEditor.pressSequentially("/", { delay: 10 });
+		await expect(page.getByRole("listbox", { name: "Insert" })).toBeVisible({
+			timeout: 15000,
+		});
+		await page.keyboard.press("Enter");
 		const dialog = page.getByRole("dialog", { name: "Insert image" });
 		await expect(dialog).toBeVisible();
 		await expect(dialog.locator(`option[value="${mediaId}"]`)).toBeAttached({
@@ -202,8 +209,12 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 		const postId = page.url().split("/").pop() ?? "";
 
 		// 5. Publish → public page shows responsive image + eager cover.
+		// Stays on the edit page; Unpublish appears.
 		await page.getByRole("button", { name: "Publish", exact: true }).click();
-		await page.waitForURL("/admin", { timeout: 15000 });
+		await page.getByRole("button", { name: "Confirm publish" }).click();
+		await expect(
+			page.getByRole("button", { name: "Unpublish", exact: true }),
+		).toBeVisible({ timeout: 15000 });
 		const pub = await request.get(`/writing/${SLUG}`);
 		expect(pub.status()).toBe(200);
 		const html = await pub.text();
@@ -244,8 +255,11 @@ test("upload EXIF JPEG → insert with alt → publish → responsive, CLS ≈ 0
 
 		// 7. Cleanup: unpublish, delete post, delete (now unreferenced) media.
 		await page.goto(`http://localhost:4322/admin/posts/${postId}`);
+		await page.getByRole("button", { name: "DETAILS" }).click();
 		await page.getByRole("button", { name: "Unpublish", exact: true }).click();
-		await page.waitForURL("/admin", { timeout: 15000 });
+		await expect(
+			page.getByRole("button", { name: "Publish", exact: true }),
+		).toBeVisible({ timeout: 15000 });
 		expect((await request.get(`/writing/${SLUG}`)).status()).toBe(404);
 		// APIRequestContext sends no Origin; the CSRF guard needs it.
 		const csrf = { Origin: "http://localhost:4322" };

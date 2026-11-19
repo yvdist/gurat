@@ -1,11 +1,26 @@
 ---
+import Wordmark from "../components/Wordmark.astro";
 import { SITE } from "../config/site";
 import "../styles/tokens.css";
 import "../styles/admin.css";
+// Same self-hosted faces as the public shell (Base.astro): Newsreader +
+// IBM Plex Mono. Preloads mirror Base so headings/labels render in the
+// tokens' typefaces from first paint.
+import "@fontsource/newsreader/latin-400.css";
+import "@fontsource/newsreader/latin-400-italic.css";
+import "@fontsource/newsreader/latin-500.css";
+import "@fontsource/newsreader/latin-ext-400.css";
+import "@fontsource/newsreader/latin-ext-400-italic.css";
+import "@fontsource/newsreader/latin-ext-500.css";
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-500.css";
+import plexmono400 from "@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url";
+import newsreader400 from "@fontsource/newsreader/files/newsreader-latin-400-normal.woff2?url";
+import newsreaderExt400 from "@fontsource/newsreader/files/newsreader-latin-ext-400-normal.woff2?url";
 
 interface Props {
 	title: string;
-	current: "posts" | "tags" | "media";
+	current: "dashboard" | "posts" | "tags" | "media" | "settings";
 	email: string;
 	logoutUrl: string;
 }
@@ -15,26 +30,53 @@ const { title, email, current, logoutUrl } = Astro.props;
 Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
 Astro.response.headers.set("Cache-Control", "no-store");
 ---
-<html lang="en">
+
+<html lang="en" data-theme="light">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>{title} · admin · {SITE.name}</title>
 		<meta name="robots" content="noindex, nofollow" />
+		<link
+			rel="preload"
+			href={newsreader400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={plexmono400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href={newsreaderExt400}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<script src="/admin-theme.js" defer></script>
 	</head>
 	<body class="admin">
 		<div class="admin-shell">
 			<nav class="admin-side" aria-label="Admin">
-				<div class="admin-brand">余 <span class="mono">{SITE.name} admin</span></div>
+				<a class="admin-brand" href="/admin" aria-label="Gurat admin dashboard">
+					<Wordmark />
+				</a>
 				<div class="admin-nav">
-					<a href="/admin" aria-current={current === "posts" ? "page" : undefined}>Posts</a>
+					<a href="/admin" aria-current={current === "dashboard" ? "page" : undefined}>Dashboard</a>
+					<a href="/admin/posts" aria-current={current === "posts" ? "page" : undefined}>Posts</a>
 					<a href="/admin/tags" aria-current={current === "tags" ? "page" : undefined}>Tags</a>
-				<a href="/admin/media" aria-current={current === "media" ? "page" : undefined}>Media</a>
+					<a href="/admin/media" aria-current={current === "media" ? "page" : undefined}>Media</a>
+					<a href="/admin/settings" aria-current={current === "settings" ? "page" : undefined}>Settings</a>
 				</div>
 				<div class="admin-foot">
-					<a href="/">view site ↗</a>
+					<a href="/">View site ↗</a>
 					<span>{email}</span>
-					<a href={logoutUrl}>sign out</a>
+					<a href={logoutUrl}>Sign out</a>
 				</div>
 			</nav>
 			<main class="admin-main">

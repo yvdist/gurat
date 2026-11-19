@@ -46,7 +46,9 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
 	const isAdmin = path === "/admin" || path.startsWith("/admin/");
 	response.headers.set(
 		"Content-Security-Policy",
-		isAdmin ? adminCsp() : publicCsp(mediaOriginFrom(mediaRaw)),
+		isAdmin
+			? adminCsp(import.meta.env.DEV)
+			: publicCsp(mediaOriginFrom(mediaRaw)),
 	);
 	response.headers.set("X-Request-Id", rid);
 	return response;

@@ -1,10 +1,18 @@
 ---
+import AdminPostRow from "../../components/AdminPostRow.astro";
 import Admin from "../../layouts/Admin.astro";
+import { renderDoc, smallestVariantUrl } from "../../lib/content/render";
+import { validateDoc } from "../../lib/content/schema";
 import { getEnv } from "../../lib/env";
-import { listAllTagsService } from "../../server/admin/service";
 import type { AccessIdentity } from "../../server/auth/access";
 import { requireAdminPage } from "../../server/auth/access";
-import { createDb, listAdminPosts } from "../../server/db";
+import {
+	countAdminMetrics,
+	createDb,
+	getMediaById,
+	listAdminPosts,
+} from "../../server/db";
+import { listMediaService } from "../../server/media/service";
 
 export const prerender = false;
 
@@ -23,95 +31,186 @@ try {
 }
 
 const db = createDb(env.DB);
-const url = new URL(Astro.request.url);
-const status = url.searchParams.get("status") ?? "";
-const locale = url.searchParams.get("locale") ?? "";
-const tagId = url.searchParams.get("tag") ?? "";
-const q = url.searchParams.get("q") ?? "";
-const posts = await listAdminPosts(db, {
-	status: status === "draft" || status === "published" ? status : undefined,
-	locale: locale === "en" || locale === "id" ? locale : undefined,
-	tagId: tagId || undefined,
-	q: q || undefined,
-});
-const tags = await listAllTagsService(db);
 const now = Date.now();
-// Latest updated draft → "continue writing" panel.
-const continuePost = posts.find((p) => p.status === "draft") ?? null;
-// Translation indicator: group members excluding self.
-const groups = new Map<string, number>();
-for (const p of posts) {
+const metrics = await countAdminMetrics(db, now);
+const all = await listAdminPosts(db, {});
+const groupSizes = new Map<string, number>();
+for (const p of all) {
 	if (!p.translationGroupId) continue;
-	groups.set(p.translationGroupId, (groups.get(p.translationGroupId) ?? 0) + 1);
+	groupSizes.set(
+		p.translationGroupId,
+		(groupSizes.get(p.translationGroupId) ?? 0) + 1,
+	);
+}
+const recent = all.slice(0, 5);
+const noCover = all.filter((p) => p.coverMediaId === null).length;
+const latestDraft = all.find((p) => p.status === "draft") ?? null;
+
+// Covers for the 5 recent rows + the continue-writing card (real thumbs,
+// not shared drafts). Null when a post has no cover.
+const coverIds = new Set<string>();
+for (const p of recent) {
+	if (p.coverMediaId) coverIds.add(p.coverMediaId);
+}
+if (latestDraft?.coverMediaId) coverIds.add(latestDraft.coverMediaId);
+const coverMap = new Map<
+	string,
+	NonNullable<Awaited<ReturnType<typeof getMediaById>>>
+>();
+for (const id of coverIds) {
+	const m = await getMediaById(db, id);
+	if (m) coverMap.set(id, m);
+}
+const draftCover = latestDraft?.coverMediaId
+	? (coverMap.get(latestDraft.coverMediaId) ?? null)
+	: null;
+const uploads = (await listMediaService(db)).slice(0, 4);
+const today = new Date();
+const weekday = today
+	.toLocaleString("en-GB", { weekday: "long", timeZone: "Asia/Jakarta" })
+	.toUpperCase();
+const dayNum = String(today.getUTCDate()).padStart(2, "0");
+const month = today
+	.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })
+	.toUpperCase();
+const year = today.getUTCFullYear();
+
+function wordsOf(contentJson: string, locale: "en" | "id"): number {
+	try {
+		const doc = validateDoc(JSON.parse(contentJson));
+		const { plainText } = renderDoc(doc, {
+			media: new Map(),
+			baseUrl: "",
+			locale,
+		});
+		const segmenter = new Intl.Segmenter(locale, { granularity: "word" });
+		let count = 0;
+		for (const seg of segmenter.segment(plainText)) {
+			if (seg.isWordLike === true) count++;
+		}
+		return count;
+	} catch {
+		return 0;
+	}
+}
+
+function savedAgo(updatedAt: number): string {
+	const mins = Math.max(0, Math.round((Date.now() - updatedAt) / 60000));
+	if (mins < 1) return "saved just now";
+	if (mins === 1) return "saved 1 min ago";
+	if (mins < 60) return `saved ${mins} min ago`;
+	const hours = Math.round(mins / 60);
+	return hours === 1 ? "saved 1 hour ago" : `saved ${hours} hours ago`;
 }
 const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
 ---
 
-<Admin title="Posts" email={identity.email} current="posts" logoutUrl={logoutUrl}>
-	<h1>Posts</h1>
-	<p><a href="/admin/posts/new">+ new post</a></p>
+<Admin title="Dashboard" email={identity.email} current="dashboard" logoutUrl={logoutUrl}>
+	<p class="admin-date">{weekday}, {dayNum} {month} {year}</p>
+	<div class="admin-topbar">
+		<h1>Dashboard</h1>
+		<div class="admin-topbar-actions">
+			<form method="get" action="/admin/posts" role="search">
+				<input class="admin-search" type="search" name="q" placeholder="search posts" aria-label="Search posts" />
+			</form>
+			<a class="admin-btn-primary" href="/admin/posts/new">[+ NEW POST]</a>
+		</div>
+	</div>
 
-	{continuePost && (
-		<section aria-label="Continue writing">
-			<h2>Continue writing</h2>
-			<p>
-				<a href={`/admin/posts/${continuePost.id}`}>{continuePost.title || "(untitled)"}</a>
-				<span class="admin-status">updated {new Date(continuePost.updatedAt).toISOString()}</span>
-			</p>
-		</section>
-	)}
+	<ul class="admin-metrics" aria-label="Post metrics">
+		<li><span class="admin-metric-label">Drafts</span><span class="admin-metric-value">{metrics.drafts}</span></li>
+		<li><span class="admin-metric-label">Scheduled</span><span class="admin-metric-value">{metrics.scheduled}</span></li>
+		<li><span class="admin-metric-label">Published</span><span class="admin-metric-value">{metrics.published}</span></li>
+		<li><span class="admin-metric-label">Missing translation</span><span class="admin-metric-value">{metrics.missingTranslation}</span></li>
+	</ul>
 
-	<form method="get" class="admin-filters" role="search">
-		<label class="admin-field">
-			<span>Status</span>
-			<select name="status">
-				<option value="">all</option>
-				<option value="draft" selected={status === "draft"}>draft</option>
-				<option value="published" selected={status === "published"}>published</option>
-			</select>
-		</label>
-		<label class="admin-field">
-			<span>Locale</span>
-			<select name="locale">
-				<option value="">all</option>
-				<option value="en" selected={locale === "en"}>en</option>
-				<option value="id" selected={locale === "id"}>id</option>
-			</select>
-		</label>
-		<label class="admin-field">
-			<span>Tag</span>
-			<select name="tag">
-				<option value="">all</option>
-				{tags.map((t) => (
-					<option value={t.id} selected={tagId === t.id}>{t.slug}</option>
-				))}
-			</select>
-		</label>
-		<label class="admin-field">
-			<span>Search</span>
-			<input type="search" name="q" value={q} />
-		</label>
-		<button type="submit">Filter</button>
-	</form>
+	<div class="admin-panels">
+		<div>
+			{latestDraft !== null && (
+				<section class="admin-card" aria-label="Continue writing">
+					<h2>Continue writing</h2>
+					<div class="admin-feature">
+						{draftCover !== null ? (
+							<img src={smallestVariantUrl(draftCover, env.MEDIA_BASE_URL)} alt="" loading="lazy" width="128" height="96" />
+						) : (
+							<span class="admin-row-thumb admin-row-thumb--empty" aria-hidden="true"></span>
+						)}
+						<div>
+							<p class="admin-feature-title"><a href={`/admin/posts/${latestDraft.id}`}>{latestDraft.title || "(untitled)"}</a></p>
+							<span class="admin-row-meta">
+								Draft · {latestDraft.locale.toUpperCase()} · {wordsOf(latestDraft.contentJson, latestDraft.locale === "id" ? "id" : "en")} words · {savedAgo(latestDraft.updatedAt)}
+							</span>
+							<p><a href={`/admin/posts/${latestDraft.id}`}>Open editor →</a></p>
+						</div>
+					</div>
+				</section>
+			)}
 
-	<table class="admin-table">
-		<thead>
-			<tr><th>Title</th><th>Locale</th><th>Status</th><th>⇄</th><th>Updated</th></tr>
-		</thead>
-		<tbody>
-			{posts.map((p) => {
-				const scheduled = p.status === "published" && (p.publishedAt ?? 0) > now;
-				const linked = (p.translationGroupId && (groups.get(p.translationGroupId) ?? 1) > 1) ? "⇄" : "✕";
-				return (
-					<tr>
-						<td><a href={`/admin/posts/${p.id}`}>{p.title || "(untitled)"}</a></td>
-						<td>{p.locale}</td>
-						<td>{scheduled ? "scheduled" : p.status}</td>
-						<td title={p.translationGroupId ?? "no translation group"}>{linked}</td>
-						<td>{new Date(p.updatedAt).toISOString()}</td>
-					</tr>
-				);
-			})}
-		</tbody>
-	</table>
+			<section aria-label="Posts">
+				<div class="admin-section-head">
+					<h2>Posts</h2>
+					<a href="/admin/posts">All posts →</a>
+				</div>
+				<ul class="admin-rows">
+					{recent.map((p) => {
+						const status = (p.status === "published" && (p.publishedAt ?? 0) > now ? "scheduled" : p.status) as
+							| "draft"
+							| "published"
+							| "scheduled";
+						const translated = p.translationGroupId !== null && (groupSizes.get(p.translationGroupId) ?? 0) > 1;
+						const cover = p.coverMediaId ? (coverMap.get(p.coverMediaId) ?? null) : null;
+						return (
+							<AdminPostRow
+								id={p.id}
+								title={p.title}
+								locale={p.locale}
+								status={status}
+								translated={translated}
+								updatedAt={p.updatedAt}
+								cover={cover}
+								mediaBaseUrl={env.MEDIA_BASE_URL}
+							/>
+						);
+					})}
+				</ul>
+			</section>
+		</div>
+
+		<div class="admin-rails">
+			{(metrics.missingTranslation > 0 || noCover > 0) && (
+				<section class="admin-card" aria-label="Needs attention">
+					<h2>Needs attention</h2>
+					<ul>
+						{metrics.missingTranslation > 0 && (
+							<li><a href="/admin/posts?missing=1">{metrics.missingTranslation} posts have no counterpart translation</a></li>
+						)}
+						{noCover > 0 && (
+							<li><a href="/admin/posts?nocover=1">{noCover} posts have no cover image</a></li>
+						)}
+					</ul>
+				</section>
+			)}
+
+			<section class="admin-card" aria-label="Free-tier usage">
+				<h2>Free-tier usage</h2>
+				<ul>
+					<li>D1 storage 12 MB / 5 GB</li>
+					<li>R2 images 84 MB / 10 GB</li>
+					<li>Worker requests today 1.2K / 100K</li>
+				</ul>
+				<p class="admin-status">Sample values; real numbers come from Cloudflare.</p>
+			</section>
+
+			{uploads.length > 0 && (
+				<section class="admin-card" aria-label="Recent uploads">
+					<h2>Recent uploads</h2>
+					<ul class="admin-upload-grid">
+						{uploads.map((m) => (
+							<li><img src={smallestVariantUrl(m, env.MEDIA_BASE_URL)} alt="" loading="lazy" width={m.width} height={m.height} /></li>
+						))}
+					</ul>
+				</section>
+			)}
+		</div>
+	</div>
 </Admin>

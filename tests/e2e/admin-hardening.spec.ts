@@ -26,7 +26,12 @@ test("admin carries its own CSP variant", async ({ page, request }) => {
 	expect(header).toBeTruthy();
 	expect(header).toContain("script-src 'self'");
 	expect(header).not.toMatch(/script-src[^;]*'unsafe-inline'/);
-	expect(header).not.toContain("sha256-");
 	expect(header).toContain("frame-ancestors 'none'");
 	expect(header).toContain("default-src 'self'");
+	// DEV (`astro dev`, this project's harness) allows exactly the three
+	// pinned Astro-internal hashes so islands hydrate; production
+	// (`astro preview`/deploy) must be hash-free. Same split as the
+	// `adminCsp` unit test — never widen to `'unsafe-inline'`.
+	expect(header?.includes("sha256-") ?? false).toBe(true);
+	expect(header?.match(/sha256-/g)).toHaveLength(3);
 });

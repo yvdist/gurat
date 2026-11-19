@@ -1,0 +1,173 @@
+---
+import AdminPostRow from "../../../components/AdminPostRow.astro";
+import Admin from "../../../layouts/Admin.astro";
+import { getEnv } from "../../../lib/env";
+import { listAllTagsService } from "../../../server/admin/service";
+import type { AccessIdentity } from "../../../server/auth/access";
+import { requireAdminPage } from "../../../server/auth/access";
+import { createDb, getMediaById, listAdminPosts } from "../../../server/db";
+
+export const prerender = false;
+
+const env = getEnv();
+let identity: AccessIdentity;
+try {
+	identity = await requireAdminPage(
+		Astro.request,
+		env,
+		new URL(Astro.request.url),
+		{ isDev: import.meta.env.DEV },
+	);
+} catch (res) {
+	if (res instanceof Response) return res;
+	throw res;
+}
+
+const db = createDb(env.DB);
+const url = new URL(Astro.request.url);
+const statusTab = url.searchParams.get("status") ?? "all";
+const locale = url.searchParams.get("locale") ?? "";
+const tagId = url.searchParams.get("tag") ?? "";
+const q = url.searchParams.get("q") ?? "";
+const missingOnly = url.searchParams.get("missing") === "1";
+const noCoverOnly = url.searchParams.get("nocover") === "1";
+const now = Date.now();
+
+// Base query through the service filters; status tabs (incl. scheduled) and
+// missing/nocover narrow in memory against the same group map.
+const base = await listAdminPosts(db, {
+	locale: locale === "en" || locale === "id" ? locale : undefined,
+	tagId: tagId || undefined,
+	q: q || undefined,
+});
+const groupSizes = new Map<string, number>();
+for (const p of base) {
+	if (!p.translationGroupId) continue;
+	groupSizes.set(
+		p.translationGroupId,
+		(groupSizes.get(p.translationGroupId) ?? 0) + 1,
+	);
+}
+const withStatus = base.map((p) => ({
+	post: p,
+	status: (p.status === "published" && (p.publishedAt ?? 0) > now
+		? "scheduled"
+		: p.status) as "draft" | "published" | "scheduled",
+}));
+let rows = withStatus;
+if (
+	statusTab === "draft" ||
+	statusTab === "scheduled" ||
+	statusTab === "published"
+) {
+	rows = rows.filter((r) => r.status === statusTab);
+}
+if (missingOnly) {
+	rows = rows.filter(
+		(r) =>
+			r.post.translationGroupId === null ||
+			(groupSizes.get(r.post.translationGroupId) ?? 0) === 1,
+	);
+}
+if (noCoverOnly) {
+	rows = rows.filter((r) => r.post.coverMediaId === null);
+}
+const coverIds = new Set<string>();
+for (const r of rows) {
+	if (r.post.coverMediaId) coverIds.add(r.post.coverMediaId);
+}
+const coverMap = new Map<
+	string,
+	NonNullable<Awaited<ReturnType<typeof getMediaById>>>
+>();
+for (const id of coverIds) {
+	const m = await getMediaById(db, id);
+	if (m) coverMap.set(id, m);
+}
+const tags = await listAllTagsService(db);
+
+function tabHref(tab: string): string {
+	const params = new URLSearchParams();
+	if (tab !== "all") params.set("status", tab);
+	if (locale) params.set("locale", locale);
+	if (tagId) params.set("tag", tagId);
+	if (q) params.set("q", q);
+	if (missingOnly) params.set("missing", "1");
+	if (noCoverOnly) params.set("nocover", "1");
+	const s = params.toString();
+	return s ? `/admin/posts?${s}` : "/admin/posts";
+}
+
+function langHref(lang: string): string {
+	// Active chip toggles the language filter off.
+	const params = new URLSearchParams();
+	if (statusTab !== "all") params.set("status", statusTab);
+	if (lang !== locale) params.set("locale", lang);
+	if (tagId) params.set("tag", tagId);
+	if (q) params.set("q", q);
+	if (missingOnly) params.set("missing", "1");
+	if (noCoverOnly) params.set("nocover", "1");
+	const s = params.toString();
+	return s ? `/admin/posts?${s}` : "/admin/posts";
+}
+const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
+---
+
+<Admin title="Posts" email={identity.email} current="posts" logoutUrl={logoutUrl}>
+	<div class="admin-topbar">
+		<h1>Posts</h1>
+		<div class="admin-topbar-actions">
+			<a class="admin-btn-primary" href="/admin/posts/new">[+ NEW POST]</a>
+		</div>
+	</div>
+
+	<form method="get" class="admin-filters" role="search">
+		<div class="admin-chips" role="group" aria-label="Status">
+			<a href={tabHref("all")} aria-pressed={statusTab === "all" ? "true" : undefined}>All</a>
+			<a href={tabHref("draft")} aria-pressed={statusTab === "draft" ? "true" : undefined}>Draft</a>
+			<a href={tabHref("scheduled")} aria-pressed={statusTab === "scheduled" ? "true" : undefined}>Scheduled</a>
+			<a href={tabHref("published")} aria-pressed={statusTab === "published" ? "true" : undefined}>Published</a>
+		</div>
+		<div class="admin-chips" role="group" aria-label="Language">
+			<a href={langHref("en")} aria-pressed={locale === "en" ? "true" : undefined}>EN</a>
+			<a href={langHref("id")} aria-pressed={locale === "id" ? "true" : undefined}>ID</a>
+		</div>
+		<label class="admin-field">
+			<span>Tag</span>
+			<select name="tag">
+				<option value="">all</option>
+				{tags.map((t) => (
+					<option value={t.id} selected={tagId === t.id}>{t.slug}</option>
+				))}
+			</select>
+		</label>
+		<label class="admin-field">
+			<span>Search</span>
+			<input type="search" name="q" value={q} />
+		</label>
+		{statusTab !== "all" && <input type="hidden" name="status" value={statusTab} />}
+		{locale !== "" && <input type="hidden" name="locale" value={locale} />}
+		{missingOnly && <input type="hidden" name="missing" value="1" />}
+		{noCoverOnly && <input type="hidden" name="nocover" value="1" />}
+		<button type="submit">Filter</button>
+	</form>
+
+	<ul class="admin-rows">
+		{rows.map(({ post: p, status }) => {
+			const translated = p.translationGroupId !== null && (groupSizes.get(p.translationGroupId) ?? 0) > 1;
+			const cover = p.coverMediaId ? (coverMap.get(p.coverMediaId) ?? null) : null;
+			return (
+				<AdminPostRow
+					id={p.id}
+					title={p.title}
+					locale={p.locale}
+					status={status}
+					translated={translated}
+					updatedAt={p.updatedAt}
+					cover={cover}
+					mediaBaseUrl={env.MEDIA_BASE_URL}
+				/>
+			);
+		})}
+	</ul>
+</Admin>

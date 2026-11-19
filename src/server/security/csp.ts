@@ -15,6 +15,17 @@ const PUBLIC_SCRIPT_HASHES = [
 	"sha256-jXKUlkI8wuQbKndzQZBsccnIUWOmK/kmNuERq53aXEc=",
 ] as const;
 
+// Astro 7.4.4 dev-only inline scripts (dev-toolbar settings, `astro:only`
+// hydration helper, island loader). Pinned hashes, DEV ONLY — production
+// stays hash-free. Re-verify via the dev console after any Astro upgrade or
+// project move (the toolbar payload embeds the project path). Never
+// `'unsafe-inline'`.
+const ADMIN_DEV_SCRIPT_HASHES = [
+	"sha256-+8GaM4dmbWZ33N3gOIea1elDa9mixiJP7H2KgqAfQgo=",
+	"sha256-Y8t0ntteBwH+PqGKUyjWW3CAk+BNJKSoQc0xZ68FjhM=",
+	"sha256-At4sXbunobuxXv56+YxR7rwL4c3n8ubyPDiI7CIowSo=",
+] as const;
+
 // `style-src 'unsafe-inline'` is decided, not open: `CoverImg.astro`
 // `style={style}` and `render.ts` `style="background-color:…"` (hex
 // validated by `DOMINANT_RE`) cannot be hashed; style cannot execute
@@ -55,10 +66,15 @@ export function publicCsp(mediaOrigin: string | null): string {
 	return base(img, scripts);
 }
 
-// Admin: no inline scripts (`Admin.astro` is script-free; island chunks are
-// same-origin). `script-src 'self'` only — if the built island ever emits an
-// inline bootstrap, the e2e listener fails closed: add that exact hash,
-// never `'unsafe-inline'`.
-export function adminCsp(): string {
-	return base("'self'", "'self'");
+// Admin: production is `script-src 'self'` only — no hashes, no
+// `'unsafe-inline'` (`Admin.astro` is script-free; island chunks are
+// same-origin). In DEV (`import.meta.env.DEV`) the pinned Astro-internal
+// hashes above are allowed so `client:only` islands can hydrate under
+// `astro dev`; the e2e hardening proof asserts this split (no `sha256-` on
+// prod, exactly these three on dev).
+export function adminCsp(isDev = false): string {
+	const scripts = isDev
+		? ["'self'", ...ADMIN_DEV_SCRIPT_HASHES.map((h) => `'${h}'`)].join(" ")
+		: "'self'";
+	return base("'self'", scripts);
 }

@@ -19,13 +19,15 @@ test("create → autosave → preview → publish → 200 → unpublish → 404"
 	request,
 }) => {
 	await page.goto("/admin");
-	await expect(page.getByRole("heading", { name: "Posts" })).toBeVisible();
+	await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
 	await page.getByRole("link", { name: "+ new post" }).click();
 	await expect(page).toHaveURL(/\/admin\/posts\/new$/);
 
-	await page.locator("#meta-slug").fill(SLUG);
+	// Title lives in the canvas H1; slug/excerpt live in the DETAILS panel.
 	await page.locator("#meta-title").fill("E2E Post");
+	await page.getByRole("button", { name: "DETAILS" }).click();
+	await page.locator("#meta-slug").fill(SLUG);
 	await page.locator("#meta-excerpt").fill("E2E excerpt");
 
 	// Type into the Tiptap surface; autosave fires ~2 s after the update.
@@ -48,17 +50,20 @@ test("create → autosave → preview → publish → 200 → unpublish → 404"
 	expect(preview.status()).toBe(200);
 	expect(await preview.text()).toContain("Hello from e2e");
 
-	// Publish → public URL 200.
+	// Publish → public URL 200. Stays on the edit page; Unpublish appears.
 	await page.getByRole("button", { name: "Publish", exact: true }).click();
-	await page.waitForURL("/admin", { timeout: 15000 });
+	await page.getByRole("button", { name: "Confirm publish" }).click();
+	const unpubBtn = page.getByRole("button", { name: "Unpublish", exact: true });
+	await expect(unpubBtn).toBeVisible({ timeout: 15000 });
 	const pub = await request.get(`/writing/${SLUG}`);
 	expect(pub.status()).toBe(200);
 	expect(await pub.text()).toContain("Hello from e2e");
 
-	// Unpublish → 404.
-	await page.goto(`/admin/posts/${postId}`);
-	await page.getByRole("button", { name: "Unpublish", exact: true }).click();
-	await page.waitForURL("/admin", { timeout: 15000 });
+	// Unpublish → 404. Stays on the edit page; Publish reappears.
+	await unpubBtn.click();
+	await expect(
+		page.getByRole("button", { name: "Publish", exact: true }),
+	).toBeVisible({ timeout: 15000 });
 	expect((await request.get(`/writing/${SLUG}`)).status()).toBe(404);
 });
 
@@ -68,8 +73,9 @@ test("two-tab conflict shows UI, never silently overwrites", async ({
 	request,
 }) => {
 	await page.goto("/admin/posts/new");
-	await page.locator("#meta-slug").fill(`${SLUG}-conflict`);
 	await page.locator("#meta-title").fill("Conflict Post");
+	await page.getByRole("button", { name: "DETAILS" }).click();
+	await page.locator("#meta-slug").fill(`${SLUG}-conflict`);
 	const editor = page.locator(
 		".article-body .tiptap, .article-body [contenteditable]",
 	);

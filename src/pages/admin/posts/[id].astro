@@ -38,90 +38,47 @@ const tags = await listAllTagsService(db);
 const recent = await listAdminPosts(db, { limit: 50 });
 const mediaItems = await listMediaService(db);
 const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
-const publishedValue =
-	post?.publishedAt !== null && post?.publishedAt !== undefined
-		? new Date(post.publishedAt).toISOString().slice(0, 16)
-		: "";
 ---
 
-{
-	post === null ? (
-		<Admin title="Not found" email={identity.email} current="posts" logoutUrl={logoutUrl}>
-			<p>Post not found.</p>
-		</Admin>
-	) : (
-		<Admin title={`Edit — ${post.title || "(untitled)"}`} email={identity.email} current="posts" logoutUrl={logoutUrl}>
-			<h1>Edit post</h1>
-			<p><a href={`/admin/preview/${post.id}`}>Preview</a></p>
-			{post.status === "published" && (
-				<p class="admin-banner" role="note">
-					Published post: changing the slug breaks existing links (no redirect manager).
-				</p>
-			)}
-			<div class="admin-field">
-				<span>Locale</span>
-				<select id="meta-locale">
-					<option value="en" selected={post.locale === "en"}>en</option>
-					<option value="id" selected={post.locale === "id"}>id</option>
-				</select>
-			</div>
-			<div class="admin-field">
-				<span>Slug</span>
-				<input id="meta-slug" value={post.slug} maxlength={150} />
-			</div>
-			<div class="admin-field">
-				<span>Title</span>
-				<input id="meta-title" value={post.title} maxlength={300} />
-			</div>
-			<div class="admin-field">
-				<span>Excerpt</span>
-				<textarea id="meta-excerpt" maxlength={500}>{post.excerpt}</textarea>
-			</div>
-			<div class="admin-field">
-				<span>SEO description</span>
-				<textarea id="meta-seo" maxlength={320}>{post.seoDescription ?? ""}</textarea>
-			</div>
-			<div class="admin-field">
-				<span>Tags</span>
-				<select id="meta-tags" multiple>
-					{tags.map((t) => (
-						<option value={t.id} selected={post.tags.some((pt) => pt.id === t.id)}>{t.slug}</option>
-					))}
-				</select>
-			</div>
-			<div class="admin-field">
-				<span>Cover image</span>
-				<select id="meta-cover">
-					<option value="">—</option>
-					{mediaItems.map((m) => (
-						<option value={m.id} selected={post.coverMediaId === m.id}>{m.id} ({m.width}×{m.height})</option>
-					))}
-				</select>
-			</div>
-			<div class="admin-field">
-				<span>Published at (future = scheduled)</span>
-				<input id="meta-published" type="datetime-local" value={publishedValue} />
-			</div>
-			<input id="meta-group" type="hidden" value={post.translationGroupId ?? ""} />
-			<EditorIsland
-				client:only="svelte"
-				postId={post.id}
-				initialDoc={post.contentJson}
-				initialUpdatedAt={post.updatedAt}
-				locale={post.locale === "id" ? "id" : "en"}
-				groupId={post.translationGroupId}
-				candidates={recent
-					.filter((r) => r.id !== post.id && r.locale !== post.locale)
-					.map((r) => ({
-						id: r.id,
-						locale: r.locale === "id" ? "id" : "en",
-						title: r.title,
-						slug: r.slug,
-						groupId: r.translationGroupId,
-						updatedAt: r.updatedAt,
-					}))}
-				mediaBaseUrl={env.MEDIA_BASE_URL}
-			/>
-		</Admin>
-	)
-}
+{post === null ? (
+	<Admin title="Not found" email={identity.email} current="posts" logoutUrl={logoutUrl}>
+		<p>Post not found.</p>
+	</Admin>
+) : (
+	<Admin title={`Edit — ${post.title || "(untitled)"}`} email={identity.email} current="posts" logoutUrl={logoutUrl}>
+		<EditorIsland
+			client:only="svelte"
+			postId={post.id}
+			initialDoc={post.contentJson}
+			initialUpdatedAt={post.updatedAt}
+			locale={post.locale === "id" ? "id" : "en"}
+			groupId={post.translationGroupId}
+			candidates={recent
+				.filter((r) => r.id !== post.id && r.locale !== post.locale)
+				.map((r) => ({
+					id: r.id,
+					locale: r.locale === "id" ? "id" : "en",
+					title: r.title,
+					slug: r.slug,
+					groupId: r.translationGroupId,
+					updatedAt: r.updatedAt,
+				}))}
+			mediaBaseUrl={env.MEDIA_BASE_URL}
+			initialTitle={post.title}
+			initialSlug={post.slug}
+			initialExcerpt={post.excerpt}
+			initialSeo={post.seoDescription}
+			initialCoverId={post.coverMediaId}
+			initialTagIds={post.tags.map((t) => t.id)}
+			initialPublishedAt={post.publishedAt}
+			initialStatus={post.status === "published" ? "published" : "draft"}
+			allTags={tags.map((t) => ({ id: t.id, slug: t.slug }))}
+			allMedia={mediaItems.map((m) => ({
+				id: m.id,
+				altDefault: m.altDefault,
+				width: m.width,
+				height: m.height,
+			}))}
+		/>
+	</Admin>
+)}

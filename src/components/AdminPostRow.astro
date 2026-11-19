@@ -1,0 +1,72 @@
+---
+import { smallestVariantUrl } from "../lib/content/render";
+import type { Media } from "../server/db/schema";
+
+interface Props {
+	id: string;
+	title: string;
+	locale: string;
+	status: "draft" | "published" | "scheduled";
+	translated: boolean;
+	updatedAt: number;
+	cover: Pick<
+		Media,
+		| "id"
+		| "r2KeyPrefix"
+		| "mime"
+		| "width"
+		| "height"
+		| "bytes"
+		| "altDefault"
+		| "dominantColor"
+		| "variantsJson"
+		| "createdAt"
+	> | null;
+	mediaBaseUrl: string;
+}
+
+const {
+	id,
+	title,
+	locale,
+	status,
+	translated,
+	updatedAt,
+	cover,
+	mediaBaseUrl,
+} = Astro.props;
+const statusGlyph =
+	status === "published" ? "●" : status === "scheduled" ? "◐" : "○";
+const statusLabel =
+	status === "published"
+		? "Published"
+		: status === "scheduled"
+			? "Scheduled"
+			: "Draft";
+const date = new Date(updatedAt);
+const day = String(date.getUTCDate()).padStart(2, "0");
+const month = date
+	.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })
+	.toUpperCase();
+---
+
+<li class="admin-row">
+	{cover !== null ? (
+		<img
+			class="admin-row-thumb"
+			src={smallestVariantUrl(cover, mediaBaseUrl)}
+			alt=""
+			loading="lazy"
+			width="56"
+			height="56"
+		/>
+	) : (
+		<span class="admin-row-thumb admin-row-thumb--empty" aria-hidden="true"></span>
+	)}
+	<div class="admin-row-main">
+		<p class="admin-row-title"><a href={`/admin/posts/${id}`}>{title || "(untitled)"}</a></p>
+		<span class="admin-row-meta">
+			{locale.toUpperCase()} {translated ? "⇄" : "✕"} {statusGlyph} {statusLabel} · {day} {month}
+		</span>
+	</div>
+</li>

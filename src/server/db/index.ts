@@ -1,11 +1,13 @@
 export type {
 	AdminListOptions,
+	AdminMetrics,
 	AdminPost,
 	NewPostInput,
 	SavePostPatch,
 } from "./admin";
 export {
 	ConcurrencyError,
+	countAdminMetrics,
 	createPost,
 	deletePost,
 	getPostById,

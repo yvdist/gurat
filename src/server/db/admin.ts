@@ -384,3 +384,51 @@ export async function listAdminPosts(
 	}
 	return out;
 }
+
+export interface AdminMetrics {
+	drafts: number;
+	scheduled: number;
+	published: number;
+	missingTranslation: number;
+}
+
+/** Dashboard strip counts: status buckets + posts with no counterpart locale
+ * (null group or singleton group). Drizzle bound params only. */
+export async function countAdminMetrics(
+	db: Db,
+	now: number,
+): Promise<AdminMetrics> {
+	const rows = await db.select().from(posts);
+	let drafts = 0;
+	let scheduled = 0;
+	let published = 0;
+	const groupSizes = new Map<string, number>();
+	let nullGroups = 0;
+	for (const row of rows) {
+		if (row.status === "draft") {
+			drafts++;
+		} else if ((row.publishedAt ?? 0) > now) {
+			scheduled++;
+		} else {
+			published++;
+		}
+		if (row.translationGroupId === null) {
+			nullGroups++;
+		} else {
+			groupSizes.set(
+				row.translationGroupId,
+				(groupSizes.get(row.translationGroupId) ?? 0) + 1,
+			);
+		}
+	}
+	let singletons = 0;
+	for (const size of groupSizes.values()) {
+		if (size === 1) singletons++;
+	}
+	return {
+		drafts,
+		scheduled,
+		published,
+		missingTranslation: nullGroups + singletons,
+	};
+}
