@@ -79,7 +79,12 @@ describe("bearer auth", () => {
 				"Content-Type": "application/json",
 				Origin: "https://evil.example",
 			},
-			body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				id: 1,
+				method: "tools/list",
+				params: {},
+			}),
 		});
 		const res = await createHandler(testEnv()).fetch(req);
 		expect(res.status).toBe(401);

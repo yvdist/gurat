@@ -1,11 +1,12 @@
 import type { MiddlewareHandler } from "astro";
 import { getEnv } from "./lib/env";
-import { adminCsp, mediaOriginFrom, publicCsp } from "./server/security/csp";
-
-// Baseline response headers (spec 02 §2.5) + Phase-7 CSP, request id, 5xx log.
-// Env via `getEnv()` (the `cloudflare:workers` import lives in
-// `src/lib/env.ts` only). HSTS is dashboard-edge per spec — never a Worker
-// header (lies on local http).
+import {
+	adminCsp,
+	extractInlineScripts,
+	hashScriptBody,
+	mediaOriginFrom,
+	publicCsp,
+} from "./server/security/csp";
 export const onRequest: MiddlewareHandler = async (context, next) => {
 	const rid = crypto.randomUUID();
 	const start = Date.now();
@@ -44,12 +45,27 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
 		mediaRaw = null;
 	}
 	const isAdmin = path === "/admin" || path.startsWith("/admin/");
-	response.headers.set(
-		"Content-Security-Policy",
-		isAdmin
-			? adminCsp(import.meta.env.DEV)
-			: publicCsp(mediaOriginFrom(mediaRaw)),
-	);
+	let csp: string;
+	if (isAdmin) {
+		// Hash the exact inline scripts Astro emits for `client:only`
+		// islands (hashes change every build — pinning can't cover them).
+		// HTML only; API JSON responses hash to nothing (today's header).
+		let extra: string[] = [];
+		try {
+			const contentType = response.headers.get("content-type") ?? "";
+			if (contentType.includes("text/html")) {
+				const html = await response.clone().text();
+				const bodies = extractInlineScripts(html);
+				extra = await Promise.all(bodies.map((b) => hashScriptBody(b)));
+			}
+		} catch {
+			extra = [];
+		}
+		csp = adminCsp(import.meta.env.DEV, extra);
+	} else {
+		csp = publicCsp(mediaOriginFrom(mediaRaw));
+	}
+	response.headers.set("Content-Security-Policy", csp);
 	response.headers.set("X-Request-Id", rid);
 	return response;
 };

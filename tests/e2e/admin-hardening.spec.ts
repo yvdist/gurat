@@ -28,10 +28,16 @@ test("admin carries its own CSP variant", async ({ page, request }) => {
 	expect(header).not.toMatch(/script-src[^;]*'unsafe-inline'/);
 	expect(header).toContain("frame-ancestors 'none'");
 	expect(header).toContain("default-src 'self'");
-	// DEV (`astro dev`, this project's harness) allows exactly the three
-	// pinned Astro-internal hashes so islands hydrate; production
-	// (`astro preview`/deploy) must be hash-free. Same split as the
-	// `adminCsp` unit test — never widen to `'unsafe-inline'`.
-	expect(header?.includes("sha256-") ?? false).toBe(true);
-	expect(header?.match(/sha256-/g)).toHaveLength(3);
+	// DEV (`astro dev`, this project's harness) pins exactly the three
+	// Astro-internal hashes, plus per-response hashes of the actual island
+	// scripts on island pages (auto-hashed by the middleware). Production
+	// (`astro preview`/deploy) carries only the per-response hashes. Same
+	// split as the `adminCsp` unit test — never `'unsafe-inline'`.
+	for (const pinned of [
+		"sha256-+8GaM4dmbWZ33N3gOIea1mixiJP7H2KgqAfQgo=",
+		"sha256-Y8t0ntteBwH+PqGKUyjWW3CAk+BNJKSoQc0xZ68FjhM=",
+		"sha256-At4sXbunobuxXv56+YxR7rwL4c3n8ubyPDiI7CIowSo=",
+	]) {
+		expect(header).toContain(pinned);
+	}
 });

@@ -79,7 +79,12 @@ describe("draft tools", () => {
 		await createDraft("First", { slug } as Record<string, unknown>);
 		const { body } = await rpcJson(testEnv(), "tools/call", {
 			name: "create-draft",
-			arguments: { locale: "en", slug, title: "Second", contentJson: doc("Second") },
+			arguments: {
+				locale: "en",
+				slug,
+				title: "Second",
+				contentJson: doc("Second"),
+			},
 		});
 		const { text, isError } = toolResult(body);
 		expect(isError).toBe(true);

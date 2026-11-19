@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
 	adminCsp,
+	extractInlineScripts,
+	hashScriptBody,
 	mediaOriginFrom,
 	publicCsp,
 } from "../src/server/security/csp";
@@ -51,7 +53,6 @@ describe("publicCsp", () => {
 		expect(csp).not.toMatch(/script-src[^;]*media\.example\.com/);
 	});
 });
-
 describe("adminCsp", () => {
 	it("allows same-origin scripts only in production", () => {
 		const csp = adminCsp();
@@ -66,5 +67,35 @@ describe("adminCsp", () => {
 		expect(csp).toContain("script-src 'self'");
 		expect(csp.match(/sha256-/g)).toHaveLength(3);
 		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+	});
+
+	it("appends caller-supplied hashes without unsafe-inline", () => {
+		const csp = adminCsp(false, ["sha256-abc123"]);
+		expect(csp).toContain("script-src 'self' 'sha256-abc123'");
+		expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+	});
+});
+
+describe("extractInlineScripts + hashScriptBody", () => {
+	it("skips external scripts, empty blocks, and JSON-LD", () => {
+		const html = [
+			'<script src="/external.js" defer></script>',
+			'<script type="application/ld+json">{"a":1}</script>',
+			"<script>   </script>",
+			"<script>console.log(1)</script>",
+			'<script type="module">import x from "y"</script>',
+		].join("\n");
+		expect(extractInlineScripts(html)).toEqual([
+			"console.log(1)",
+			'import x from "y"',
+		]);
+	});
+
+	it("hashes exact bytes verifiable by WebCrypto", async () => {
+		const hash = await hashScriptBody("console.log(1)");
+		expect(hash).toMatch(/^sha256-[A-Za-z0-9+/=]+$/);
+		// Stable: same input, same hash.
+		expect(await hashScriptBody("console.log(1)")).toBe(hash);
+		expect(await hashScriptBody("console.log(2)")).not.toBe(hash);
 	});
 });
