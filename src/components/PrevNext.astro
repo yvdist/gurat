@@ -6,6 +6,7 @@ import { localizePath, t } from "../i18n";
 // the post has no cover. Reuses .prevnext-card classes.
 import { smallestVariantUrl } from "../lib/content/render";
 import { getEnv } from "../lib/env";
+import type { Media } from "../server/db/schema";
 
 export interface ClosingCard {
 	slug: string;
