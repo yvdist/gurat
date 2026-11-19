@@ -1062,12 +1062,10 @@ img {
 	color: var(--ink);
 }
 
-
 .post-sidenotes {
 	color: var(--muted);
 	font-size: var(--font-size-small);
 }
-
 
 /* byline + prevnext */
 .byline {

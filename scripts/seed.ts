@@ -202,9 +202,7 @@ const EN_007 = doc(
 		),
 	),
 	footnote(
-		para(
-			tx("A dashboard that needs scrolling is a dashboard nobody reads."),
-		),
+		para(tx("A dashboard that needs scrolling is a dashboard nobody reads.")),
 	),
 	para(
 		tx(
