@@ -128,6 +128,8 @@ let element: HTMLElement | null = $state(null);
 let editor: Editor | null = $state(null);
 let saveState: "saved" | "saving" | "offline" | "conflict" = $state("saved");
 let dirty = $state(false);
+/** Last non-conflict save failure, parsed from the API body (shown verbatim). */
+let saveError: string | null = $state(null);
 let conflictStamp: number | null = $state(null);
 let postId: string | null = $state(initialPostId);
 let expectedUpdatedAt = $state(initialUpdatedAt);
@@ -391,7 +393,7 @@ async function save(overwrite: boolean): Promise<boolean> {
 		serverUpdatedAt = data.post.updatedAt;
 		dirty = false;
 		publishedDirty = false;
-		saveState = "saved";
+		saveError = null;
 		if (wasNew) {
 			// First save created the row: reflect the canonical URL without
 			// reloading (refresh-safe, keeps editor state).
@@ -541,7 +543,11 @@ async function confirmPublish(): Promise<void> {
 		const dirtyJson = dirty ? currentDocJson() : undefined;
 		if (dirty) {
 			const ok = await save(false);
-			if (!ok) throw new Error("save failed — resolve the conflict first");
+			if (!ok) {
+				if (saveState === "conflict")
+					throw new Error("save failed — resolve the conflict first");
+				throw new Error(saveError ?? "save failed");
+			}
 		}
 		if (!postId) throw new Error("save the post first");
 		const res = await fetch(`/admin/api/posts/${postId}/publish`, {
@@ -1293,6 +1299,16 @@ onDestroy(() => {
 			</button>
 			<button type="button" class="ed-btn ed-btn-solid" onclick={overwriteMine}>
 				Overwrite with mine
+			</button>
+		</div>
+	{:else if saveError !== null}
+		<div class="ed-conflict" role="alert">
+			<p>Save failed: {saveError}. Your version is intact.</p>
+			<button type="button" class="ed-btn ed-btn-ghost" onclick={reloadServer}>
+				Reload server version
+			</button>
+			<button type="button" class="ed-btn ed-btn-solid" onclick={overwriteMine}>
+				Retry save with mine
 			</button>
 		</div>
 	{/if}
