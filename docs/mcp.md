@@ -31,8 +31,11 @@ can self-correct.
 1. `cd mcp && wrangler secret put MCP_BEARER_TOKEN` (dashboard secret, never
    in config — `mcp/wrangler.jsonc` has no `vars` block, same rule as the
    main Worker).
-2. Deploy from `mcp/`: `wrangler deploy --keep-vars` (same flag, same reason:
-   dashboard stays the single source of truth).
+2. Deploy from `mcp/`: `pnpm deploy` (=
+   `wrangler deploy --config wrangler.jsonc --keep-vars`; `--config` is
+   required because the Astro build's generated `.wrangler/deploy/config.json`
+   in the repo root would otherwise confuse wrangler, `--keep-vars` keeps the
+   dashboard the single source of truth).
 3. Connect from Claude Code:
    `claude mcp add --transport http gurat https://<mcp-worker-host>/mcp --header "Authorization: Bearer <token>"`
    (or the equivalent bearer-token HTTP transport in Gemini / inspector).
