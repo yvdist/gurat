@@ -82,52 +82,95 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 	<section aria-label="Library">
 		<h2>Library</h2>
 		<div class="admin-media-grid">
-			{items.map((m) => (
-				<figure class="admin-media-card">
-					<img src={smallestVariantUrl(m, baseUrl)} alt={m.altDefault} loading="lazy" width={m.width} height={m.height} />
+			{items.map((m, i) => (
+				<figure class="admin-media-card" data-media-index={i}>
+					<button type="button" class="admin-media-thumb" data-media-open={i} aria-label={`Open ${m.altDefault || m.id} in viewer`}>
+						<img src={smallestVariantUrl(m, baseUrl)} alt={m.altDefault} loading="lazy" width={m.width} height={m.height} />
+					</button>
 					<figcaption>
-						<code>{m.id}</code>
-						<span>{m.width}×{m.height} · {m.useCount} {m.useCount === 1 ? "post" : "posts"}</span>
-						{m.posts.length > 0 && <span>used in: {m.posts.join(", ")}</span>}
-						<form method="post">
-							<input type="hidden" name="action" value="rename" />
-							<input type="hidden" name="id" value={m.id} />
-							<input name="altDefault" value={m.altDefault} maxlength={200} aria-label={`Default alt text for ${m.id}`} />
-							<button type="submit">Save alt</button>
-						</form>
-						<form method="post" onsubmit="return confirm('Delete this media?')">
-							<input type="hidden" name="action" value="delete" />
-							<input type="hidden" name="id" value={m.id} />
-							<button type="submit">Delete</button>
-						</form>
+						<code title={m.id}>{m.id}</code>
+						<span class="admin-media-meta">{m.width}×{m.height} · {m.useCount} {m.useCount === 1 ? "post" : "posts"}</span>
+						{m.posts.length > 0 && <span class="admin-media-meta" title={m.posts.join(", ")}>used in: {m.posts.join(", ")}</span>}
+						<span class="admin-media-actions">
+							<button type="button" data-media-rename={m.id} data-media-alt={m.altDefault}>Rename</button>
+							<button type="button" data-media-delete={m.id} data-media-posts={m.posts.join(",")}>Delete</button>
+						</span>
 					</figcaption>
 				</figure>
 			))}
 		</div>
 	</section>
+
+	<dialog class="admin-lightbox" id="media-lightbox" aria-label="Media viewer">
+		<img id="media-lightbox-img" alt="" />
+		<p class="admin-lightbox-meta" id="media-lightbox-meta"></p>
+		<div class="admin-lightbox-nav">
+			<button type="button" id="media-lightbox-prev">← Prev</button>
+			<button type="button" id="media-lightbox-next">Next →</button>
+		</div>
+		<form method="dialog">
+			<button type="submit">Close</button>
+		</form>
+	</dialog>
+
+	<dialog class="admin-dialog" id="media-rename-dialog" aria-label="Rename media alt text">
+		<form method="dialog" id="media-rename-form">
+			<h2>Alt text</h2>
+			<label class="admin-field">
+				<span>Default alt text</span>
+				<input name="altDefault" id="media-rename-alt" maxlength={200} />
+			</label>
+			<p class="admin-error" id="media-rename-error" role="alert" hidden></p>
+			<button type="submit">Save alt</button>
+			<button type="submit" value="cancel" formnovalidate>Cancel</button>
+		</form>
+	</dialog>
+
+	<dialog class="admin-dialog" id="media-delete-dialog" aria-label="Delete media">
+		<form method="dialog" id="media-delete-form">
+			<h2>Delete media</h2>
+			<p id="media-delete-text"></p>
+			<p class="admin-error" id="media-delete-error" role="alert" hidden></p>
+			<button type="submit">Delete</button>
+			<button type="submit" value="cancel" formnovalidate>Cancel</button>
+		</form>
+	</dialog>
 </Admin>
+	<script type="application/json" id="media-data" data-base-url={baseUrl}>{JSON.stringify(items.map((m) => ({ id: m.id, altDefault: m.altDefault, width: m.width, height: m.height, variantsJson: m.variantsJson, useCount: m.useCount, posts: m.posts })))}</script>
 
 <script>
+	import { adminErrorHint, toast } from "../../lib/admin/toast";
 	import { fileToVariants, uploadMedia } from "../../islands/mediaClient";
 
 	const zone = document.getElementById("dropzone");
 	const pick = document.getElementById("filepick") as HTMLInputElement | null;
 	const status = document.getElementById("upload-status");
 
+	function uploadHint(err: unknown): string {
+		const code = err instanceof Error ? err.message : "upload failed";
+		if (code.includes("403")) return adminErrorHint("upload failed (403)");
+		return code;
+	}
+
 	async function handleFiles(files: FileList | File[]): Promise<void> {
 		const list = [...files].filter((f) => f.type.startsWith("image/"));
 		if (list.length === 0 || !status) return;
+		let uploaded = 0;
 		for (const file of list) {
 			try {
 				status.textContent = `Uploading ${file.name}…`;
 				const prepared = await fileToVariants(file);
 				await uploadMedia(prepared, "");
-				window.location.reload();
-				return;
+				uploaded += 1;
+				toast(`Uploaded ${file.name}`);
 			} catch (err) {
-				status.textContent = err instanceof Error ? err.message : "upload failed";
+				const hint = uploadHint(err);
+				status.textContent = hint;
+				toast(hint, "err");
 			}
 		}
+		status.textContent = uploaded > 0 ? `Uploaded ${uploaded} of ${list.length}` : status.textContent;
+		if (uploaded > 0) window.location.reload();
 	}
 
 	zone?.addEventListener("click", () => pick?.click());
@@ -145,5 +188,136 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 	document.addEventListener("paste", (e) => {
 		const files = e.clipboardData?.files;
 		if (files && files.length > 0) void handleFiles(files);
+	});
+
+	// Custom lightbox: largest variant + alt + W×H meta, prev/next over the
+	// server-rendered items (payload embedded below by Astro).
+	const mediaBase = document.getElementById("media-data")?.getAttribute("data-base-url") ?? "";
+	interface LightItem {
+		id: string; altDefault: string; width: number; height: number; variantsJson: string; useCount: number; posts: string[];
+	}
+	const library: LightItem[] = JSON.parse(document.getElementById("media-data")?.textContent ?? "[]");
+	// Largest variant URL over the payload subset (mirrors
+	// `largestVariantUrl` without requiring a full Media row).
+	function largestFor(item: LightItem, base: string): string {
+		let widths: number[] | null = null;
+		try {
+			const v: unknown = JSON.parse(item.variantsJson);
+			if (Array.isArray(v)) {
+				const ws: number[] = [];
+				for (const entry of v) {
+					if (typeof entry === "object" && entry !== null) {
+						const w = (entry as Record<string, unknown>).w;
+						if (typeof w === "number" && Number.isInteger(w) && w > 0) ws.push(w);
+					}
+				}
+				if (ws.length > 0) widths = [...new Set(ws)].sort((a, b) => a - b);
+			}
+		} catch {
+			widths = null;
+		}
+		const list = widths ?? [item.width];
+		const w = list[list.length - 1] ?? item.width;
+		const prefix = base.replace(/\/+$/, "");
+		return `${prefix}/media/${item.id}/${w}.webp`;
+	}
+	const lightbox = document.getElementById("media-lightbox");
+	const lightImg = document.getElementById("media-lightbox-img");
+	const lightMeta = document.getElementById("media-lightbox-meta");
+	let lightIndex = 0;
+	function showLightbox(i: number): void {
+		const item = library[(i + library.length) % library.length];
+		if (!item || !(lightbox instanceof HTMLDialogElement)) return;
+		lightIndex = (i + library.length) % library.length;
+		if (lightImg instanceof HTMLImageElement) {
+			lightImg.src = largestFor(item, mediaBase);
+			lightImg.alt = item.altDefault;
+		}
+		if (lightMeta) lightMeta.textContent = `${item.altDefault || item.id} · ${item.width}×${item.height} · ${item.useCount} ${item.useCount === 1 ? "post" : "posts"}`;
+		lightbox.showModal();
+	}
+	for (const btn of document.querySelectorAll("[data-media-open]")) {
+		btn.addEventListener("click", () => showLightbox(Number(btn.getAttribute("data-media-open") ?? "0")));
+	}
+	document.getElementById("media-lightbox-prev")?.addEventListener("click", () => showLightbox(lightIndex - 1));
+	document.getElementById("media-lightbox-next")?.addEventListener("click", () => showLightbox(lightIndex + 1));
+
+	// Rename/delete via fetch + dialogs + shared toast (no inline confirm).
+	const renameDialog = document.getElementById("media-rename-dialog");
+	const renameForm = document.getElementById("media-rename-form");
+	const renameAlt = document.getElementById("media-rename-alt");
+	const renameError = document.getElementById("media-rename-error");
+	let renameId = "";
+	for (const btn of document.querySelectorAll("[data-media-rename]")) {
+		btn.addEventListener("click", () => {
+			if (!(renameDialog instanceof HTMLDialogElement)) return;
+			renameId = btn.getAttribute("data-media-rename") ?? "";
+			if (renameAlt instanceof HTMLInputElement) renameAlt.value = btn.getAttribute("data-media-alt") ?? "";
+			if (renameError instanceof HTMLElement) renameError.hidden = true;
+			renameDialog.showModal();
+		});
+	}
+	renameForm?.addEventListener("submit", async (e) => {
+		if (!(renameDialog instanceof HTMLDialogElement)) return;
+		if (renameDialog.returnValue === "cancel") return;
+		e.preventDefault();
+		const res = await fetch(`/admin/api/media/${renameId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ altDefault: renameAlt instanceof HTMLInputElement ? renameAlt.value : "" }),
+		});
+		if (!res.ok) {
+			const hint = adminErrorHint("request failed");
+			if (renameError instanceof HTMLElement) {
+				renameError.textContent = hint;
+				renameError.hidden = false;
+			}
+			toast(hint, "err");
+			return;
+		}
+		toast("Alt text saved");
+		window.location.reload();
+	});
+
+	const deleteDialog = document.getElementById("media-delete-dialog");
+	const deleteForm = document.getElementById("media-delete-form");
+	const deleteText = document.getElementById("media-delete-text");
+	const deleteError = document.getElementById("media-delete-error");
+	let deleteId = "";
+	for (const btn of document.querySelectorAll("[data-media-delete]")) {
+		btn.addEventListener("click", () => {
+			if (!(deleteDialog instanceof HTMLDialogElement)) return;
+			deleteId = btn.getAttribute("data-media-delete") ?? "";
+			const posts = btn.getAttribute("data-media-posts") ?? "";
+			if (deleteText) deleteText.textContent = posts !== "" ? `Delete media ${deleteId}? Used by ${posts} — remove from posts first.` : `Delete media ${deleteId}?`;
+			if (deleteError instanceof HTMLElement) deleteError.hidden = true;
+			deleteDialog.showModal();
+		});
+	}
+	deleteForm?.addEventListener("submit", async (e) => {
+		if (!(deleteDialog instanceof HTMLDialogElement)) return;
+		if (deleteDialog.returnValue === "cancel") return;
+		e.preventDefault();
+		const res = await fetch(`/admin/api/media/${deleteId}`, { method: "DELETE" });
+		if (!res.ok) {
+			let hint = `request failed (${res.status})`;
+			try {
+				const body: { error?: unknown; detail?: unknown } = await res.json();
+				if (body.error === "media-in-use") {
+					const posts = Array.isArray((body.detail as { posts?: unknown })?.posts) ? (body.detail as { posts: string[] }).posts.join(", ") : "";
+					hint = adminErrorHint("media-in-use", posts);
+				}
+			} catch {
+				hint = `request failed (${res.status})`;
+			}
+			if (deleteError instanceof HTMLElement) {
+				deleteError.textContent = hint;
+				deleteError.hidden = false;
+			}
+			toast(hint, "err");
+			return;
+		}
+		toast("Media deleted");
+		window.location.reload();
 	});
 </script>

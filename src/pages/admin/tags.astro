@@ -82,59 +82,182 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 
 	{formError !== null && <p class="admin-error" role="alert">{formError}</p>}
 
-	<section aria-label="Create tag">
+	<section class="admin-card" aria-label="Create tag">
 		<h2>Create</h2>
-		<form method="post">
+		<form method="post" id="tag-create">
 			<input type="hidden" name="action" value="create" />
-			<div class="admin-field">
-				<span>Slug (lowercase-hyphen)</span>
-				<input name="slug" required maxlength={64} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
+			<div class="admin-create-grid">
+				<div class="admin-field">
+					<span>Slug (lowercase-hyphen)</span>
+					<input name="slug" required maxlength={64} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
+				</div>
+				<div class="admin-field">
+					<span>Label (EN)</span>
+					<input name="labelEn" required maxlength={120} />
+				</div>
+				<div class="admin-field">
+					<span>Label (ID)</span>
+					<input name="labelId" required maxlength={120} />
+				</div>
 			</div>
-			<div class="admin-field">
-				<span>Label (EN)</span>
-				<input name="labelEn" required maxlength={120} />
-			</div>
-			<div class="admin-field">
-				<span>Label (ID)</span>
-				<input name="labelId" required maxlength={120} />
-			</div>
-			<button type="submit">Create tag</button>
+			<button type="submit" class="admin-btn-primary">Create tag</button>
 		</form>
 	</section>
 
 	<section aria-label="Existing tags">
 		<h2>Existing</h2>
-		<table class="admin-table">
-			<thead>
-				<tr><th>Slug</th><th>EN</th><th>ID</th><th>Posts</th><th>Actions</th></tr>
-			</thead>
-			<tbody>
-				{tags.map((t) => (
-					<tr>
-						<td>
-							<form method="post">
-								<input type="hidden" name="action" value="rename" />
-								<input type="hidden" name="id" value={t.id} />
-								<input name="slug" value={t.slug} required maxlength={64} aria-label={`Slug for ${t.slug}`} />
-								<input name="labelEn" value={t.labelEn} required maxlength={120} aria-label={`English label for ${t.slug}`} />
-								<input name="labelId" value={t.labelId} required maxlength={120} aria-label={`Indonesian label for ${t.slug}`} />
-								<button type="submit">Rename</button>
-							</form>
-						</td>
-						<td>{t.labelEn}</td>
-						<td>{t.labelId}</td>
-						<td>{t.useCount}</td>
-						<td>
-							<form method="post" onsubmit="return confirm('Delete this tag?')">
-								<input type="hidden" name="action" value="delete" />
-								<input type="hidden" name="id" value={t.id} />
-								<label><input type="checkbox" name="confirm" /> in use: delete anyway</label>
-								<button type="submit">Delete</button>
-							</form>
-						</td>
-					</tr>
-				))}
-			</tbody>
-		</table>
+		<ul class="admin-tag-list">
+			{tags.map((t) => (
+				<li data-tag-id={t.id} data-tag-slug={t.slug} data-tag-en={t.labelEn} data-tag-id-label={t.labelId} data-tag-count={t.useCount}>
+					<span class="admin-tag-slug">{t.slug}</span>
+					<span>{t.labelEn}</span>
+					<span>{t.labelId}</span>
+					<span class="admin-tag-meta">{t.useCount} {t.useCount === 1 ? "post" : "posts"}</span>
+					<span class="admin-tag-actions">
+						<button type="button" data-tag-edit={t.id}>Edit</button>
+						<button type="button" data-tag-delete={t.id}>Delete</button>
+					</span>
+				</li>
+			))}
+		</ul>
 	</section>
-</Admin>
+
+	<dialog class="admin-dialog" id="tag-edit-dialog" aria-label="Rename tag">
+		<form method="dialog" id="tag-edit-form">
+			<h2>Rename tag</h2>
+			<label class="admin-field">
+				<span>Slug (lowercase-hyphen)</span>
+				<input name="slug" id="tag-edit-slug" required maxlength={64} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
+			</label>
+			<label class="admin-field">
+				<span>Label (EN)</span>
+				<input name="labelEn" id="tag-edit-en" required maxlength={120} />
+			</label>
+			<label class="admin-field">
+				<span>Label (ID)</span>
+				<input name="labelId" id="tag-edit-id" required maxlength={120} />
+			</label>
+			<p class="admin-error" id="tag-edit-error" role="alert" hidden></p>
+			<button type="submit">Save</button>
+			<button type="submit" value="cancel" formnovalidate>Cancel</button>
+		</form>
+	</dialog>
+
+	<dialog class="admin-dialog" id="tag-delete-dialog" aria-label="Delete tag">
+		<form method="dialog" id="tag-delete-form">
+			<h2>Delete tag</h2>
+			<p id="tag-delete-text"></p>
+			<label id="tag-delete-confirm-row" hidden><input type="checkbox" id="tag-delete-confirm" /> in use: delete anyway</label>
+			<p class="admin-error" id="tag-delete-error" role="alert" hidden></p>
+			<button type="submit" id="tag-delete-submit">Delete</button>
+			<button type="submit" value="cancel" formnovalidate>Cancel</button>
+		</form>
+	</dialog>
+
+	<script>
+		import { adminErrorHint, toast } from "../../lib/admin/toast.ts";
+
+		async function readError(res: Response): Promise<{ code: string; detail?: string }> {
+			try {
+				const body: { error?: unknown; detail?: unknown } = await res.json();
+				return {
+					code: typeof body.error === "string" ? body.error : `request failed (${res.status})`,
+					detail: typeof body.detail === "string" || typeof body.detail === "number" ? String(body.detail) : undefined,
+				};
+			} catch {
+				return { code: `request failed (${res.status})` };
+			}
+		}
+
+		const editDialog = document.getElementById("tag-edit-dialog");
+		const editForm = document.getElementById("tag-edit-form");
+		const editSlug = document.getElementById("tag-edit-slug");
+		const editEn = document.getElementById("tag-edit-en");
+		const editIdInput = document.getElementById("tag-edit-id");
+		const editError = document.getElementById("tag-edit-error");
+		let editId_ = "";
+		for (const btn of document.querySelectorAll("[data-tag-edit]")) {
+			btn.addEventListener("click", () => {
+				const li = btn.closest("[data-tag-id]");
+				if (!(editDialog instanceof HTMLDialogElement) || !li) return;
+				editId_ = li.getAttribute("data-tag-id") ?? "";
+				if (editSlug instanceof HTMLInputElement) editSlug.value = li.getAttribute("data-tag-slug") ?? "";
+				if (editEn instanceof HTMLInputElement) editEn.value = li.getAttribute("data-tag-en") ?? "";
+				if (editIdInput instanceof HTMLInputElement) editIdInput.value = li.getAttribute("data-tag-id-label") ?? "";
+				if (editError instanceof HTMLElement) editError.hidden = true;
+				editDialog.showModal();
+			});
+		}
+		editForm?.addEventListener("submit", async (e) => {
+			if (!(editDialog instanceof HTMLDialogElement)) return;
+			if (editDialog.returnValue === "cancel") return;
+			e.preventDefault();
+			const res = await fetch(`/admin/api/tags/${editId_}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					slug: editSlug instanceof HTMLInputElement ? editSlug.value : "",
+					labelEn: editEn instanceof HTMLInputElement ? editEn.value : "",
+					labelId: editIdInput instanceof HTMLInputElement ? editIdInput.value : "",
+				}),
+			});
+			if (!res.ok) {
+				const err = await readError(res);
+				const hint = adminErrorHint(err.code, err.detail);
+				if (editError instanceof HTMLElement) {
+					editError.textContent = hint;
+					editError.hidden = false;
+				} else {
+					toast(hint, "err");
+				}
+				return;
+			}
+			toast("Tag saved");
+			window.location.reload();
+		});
+
+		const deleteDialog = document.getElementById("tag-delete-dialog");
+		const deleteForm = document.getElementById("tag-delete-form");
+		const deleteText = document.getElementById("tag-delete-text");
+		const deleteRow = document.getElementById("tag-delete-confirm-row");
+		const deleteCheck = document.getElementById("tag-delete-confirm");
+		const deleteError = document.getElementById("tag-delete-error");
+		let deleteId_ = "";
+		for (const btn of document.querySelectorAll("[data-tag-delete]")) {
+			btn.addEventListener("click", () => {
+				const li = btn.closest("[data-tag-id]");
+				if (!(deleteDialog instanceof HTMLDialogElement) || !li) return;
+				deleteId_ = li.getAttribute("data-tag-id") ?? "";
+				const slug = li.getAttribute("data-tag-slug") ?? "";
+				const count = Number(li.getAttribute("data-tag-count") ?? "0");
+				if (deleteText) deleteText.textContent = `Delete tag “${slug}”?`;
+				if (deleteRow instanceof HTMLElement) deleteRow.hidden = count === 0;
+				if (deleteCheck instanceof HTMLInputElement) deleteCheck.checked = false;
+				if (deleteError instanceof HTMLElement) deleteError.hidden = true;
+				deleteDialog.showModal();
+			});
+		}
+		deleteForm?.addEventListener("submit", async (e) => {
+			if (!(deleteDialog instanceof HTMLDialogElement)) return;
+			if (deleteDialog.returnValue === "cancel") return;
+			e.preventDefault();
+			const res = await fetch(`/admin/api/tags/${deleteId_}`, {
+				method: "DELETE",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ confirm: deleteCheck instanceof HTMLInputElement ? deleteCheck.checked : false }),
+			});
+			if (!res.ok) {
+				const err = await readError(res);
+				const hint = adminErrorHint(err.code, err.detail);
+				if (deleteError instanceof HTMLElement) {
+					deleteError.textContent = hint;
+					deleteError.hidden = false;
+				}
+				toast(hint, "err");
+				return;
+			}
+			toast("Tag deleted");
+			window.location.reload();
+		});
+	</script>
+	</Admin>

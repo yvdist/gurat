@@ -323,6 +323,26 @@ function refreshStats() {
 	words = wordCount(editor.getText());
 }
 
+// Figures-only posts have no words but are valid docs (server gates only
+// blank title/slug); any non-empty-paragraph block counts as content.
+function docHasContentBlocks(): boolean {
+	if (!editor) return false;
+	const content = editor.getJSON()?.content;
+	if (!Array.isArray(content)) return false;
+	for (const block of content) {
+		if (typeof block !== "object" || block === null) continue;
+		const node = block as { type?: unknown; content?: unknown };
+		if (node.type !== "paragraph") return true;
+		if (Array.isArray(node.content) && node.content.length > 0) return true;
+	}
+	return false;
+}
+const hasContentBlocks = $derived.by(() => {
+	// Depend on `words` so the checklist re-evaluates on every edit.
+	void words;
+	return docHasContentBlocks();
+});
+
 // Same formula as `renderDoc`: words / 200, min 1.
 const readingMinutes = $derived(Math.max(1, Math.round(words / 200)));
 
@@ -532,7 +552,7 @@ let publishBusy = $state(false);
 let publishError: string | null = $state(null);
 const checklistTitle = $derived(metaTitle.trim() !== "");
 const checklistSlug = $derived(/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(metaSlug));
-const checklistBody = $derived(words > 0);
+const checklistBody = $derived(words > 0 || hasContentBlocks);
 const checklistCover = $derived(metaCover !== "");
 const checklistTranslation = $derived(groupId !== null);
 const checklistReady = $derived(
@@ -542,6 +562,30 @@ const checklistReady = $derived(
 function openPublishDialog(): void {
 	publishError = null;
 	publishDialog?.showModal();
+}
+
+// Server rejection → one-line English hint (codes already returned by
+// publishPostService; no API change).
+async function publishHint(res: Response): Promise<string> {
+	let body: { error?: unknown; detail?: unknown } = {};
+	try {
+		body = (await res.json()) as { error?: unknown; detail?: unknown };
+	} catch {
+		body = {};
+	}
+	const code = typeof body.error === "string" ? body.error : "";
+	const detail = typeof body.detail === "string" ? body.detail : "";
+	if (code === "validation" && detail === "title")
+		return "Add a title before publishing";
+	if (code === "validation" && detail === "slug")
+		return "Fix the slug (lowercase-hyphen) before publishing";
+	if (code === "render" && detail !== "")
+		return `Fix the broken block at ${detail} before publishing`;
+	if (code === "media" && detail === "unknown cover")
+		return "Pick a valid cover image before publishing";
+	if (code === "schema" && detail !== "")
+		return `Fix the invalid block at ${detail} before publishing`;
+	return `publish failed (${res.status})`;
 }
 
 async function confirmPublish(): Promise<void> {
@@ -562,7 +606,7 @@ async function confirmPublish(): Promise<void> {
 				dirtyJson ? { contentJson: dirtyJson, expectedUpdatedAt } : {},
 			),
 		});
-		if (!res.ok) throw new Error(`publish failed (${res.status})`);
+		if (!res.ok) throw new Error(await publishHint(res));
 		const data = (await res.json()) as {
 			post: { id: string; updatedAt: number; publishedAt?: number | null };
 		};
@@ -982,6 +1026,15 @@ function slashItems(): SlashItem[] {
 			id: "sidenote",
 			label: "Sidenote",
 			run: () => sidenoteDialog?.showModal(),
+		},
+		{
+			id: "quote",
+			label: "Quote",
+			run: () => {
+				editor?.chain().focus().toggleBlockquote().run();
+				refreshSelection();
+				markDirty();
+			},
 		},
 	];
 }
@@ -2037,6 +2090,27 @@ onDestroy(() => {
 				<button
 					type="button"
 					class="ed-bubble-btn"
+					aria-label="Image"
+					onclick={() => openImageDialog("insert")}
+				>
+					img
+				</button>
+				<button
+					type="button"
+					class="ed-bubble-btn"
+					aria-pressed={editor?.isActive("blockquote") ?? false}
+					aria-label="Quote"
+					onclick={() => {
+						editor?.chain().focus().toggleBlockquote().run();
+						refreshSelection();
+						markDirty();
+					}}
+				>
+					“”
+				</button>
+				<button
+					type="button"
+					class="ed-bubble-btn"
 					aria-pressed={editor?.isActive("heading", { level: 2 }) ?? false}
 					aria-label="Heading 2"
 					onclick={() => {
@@ -2410,18 +2484,24 @@ onDestroy(() => {
 		padding: 0.25rem 0;
 	}
 	.ed-details {
-		width: min(22rem, 90vw);
-		flex-shrink: 0;
+		position: fixed;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		/* Below the sticky topbar (z-index 30) so PREVIEW/DETAILS/Publish
+		   stay clickable while the drawer is open; still above canvas.
+		   Slides under the bar, so the top padding clears it. */
+		z-index: 20;
+		width: min(22rem, 92vw);
+		max-height: none;
 		border-left: 1px solid var(--line);
 		background: var(--surface, var(--bg));
-		padding: 1rem;
+		padding: 4rem 1rem 1rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		max-height: calc(100vh - 3.5rem);
 		overflow-y: auto;
-		position: sticky;
-		top: 3.5rem;
+		box-shadow: -8px 0 24px rgb(0 0 0 / 0.25);
 	}
 	.ed-details h2 {
 		font-family: var(--font-mono, monospace);
@@ -2563,7 +2643,9 @@ onDestroy(() => {
 	.ed-bottom {
 		position: sticky;
 		bottom: 0;
-		z-index: 30;
+		/* Below the DETAILS slide-over (z-index 20) so the drawer's bottom
+		   rows stay clickable; still above canvas content. Topbar stays 30. */
+		z-index: 10;
 		display: flex;
 		justify-content: space-between;
 		gap: 1rem;
@@ -2696,21 +2778,11 @@ onDestroy(() => {
 		opacity: 0;
 		pointer-events: none;
 	}
-	/* Narrow screens: DETAILS becomes a right-side overlay so the canvas
-	   keeps full width (drawer + canvas side-by-side crushes both at 390px). */
+	/* Narrow screens: the drawer is a fixed overlay at every width, so the
+	   canvas keeps full width (side-by-side crushes both at 390px). */
 	@media (max-width: 900px) {
 		.ed-main {
 			display: block;
-		}
-		.ed-details {
-			position: fixed;
-			top: 0;
-			right: 0;
-			bottom: 0;
-			z-index: 30;
-			max-height: none;
-			width: min(22rem, 92vw);
-			box-shadow: -8px 0 24px rgb(0 0 0 / 0.25);
 		}
 	}
 	.ed-focus :global(.admin-side),

@@ -27,29 +27,33 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 <Admin title="Settings" email={identity.email} current="settings" logoutUrl={logoutUrl}>
 	<h1>Settings</h1>
 
-	<section aria-label="Account">
-		<h2>Account</h2>
-		<p class="admin-status">Signed in as {identity.email}</p>
-		<p>
-			<a href={logoutUrl}>Sign out</a>
-		</p>
-	</section>
+	<div class="admin-stack">
+		<section class="admin-card" aria-label="Account">
+			<h2>Account</h2>
+			<p class="admin-status">Signed in as {identity.email}</p>
+			<p>
+				<a class="admin-btn-secondary" href={logoutUrl}>Sign out</a>
+			</p>
+		</section>
 
-	<section aria-label="Site">
-		<h2>Site</h2>
-		<dl>
-			<div>
-				<dt class="admin-status">Site URL</dt>
-				<dd><a href={SITE.url}>{SITE.url}</a> (<a href="/">view site ↗</a>)</dd>
-			</div>
-			<div>
-				<dt class="admin-status">Media base URL</dt>
-				<dd class="admin-status">{env.MEDIA_BASE_URL || "same-origin (local dev route)"}</dd>
-			</div>
-			<div>
-				<dt class="admin-status">Theme</dt>
-				<dd>Light/Dark follows the same <code>gurat-theme</code> override as the public site.</dd>
-			</div>
-		</dl>
-	</section>
+		<section class="admin-card" aria-label="Site">
+			<h2>Site</h2>
+			<dl class="admin-defs">
+				<div>
+					<dt>Site URL</dt>
+					<dd><a href={SITE.url}>{SITE.url}</a> (<a href="/">view site ↗</a>)</dd>
+				</div>
+				<div>
+					<dt>Media base URL</dt>
+					<dd class="admin-status">{env.MEDIA_BASE_URL || "same-origin (local dev route)"}</dd>
+				</div>
+			</dl>
+		</section>
+
+		<section class="admin-card" aria-label="Appearance">
+			<h2>Appearance</h2>
+			<p class="admin-status">Light/Dark follows the same <code>gurat-theme</code> override as the public site.</p>
+			<div class="admin-theme" role="group" aria-label="Theme"><button type="button" data-theme-value="light" aria-pressed="false">Light</button><button type="button" data-theme-value="dark" aria-pressed="false">Dark</button></div>
+		</section>
+	</div>
 </Admin>

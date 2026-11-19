@@ -98,6 +98,21 @@ function tabHref(tab: string): string {
 	return s ? `/admin/posts?${s}` : "/admin/posts";
 }
 
+function flagHref(flag: "missing" | "nocover"): string {
+	// URL-only toggle chip preserving every other param, like tabHref.
+	const params = new URLSearchParams();
+	if (statusTab !== "all") params.set("status", statusTab);
+	if (locale) params.set("locale", locale);
+	if (tagId) params.set("tag", tagId);
+	if (q) params.set("q", q);
+	if (flag === "missing" ? !missingOnly : missingOnly)
+		params.set("missing", "1");
+	if (flag === "nocover" ? !noCoverOnly : noCoverOnly)
+		params.set("nocover", "1");
+	const s = params.toString();
+	return s ? `/admin/posts?${s}` : "/admin/posts";
+}
+
 function langHref(lang: string): string {
 	// Active chip toggles the language filter off.
 	const params = new URLSearchParams();
@@ -132,6 +147,10 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 			<a href={langHref("en")} aria-pressed={locale === "en" ? "true" : undefined}>EN</a>
 			<a href={langHref("id")} aria-pressed={locale === "id" ? "true" : undefined}>ID</a>
 		</div>
+		<div class="admin-chips" role="group" aria-label="Completeness">
+			<a href={flagHref("missing")} aria-pressed={missingOnly ? "true" : undefined}>Needs translation</a>
+			<a href={flagHref("nocover")} aria-pressed={noCoverOnly ? "true" : undefined}>No cover</a>
+		</div>
 		<label class="admin-field">
 			<span>Tag</span>
 			<select name="tag">
@@ -150,9 +169,13 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 		{missingOnly && <input type="hidden" name="missing" value="1" />}
 		{noCoverOnly && <input type="hidden" name="nocover" value="1" />}
 		<button type="submit">Filter</button>
+		<div class="admin-view-toggle" role="group" aria-label="Layout">
+			<button type="button" data-posts-view="column" aria-pressed="true">List</button>
+			<button type="button" data-posts-view="grid" aria-pressed="false">Grid</button>
+		</div>
 	</form>
 
-	<ul class="admin-rows">
+	<ul class="admin-rows" data-view="column">
 		{rows.map(({ post: p, status }) => {
 			const translated = p.translationGroupId !== null && (groupSizes.get(p.translationGroupId) ?? 0) > 1;
 			const cover = p.coverMediaId ? (coverMap.get(p.coverMediaId) ?? null) : null;
@@ -170,4 +193,5 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 			);
 		})}
 	</ul>
+	<script src="/admin-view.js" defer></script>
 </Admin>

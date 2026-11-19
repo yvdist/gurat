@@ -718,32 +718,21 @@ body.admin {
 	min-width: 0;
 }
 
-.admin-media-card > img {
+/* Lightbox thumb trigger: invisible button frame around the card image. */
+.admin-media-thumb {
+	display: block;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	background: none;
+	cursor: zoom-in;
+}
+.admin-media-thumb img {
 	width: 100%;
 	aspect-ratio: 4 / 3;
 	object-fit: cover;
 	display: block;
 	background: var(--surface);
-}
-
-.admin-media-card figcaption {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-1);
-	font-size: var(--font-size-small);
-	min-width: 0;
-}
-
-.admin-media-card figcaption code {
-	font-family: var(--font-mono);
-	font-size: var(--font-size-meta);
-	overflow-wrap: anywhere;
-}
-
-.admin-media-card form {
-	display: flex;
-	gap: var(--space-1);
-	flex-wrap: wrap;
 }
 
 /* Editor shell: plain canvas, top bar, bottom bar, slide-over */
@@ -849,4 +838,226 @@ body[data-focus="on"] .admin-details {
 
 .admin dialog::backdrop {
 	background: rgb(0 0 0 / 0.5);
+}
+
+/* Shared toast primitive (src/lib/admin/toast.ts) — fixed bottom-right
+   stack, monochrome surface card with ink border. Error variant accents
+   glyph/text with --error only: no colored fills anywhere. */
+.admin-toast-root {
+	position: fixed;
+	right: var(--space-4);
+	bottom: var(--space-4);
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	max-width: min(24rem, calc(100vw - 2rem));
+}
+.admin-toast {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-2);
+	color: var(--ink);
+	background: var(--bg);
+	border: var(--hairline) solid var(--ink);
+	border-radius: var(--radius);
+	padding: var(--space-2) var(--space-4);
+	font-family: var(--font-mono);
+	font-size: var(--font-size-small);
+	box-shadow: -4px 4px 0 rgb(0 0 0 / 0.15);
+	animation: admin-toast-in var(--duration-default) var(--ease-out);
+}
+.admin-toast-glyph {
+	font-weight: 500;
+}
+.admin-toast--err .admin-toast-glyph,
+.admin-toast--err .admin-toast-msg {
+	color: var(--error);
+}
+.admin-toast-close {
+	margin-inline-start: auto;
+}
+@keyframes admin-toast-in {
+	from {
+		transform: translateY(0.5rem);
+		opacity: 0;
+	}
+	to {
+		transform: none;
+		opacity: 1;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.admin-toast {
+		animation: none;
+	}
+}
+
+/* Posts index filter bar: one aligned row, roomy fields, submit pinned to
+   the field baseline (fixes cramped/misaligned bar with CSS only). */
+.admin-filters {
+	gap: var(--space-4);
+	align-items: end;
+}
+.admin-filters .admin-field input,
+.admin-filters .admin-field select {
+	min-width: 12rem;
+}
+.admin-filters button[type="submit"] {
+	align-self: end;
+}
+.admin-view-toggle {
+	display: flex;
+	gap: var(--space-1);
+	align-self: end;
+	margin-inline-start: auto;
+}
+@media (max-width: 768px) {
+	.admin-view-toggle {
+		margin-inline-start: 0;
+	}
+}
+
+/* Posts grid view (progressive enhancement over the same AdminPostRow
+   markup; column keeps the legacy row CSS untouched). */
+.admin-rows[data-view="grid"] {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+	gap: var(--space-4);
+	border-top: 0;
+}
+.admin-rows[data-view="grid"] .admin-row {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0;
+	padding: 0;
+	overflow: clip;
+	border: var(--hairline) solid var(--line);
+	border-radius: var(--radius);
+}
+.admin-rows[data-view="grid"] .admin-row-thumb {
+	width: 100%;
+	height: auto;
+	aspect-ratio: 4 / 3;
+	flex: none;
+}
+.admin-rows[data-view="grid"] .admin-row-main {
+	padding: var(--space-2) var(--space-4) var(--space-4);
+}
+
+/* Tags create panel: 3-column field grid, 1 column under 768px. */
+.admin-create-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--space-4);
+}
+@media (max-width: 768px) {
+	.admin-create-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+.admin-tag-list {
+	list-style: none;
+	margin: var(--space-4) 0 0;
+	padding: 0;
+	border-top: var(--hairline) solid var(--line);
+}
+.admin-tag-list li {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-4);
+	padding-block: var(--space-2);
+	border-bottom: var(--hairline) solid var(--line);
+	flex-wrap: wrap;
+}
+.admin-tag-slug {
+	font-family: var(--font-mono);
+	font-size: var(--font-size-small);
+}
+.admin-tag-meta {
+	font-family: var(--font-mono);
+	font-size: var(--font-size-meta);
+	letter-spacing: var(--tracking-meta);
+	text-transform: uppercase;
+	color: var(--muted);
+}
+.admin-tag-actions {
+	display: flex;
+	gap: var(--space-2);
+	margin-inline-start: auto;
+}
+
+/* Media cards: uniform height via flex column + fixed action row; meta
+   clamped to fixed lines so tall captions can't stretch the card. */
+.admin-media-card figcaption {
+	flex: 1;
+}
+.admin-media-card figcaption code {
+	display: block;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.admin-media-meta {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-family: var(--font-mono);
+	font-size: var(--font-size-meta);
+	letter-spacing: var(--tracking-meta);
+	text-transform: uppercase;
+	color: var(--muted);
+}
+.admin-media-actions {
+	display: flex;
+	gap: var(--space-1);
+	margin-top: auto;
+	padding-top: var(--space-1);
+	flex-wrap: wrap;
+}
+.admin-lightbox {
+	max-width: min(64rem, 94vw);
+}
+.admin-lightbox img {
+	display: block;
+	max-width: 100%;
+	max-height: 70vh;
+	object-fit: contain;
+	margin-inline: auto;
+	background: var(--surface);
+}
+.admin-lightbox-meta {
+	font-family: var(--font-mono);
+	font-size: var(--font-size-small);
+	color: var(--muted);
+	margin-block: var(--space-2);
+}
+.admin-lightbox-nav {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--space-2);
+}
+
+/* Settings stack: same card/mono vocabulary as the dashboard. */
+.admin-stack {
+	display: grid;
+	gap: var(--space-4);
+	margin-block-start: var(--space-4);
+}
+.admin-defs > div {
+	display: flex;
+	gap: var(--space-4);
+	padding-block: var(--space-1);
+	flex-wrap: wrap;
+}
+.admin-defs dt {
+	font-family: var(--font-mono);
+	font-size: var(--font-size-meta);
+	letter-spacing: var(--tracking-meta);
+	text-transform: uppercase;
+	color: var(--muted);
+	min-width: 10rem;
+}
+.admin-defs dd {
+	margin: 0;
 }
