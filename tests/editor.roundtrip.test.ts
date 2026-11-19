@@ -34,18 +34,6 @@ function fullDoc(): unknown {
 							},
 						],
 					},
-					{
-						type: "sidenote",
-						attrs: { label: "1" },
-						content: [
-							{ type: "text", text: "side " },
-							{
-								type: "text",
-								text: "linked",
-								marks: [{ type: "link", attrs: { href: "/writing/x" } }],
-							},
-						],
-					},
 				],
 			},
 			{
@@ -144,7 +132,6 @@ describe("editor round-trip", () => {
 		expect(rendered.html).toContain("<em>italic</em>");
 		expect(rendered.html).toContain("<code>code</code>");
 		expect(rendered.html).toContain('href="https://example.com"');
-		expect(rendered.html).toContain('class="sidenote"');
 		expect(rendered.html).toContain("<blockquote>");
 		expect(rendered.html).toContain("<ul>");
 		expect(rendered.html).toContain("<ol>");
@@ -230,6 +217,54 @@ describe("editor round-trip", () => {
 			attrs: { language: "ts" },
 			content: [{ type: "text", text: "x" }],
 		});
+	});
+
+	it("flattens legacy sidenotes to surrounding text", () => {
+		const doc = tiptapToDoc(
+			docToTiptap({
+				type: "doc",
+				content: [
+					{
+						type: "paragraph",
+						content: [
+							{ type: "text", text: "before " },
+							{
+								type: "sidenote",
+								attrs: { label: "1" },
+								content: [{ type: "text", text: "margin note" }],
+							},
+							{ type: "text", text: " after" },
+						],
+					},
+					{
+						type: "paragraph",
+						content: [
+							{ type: "text", text: "before" },
+							{ type: "sidenote", attrs: { label: "1" }, content: [] },
+							{ type: "text", text: "after" },
+						],
+					},
+				],
+			} as never),
+		);
+		const first = doc.content[0];
+		expect(first.type).toBe("paragraph");
+		if (first.type !== "paragraph") throw new Error("expected paragraph");
+		const inlines = first.content as { type: string; text?: string }[];
+		expect(inlines.some((n) => n.type === "sidenote")).toBe(false);
+		expect(inlines.map((n) => (n.type === "text" ? n.text : null))).toEqual([
+			"before ",
+			"margin note",
+			" after",
+		]);
+		const second = doc.content[1];
+		expect(second.type).toBe("paragraph");
+		if (second.type !== "paragraph") throw new Error("expected paragraph");
+		const inlines2 = second.content ?? [];
+		expect(inlines2.map((n) => (n.type === "text" ? n.text : null))).toEqual([
+			"before",
+			"after",
+		]);
 	});
 
 	it("throws with a path on schema drift (unknown node)", () => {

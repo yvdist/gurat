@@ -78,10 +78,6 @@ function codeBlock(language: string, text: string): SeedNode {
 	};
 }
 
-function sidenote(label: string, ...content: SeedInline[]): SeedInline {
-	return { type: "sidenote", attrs: { label }, content };
-}
-
 function pullquote(...content: SeedNode[]): SeedNode {
 	return { type: "pullquote", content };
 }
@@ -204,10 +200,13 @@ const EN_007 = doc(
 		tx(
 			"Nothing ships boring. Boring is something you do to software every week, the way you weed a garden, and the work is never finished because entropy never sleeps. Dependencies release major versions. Certificates expire. Disks fill. The practice is a short loop: watch one dashboard that fits on a phone screen, fix the smallest anomaly before it becomes a story, and delete one thing you no longer understand. I run this loop on Friday afternoons when my judgment is worst, because the loop is designed to be safe for tired people. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx("A dashboard that needs scrolling is a dashboard nobody reads."),
 		),
+	),
+	para(
 		tx(
 			" If a check cannot be understood in ten seconds it gets simplified until it can. The goal is not perfect observability. The goal is a system so legible that a stranger could take the pager on their first day, which has happened twice, and both times the stranger thanked me for the boredom.",
 		),
@@ -222,12 +221,15 @@ const EN_007 = doc(
 		tx(
 			"The second discipline is writing things down where the next person will actually look. Not in a wiki that requires a VPN and a prayer, but in the repository, next to the code, in the same plain text the code is written in. Every runbook I write answers three questions: what does normal look like, what is the single most likely way this breaks, and what is the first command to type. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Runbooks rot; I re-read mine every quarter and delete the parts that embarrass me.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Documentation rots, of course. All of it rots. But a short, specific document rots visibly, in a way that invites repair, while a comprehensive one rots invisibly, in a way that invites trust it no longer deserves. I prefer my rot visible. Visible rot gets weeded. Invisible rot gets paged.",
 		),
@@ -398,10 +400,13 @@ const ID_007 = doc(
 		tx(
 			"Tidak ada yang dikirim dalam keadaan membosankan. Membosankan adalah sesuatu yang Anda lakukan pada perangkat lunak setiap minggu, seperti menyiangi kebun, dan pekerjaan itu tak pernah selesai karena entropi tak pernah tidur. Dependensi merilis versi mayor. Sertifikat kedaluwarsa. Diska penuh. Latihannya adalah lingkaran pendek: awasi satu dasbor yang muat di layar ponsel, perbaiki anomali terkecil sebelum menjadi cerita, dan hapus satu hal yang tak lagi Anda pahami. Saya menjalankan lingkaran ini pada Jumat sore saat penilaian saya terburuk, karena lingkaran ini dirancang aman untuk orang lelah. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx("Dasbor yang perlu digulir adalah dasbor yang tak dibaca siapa pun."),
 		),
+	),
+	para(
 		tx(
 			" Jika sebuah pemeriksaan tak bisa dipahami dalam sepuluh detik, ia disederhanakan sampai bisa. Tujuannya bukan observabilitas sempurna. Tujuannya adalah sistem yang begitu terbaca sehingga orang asing bisa memegang pager di hari pertamanya, yang sudah terjadi dua kali, dan kedua kali orang asing itu berterima kasih atas kebosanannya.",
 		),
@@ -416,12 +421,15 @@ const ID_007 = doc(
 		tx(
 			"Disiplin kedua adalah menuliskan hal-hal di tempat orang berikutnya benar-benar akan melihat. Bukan di wiki yang butuh VPN dan doa, melainkan di repositori, di samping kode, dalam teks polos yang sama dengan kode itu ditulis. Setiap runbook yang saya tulis menjawab tiga pertanyaan: seperti apa keadaan normal, apa satu cara paling mungkin ini rusak, dan apa perintah pertama yang diketik. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Runbook membusuk; saya membaca ulang milik saya setiap kuartal dan menghapus bagian yang memalukan.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Dokumentasi membusuk, tentu saja. Semuanya membusuk. Tetapi dokumen yang pendek dan spesifik membusuk secara terlihat, dengan cara yang mengundang perbaikan, sementara yang komprehensif membusuk secara tak terlihat, dengan cara yang mengundang kepercayaan yang tak lagi pantas. Saya lebih suka pembusukan yang terlihat. Yang terlihat disiangi. Yang tak terlihat memanggil pager.",
 		),
@@ -597,12 +605,15 @@ const EN_008 = doc(
 		tx(
 			"Every art has a minimum interesting duration, the shortest span in which it can say what it came to say, and commercial cinema keeps convincing us that span is about ninety seconds. Slow films propose otherwise: that a shot held past comfort becomes a different kind of sentence, one whose subject is time itself. Watch a fixed frame of a kitchen for two minutes and something predictable happens. First you inventory the objects. Then you get restless. Then, if you stay, the frame starts to move without moving — steam, shadows, your own breathing — and you realize the shot was never empty. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"My rule: never check the time before the first hour. The film knows what it is doing.",
 			),
 		),
+	),
+	para(
 		tx(
 			" You were. Duration had to teach you how to see it, because nothing in the feed-scroll rhythm of ordinary viewing prepares the eye for a pleasure that arrives this slowly. The message is not in the frame. The message is the frame, held.",
 		),
@@ -617,12 +628,15 @@ const EN_008 = doc(
 		tx(
 			"I practice this deliberately now, the way musicians practice scales. One evening a month I watch something that asks for slowness and I leave the phone in another room, which is the entire technique, and somehow also the hardest part. The first twenty minutes are always negotiation: the itch, the bargaining, the phantom vibration of a device that is not even present. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Phantom vibration is real; I have felt it for a phone left two rooms away.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Then the negotiation ends, usually mid-shot, and the evening becomes what evenings used to be: one thing, fully attended. I take notes afterward, never during. During is for watching. Afterward I write down the three shots I remember, and they are never the three I would have predicted, which is how I know the practice is working on something deeper than taste.",
 		),
@@ -793,12 +807,15 @@ const ID_008 = doc(
 		tx(
 			"Setiap seni punya durasi minimum yang menarik, rentang terpendek di mana ia bisa mengatakan maksud kedatangannya, dan sinema komersial terus meyakinkan kita bahwa rentang itu sekitar sembilan puluh detik. Film-film lambat mengusulkan sebaliknya: bahwa bidikan yang ditahan melewati nyaman menjadi jenis kalimat yang berbeda, yang subjeknya adalah waktu itu sendiri. Tatap bingkai tetap sebuah dapur selama dua menit dan sesuatu yang dapat diprediksi terjadi. Pertama Anda menginventarisasi benda. Lalu Anda gelisah. Lalu, jika Anda tinggal, bingkai itu mulai bergerak tanpa bergerak — uap, bayangan, napas Anda sendiri — dan Anda sadar bidikan itu tak pernah kosong. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Aturan saya: jangan pernah melihat jam sebelum satu jam pertama. Film itu tahu apa yang dilakukannya.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Andalah yang kosong. Durasi harus mengajari Anda cara melihatnya, karena tak ada dalam ritme umpan-gulir tontonan biasa yang menyiapkan mata untuk kenikmatan yang tiba selambat ini. Pesan itu tidak ada dalam bingkai. Pesan itu adalah bingkai itu, yang ditahan.",
 		),
@@ -813,12 +830,15 @@ const ID_008 = doc(
 		tx(
 			"Saya melatih ini dengan sengaja sekarang, seperti musisi berlatih tangga nada. Sebulan sekali saya menonton sesuatu yang meminta kelambatan dan saya meninggalkan ponsel di ruangan lain, yang merupakan seluruh tekniknya, sekaligus bagian tersulitnya. Dua puluh menit pertama selalu negosiasi: gatal itu, tawar-menawar itu, getaran hantu dari perangkat yang bahkan tidak ada. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Getaran hantu itu nyata; saya pernah merasakannya untuk ponsel yang tertinggal dua ruangan.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Lalu negosiasi berakhir, biasanya di tengah bidikan, dan malam itu menjadi seperti malam-malam dulu: satu hal, dihadiri penuh. Saya mencatat setelahnya, tak pernah selama. Selama adalah untuk menonton. Setelahnya saya menulis tiga bidikan yang saya ingat, dan tak pernah tiga yang saya duga, begitulah saya tahu latihan ini bekerja pada sesuatu yang lebih dalam dari selera.",
 		),
@@ -995,12 +1015,15 @@ const EN_009 = doc(
 		tx(
 			"Around day nine every record fights back. The novelty is gone, the favorites are tired, and the weak track you have been skipping in your head steps forward and demands its hearing. This is the week most listening projects die, and it is the entire point. What lives on the other side of day nine is the album as the artist sequenced it, including the song that only makes sense as a corridor between two rooms you love. I had dismissed track six as filler for years. On day eleven, walking home in sleet, its bridge arrived uninvited and rearranged my week. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Skip buttons are editors with no accountability. Remove them for a month.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Filler is usually a room you have not stood in long enough. Stay in the corridor. The doors on either side sound better for it, and so, incidentally, do you.",
 		),
@@ -1015,12 +1038,15 @@ const EN_009 = doc(
 		tx(
 			"By the third week the diary entries changed character. The first week's notes were reviews — judgments, ratings, comparisons. The third week's notes were weather reports: today the record sounded tall, today it sounded tired, today the bassline walked me to the station. I stopped writing about the music and started writing about the listening, which is the correct subject and the one I had been avoiding. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"A listening diary is a diary that happens to mention music. Read yours accordingly.",
 			),
 		),
+	),
+	para(
 		tx(
 			" A month of one album is a controlled experiment where the variable is you. The record holds still so you can watch yourself move: grieving on day fourteen, restless on day twenty, oddly weightless on day twenty-six, each state remixing the same twelve tracks into a different record. Nobody needs thirty days to review an album. You need thirty days to review the listener.",
 		),
@@ -1195,12 +1221,15 @@ const ID_009 = doc(
 		tx(
 			"Sekitar hari kesembilan setiap rekaman melawan. Kebaruan habis, favorit-favorit lelah, dan trek lemah yang selama ini Anda lewati di kepala maju dan menuntut didengar. Inilah minggu tempat kebanyakan proyek dengar mati, dan inilah seluruh intinya. Yang hidup di seberang hari kesembilan adalah album sebagaimana diurutkan senimannya, termasuk lagu yang hanya masuk akal sebagai koridor di antara dua ruangan yang Anda cintai. Saya telah mengabaikan trek enam sebagai pengisi selama bertahun-tahun. Pada hari kesebelas, berjalan pulang dalam hujan es, jembatannya tiba tanpa diundang dan menata ulang minggu saya. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Tombol lewati adalah editor tanpa akuntabilitas. Singkirkan selama sebulan.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Pengisi biasanya adalah ruangan yang belum cukup lama Anda diami. Tinggallah di koridor. Pintu-pintu di kedua sisinya terdengar lebih baik karenanya, dan Anda pun, secara kebetulan, demikian.",
 		),
@@ -1215,12 +1244,15 @@ const ID_009 = doc(
 		tx(
 			"Pada minggu ketiga entri diari berubah karakter. Catatan minggu pertama adalah ulasan — penilaian, peringkat, perbandingan. Catatan minggu ketiga adalah laporan cuaca: hari ini rekaman terdengar tinggi, hari ini terdengar lelah, hari ini bassline mengantar saya ke stasiun. Saya berhenti menulis tentang musik dan mulai menulis tentang mendengar, yang merupakan subjek yang benar dan yang selama ini saya hindari. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Diari dengar adalah diari yang kebetulan menyebut musik. Bacalah milik Anda seperti itu.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Sebulan satu album adalah eksperimen terkendali yang variabelnya adalah Anda. Rekaman diam agar Anda bisa melihat diri bergerak: berduka pada hari keempat belas, gelisah pada hari kedua puluh, ringan aneh pada hari kedua puluh enam, setiap keadaan me-remix dua belas trek yang sama menjadi rekaman berbeda. Tak ada yang butuh tiga puluh hari untuk mengulas album. Anda butuh tiga puluh hari untuk mengulas pendengar.",
 		),
@@ -1395,12 +1427,15 @@ const EN_010 = doc(
 		tx(
 			"There is a kind of annotation that flatters the book: neat underlines of sentences already famous, exclamation marks where the author intended them, little stars raining on conclusions you agreed with before opening. This is not thinking. This is applause, and applause belongs in theaters. The margin deserves better than agreement. It deserves the sentence you almost wrote in anger and then, on rereading, kept — the objection that survived the night. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"If every mark agrees with the author, you are reviewing, not reading. Pick a fight.",
 			),
 		),
+	),
+	para(
 		tx(
 			" I have a rule now: no book is finished until something in it has annoyed me enough to answer. The answers embarrass me later, often within the year. That embarrassment is the receipt. It proves the margin did its job, which was never to be right. It was to be present — a dated witness that a mind was here, working, and willing to be wrong in writing.",
 		),
@@ -1415,10 +1450,11 @@ const EN_010 = doc(
 		tx(
 			"Rereading annotated books is time travel with a hostile guide. You meet five-years-ago-you mid-argument, confident, wrong about something you now find obvious, and the margin forces a confrontation that memory would have politely skipped. This is the real dividend of the practice, larger than any retrieval benefit: a dated record of your own mind changing, in your own hand, disagreeing with itself across the years. ",
 		),
-		sidenote(
-			"2",
-			tx("Keep the embarrassing marks. Erasing them forges the record."),
-		),
+	),
+	footnote(
+		para(tx("Keep the embarrassing marks. Erasing them forges the record.")),
+	),
+	para(
 		tx(
 			" I never erase, even the marks that make me wince. Erasing forges the record, and the record is the point. Who you were is data. The margin is the lab notebook of the self, and lab notebooks are not edited for dignity. They are kept — coffee stains, wrong turns, crossed-out certainties and all — because the crossed-out parts are where the learning visibly happened.",
 		),
@@ -1591,12 +1627,15 @@ const ID_010 = doc(
 		tx(
 			"Ada jenis anotasi yang menyanjung buku: garis bawah rapi pada kalimat yang sudah terkenal, tanda seru di tempat yang memang dimaksud pengarang, bintang-bintang kecil menghujani simpulan yang sudah Anda setujui sebelum membuka. Ini bukan berpikir. Ini tepuk tangan, dan tepuk tangan milik gedung pertunjukan. Margin layak lebih baik dari persetujuan. Ia layak kalimat yang nyaris Anda tulis dalam amarah lalu, setelah dibaca ulang, dipertahankan — keberatan yang selamat melewati malam. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Jika setiap tanda setuju dengan pengarang, Anda sedang mengulas, bukan membaca. Ajaklah bertengkar.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Saya punya aturan kini: tak ada buku yang tamat sampai sesuatu di dalamnya cukup mengganggu saya untuk dijawab. Jawaban-jawaban itu memalukan saya kemudian, sering dalam setahun. Rasa malu itu adalah kuitansinya. Ia membuktikan margin menjalankan tugasnya, yang tak pernah menjadi benar. Tugasnya adalah hadir — saksi bertanggal bahwa sebuah pikiran pernah di sini, bekerja, dan bersedia salah secara tertulis.",
 		),
@@ -1611,10 +1650,13 @@ const ID_010 = doc(
 		tx(
 			"Membaca ulang buku beranotasi adalah perjalanan waktu dengan pemandu yang bermusuhan. Anda bertemu diri-Anda-lima-tahun-lalu di tengah argumen, percaya diri, salah tentang sesuatu yang kini Anda anggap jelas, dan margin memaksa konfrontasi yang akan dilewatkan memori dengan sopan. Inilah dividen sesungguhnya dari latihan ini, lebih besar dari manfaat temu kembali apa pun: catatan bertanggal tentang pikiran Anda sendiri yang berubah, dalam tulisan tangan Anda sendiri, berselisih dengan dirinya lintas tahun. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx("Simpan tanda-tanda yang memalukan. Menghapusnya memalsukan catatan."),
 		),
+	),
+	para(
 		tx(
 			" Saya tak pernah menghapus, bahkan tanda yang membuat saya meringis. Menghapus memalsukan catatan, dan catatan itulah intinya. Siapa Anda dulu adalah data. Margin adalah buku lab tentang diri, dan buku lab tidak disunting demi martabat. Ia disimpan — noda kopi, jalan buntu, kepastian yang dicoret dan semua — karena bagian yang dicoret itulah tempat pembelajaran terlihat terjadi.",
 		),
@@ -1786,12 +1828,15 @@ const EN_011 = doc(
 		tx(
 			"After three rounds of deletion, one number remained on my screen, and it surprised me. Not revenue, not growth, not the vanity with the hockey stick — but time-to-first-green-build for new contributors, a quiet little duration that measures how long a stranger waits before the project welcomes them. Everything noisy had been deleted. What survived was hospitality. I stared at that single graph for a long time and understood something about dashboards I had missed for years: they are not instruments, they are aspirations. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Keep the metric you would show a newcomer. Delete the ones you show investors.",
 			),
 		),
+	),
+	para(
 		tx(
 			" You become what you measure, slowly, then all at once, which is why the deletion rite matters more than any single metric. The screen shapes the team that stares at it. Choose the shape on purpose, or it will be chosen by every worried Tuesday that ever added a widget.",
 		),
@@ -1806,10 +1851,13 @@ const EN_011 = doc(
 		tx(
 			"Deletion has a failure mode worth naming: the purge that deletes the memory along with the metric. I learned this the expensive way, removing a latency chart six months before a regression made that exact chart the thing everyone wished they had. The fix is not to keep everything — that is the disease, not the cure — but to delete loudly. Every deletion gets a dated note: what it was, why it went, what would justify its return. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx("Delete loudly: a dated note survives longer than a dusty widget."),
 		),
+	),
+	para(
 		tx(
 			" The note costs thirty seconds and buys back the future. We did, eventually, bring one chart back — the latency one, vindicated, welcomed home like a dog that ran away and returned having learned something. Loud deletion means no deletion is final. It only means: not now, not here, and here is exactly why.",
 		),
@@ -1982,12 +2030,15 @@ const ID_011 = doc(
 		tx(
 			"Setelah tiga putaran penghapusan, satu angka tersisa di layar saya, dan ia mengejutkan saya. Bukan pendapatan, bukan pertumbuhan, bukan kesombongan bertongkat hoki — melainkan waktu-menuju-build-hijau-pertama bagi kontributor baru, durasi tenang yang mengukur berapa lama orang asing menunggu sebelum proyek menyambutnya. Segala yang berisik telah dihapus. Yang selamat adalah keramahan. Saya menatap grafik tunggal itu lama dan memahami sesuatu tentang dasbor yang terlewatkan saya bertahun-tahun: mereka bukan instrumen, mereka aspirasi. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Simpan metrik yang akan Anda tunjukkan pada pendatang baru. Hapus yang Anda tunjukkan pada investor.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Anda menjadi apa yang Anda ukur, perlahan, lalu sekaligus, itulah mengapa ritus penghapusan lebih penting daripada metrik tunggal mana pun. Layar membentuk tim yang menatapnya. Pilih bentuknya dengan sengaja, atau ia akan dipilih oleh setiap Selasa cemas yang pernah menambah widget.",
 		),
@@ -2002,12 +2053,15 @@ const ID_011 = doc(
 		tx(
 			"Penghapusan punya mode gagal yang layak dinamai: pembersihan yang menghapus ingatan beserta metriknya. Saya mempelajari ini dengan cara mahal, menyingkirkan grafik latensi enam bulan sebelum regresi membuat grafik itu persis hal yang diharapkan semua orang masih ada. Perbaikannya bukan menyimpan segalanya — itu penyakitnya, bukan obatnya — melainkan menghapus dengan lantang. Setiap penghapusan mendapat catatan bertanggal: apa itu, mengapa pergi, apa yang membenarkan kembalinya. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Hapuslah dengan lantang: catatan bertanggal hidup lebih lama dari widget berdebu.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Catatan butuh tiga puluh detik dan membeli kembali masa depan. Kami, akhirnya, membawa pulang satu grafik — yang latensi itu, terbukti benar, disambut pulang seperti anjing yang kabur dan kembali setelah mempelajari sesuatu. Penghapusan lantang berarti tak ada penghapusan yang final. Artinya hanya: bukan kini, bukan di sini, dan inilah tepat alasannya.",
 		),
@@ -2182,12 +2236,15 @@ const EN_012 = doc(
 		tx(
 			"The interval has a duration worth measuring. Too short and the room is scenery, flashing past on the way to the people. Too long and the audience revolts — I have felt the revolt, a physical itch at minute three of a locked-off hallway, followed by the strangest surrender. Somewhere past the itch the room stops being background and becomes subject, and you start noticing the way you notice things in your own home at 6 a.m.: peripherally, tenderly, without agenda. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"The itch at minute three is the toll. Pay it; the room is worth more.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Filmmakers who trust the interval are trusting you — trusting that your attention, left alone with a space, will find the performance in it. Most of the time they are right. The room was performing all along. You were just never given the time to be its audience.",
 		),
@@ -2202,12 +2259,15 @@ const EN_012 = doc(
 		tx(
 			"I started photographing my own rooms the way those directors shoot theirs: after everyone leaves, before anyone returns, the interval when the apartment is most itself. The results embarrassed my housekeeping and vindicated my attention. A mug left mid-table tells you more about the morning than any diary entry; the dent in the sofa cushion is a portrait of the reader who just stood up. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Photograph the room right after leaving it. You will see who lives there.",
 			),
 		),
+	),
+	para(
 		tx(
 			" We curate our spaces for visitors and neglect them for ourselves, but the camera in the interval sees the uncurated truth: the everyday debris of a life actually being lived. These photographs are the only ones I never post. They are not for showing. They are for seeing — private screenings of the film my rooms make when I am not performing in them.",
 		),
@@ -2370,12 +2430,15 @@ const ID_012 = doc(
 		tx(
 			"Jeda punya durasi yang layak diukur. Terlalu pendek dan ruangan menjadi pemandangan, melintas menuju orang-orangnya. Terlalu panjang dan penonton memberontak — saya pernah merasakan pemberontakan itu, gatal fisik pada menit ketiga koridor terkunci, diikuti penyerahan paling aneh. Di suatu tempat melewati gatal ruangan berhenti menjadi latar dan menjadi subjek, dan Anda mulai memperhatikan seperti Anda memperhatikan di rumah sendiri pukul 6 pagi: periferal, lembut, tanpa agenda. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Gatal pada menit ketiga adalah tolnya. Bayarlah; ruangan itu lebih berharga.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Sineas yang memercayai jeda sedang memercayai Anda — memercayai bahwa perhatian Anda, ditinggal sendirian bersama ruang, akan menemukan pertunjukan di dalamnya. Kebanyakan mereka benar. Ruangan itu selama ini tampil. Anda saja tak pernah diberi waktu menjadi penontonnya.",
 		),
@@ -2390,12 +2453,15 @@ const ID_012 = doc(
 		tx(
 			"Saya mulai memotret ruangan sendiri seperti para sutradara itu memotret miliknya: setelah semua orang pergi, sebelum siapa pun kembali, jeda saat apartemen paling menjadi dirinya. Hasilnya memalukan kerapian rumah saya dan membenarkan perhatian saya. Cangkir yang tertinggal di tengah meja memberi tahu lebih banyak tentang pagi itu daripada entri diari mana pun; lekuk di bantal sofa adalah potret pembaca yang baru berdiri. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Potret ruangan tepat setelah meninggalkannya. Anda akan melihat siapa tinggal di sana.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Kita menata ruang untuk tamu dan menelantarkannya untuk diri sendiri, tetapi kamera dalam jeda melihat kebenaran yang tak ditata: puing sehari-hari kehidupan yang benar-benar dijalani. Foto-foto ini satu-satunya yang tak pernah saya posting. Mereka bukan untuk ditunjukkan. Mereka untuk melihat — pemutaran privat atas film yang dibuat ruangan saya saat saya tidak tampil di dalamnya.",
 		),
@@ -2563,12 +2629,15 @@ const EN_013 = doc(
 		tx(
 			"Here is the strange part nobody warns you about. After months of practicing against the click, I started hearing it everywhere — in footsteps, in windshield wipers, in the hospital corridor where I sat last winter counting my father's breathing against a wall clock. Sixty beats per minute is resting heart rate, roughly, and the body knows this long before the mind does. The metronome had been training something deeper than timing. It had been training steadiness: the ability to hold a pulse while everything around it wobbles. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Practice steadiness, not speed. Speed is steadiness that arrived early.",
 			),
 		),
+	),
+	para(
 		tx(
 			" In the corridor, counting breaths against the clock, I understood what the teacher had really been teaching. Not the passage. Me. The music was the pretext. The pulse was the point — a steadiness you can carry out of the practice room into every room that needs it.",
 		),
@@ -2583,12 +2652,15 @@ const EN_013 = doc(
 		tx(
 			"Work stole the method within a year, as work steals every good method. The four-bpm rule became the one-small-task rule: one honest unit of the hard thing per day, no heroic sessions, no expressive rushing through the easy parts. Code reviews got the metronome treatment — slow, even, every line, especially the ones that looked fine. Writing got it too: one paragraph a day at the honest tempo, the speed at which the thinking is actually clear, not the speed at which the deadline panics. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Find your honest tempo at work: the speed where the thinking stays clear.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Everything I had learned about cowardice with rubato applied perfectly to every craft with a difficult passage. The metronome is a small box. Its lessons are not small. They transfer the way steadiness transfers — quietly, completely, into rooms the box will never enter.",
 		),
@@ -2748,12 +2820,15 @@ const ID_013 = doc(
 		tx(
 			"Inilah bagian aneh yang tak diperingatkan siapa pun. Setelah berbulan-bulan berlatih melawan klik, saya mulai mendengarnya di mana-mana — dalam langkah kaki, dalam penghapus kaca, di koridor rumah sakit tempat saya duduk musim dingin lalu menghitung napas ayah saya terhadap jam dinding. Enam puluh ketukan per menit kira-kira adalah detak jantung istirahat, dan tubuh tahu ini jauh sebelum pikiran. Metronom telah melatih sesuatu yang lebih dalam dari ketepatan. Ia melatih keteguhan: kemampuan menahan denyut selagi segala di sekitarnya bergoyang. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Latihlah keteguhan, bukan kecepatan. Kecepatan adalah keteguhan yang tiba lebih awal.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Di koridor itu, menghitung napas terhadap jam, saya memahami apa yang sebenarnya diajarkan guru. Bukan bagiannya. Saya. Musik adalah dalih. Denyut adalah intinya — keteguhan yang bisa dibawa keluar ruang latihan ke setiap ruangan yang membutuhkannya.",
 		),
@@ -2768,12 +2843,15 @@ const ID_013 = doc(
 		tx(
 			"Pekerjaan mencuri metode itu dalam setahun, seperti pekerjaan mencuri setiap metode baik. Aturan empat-bpm menjadi aturan satu-tugas-kecil: satu unit jujur hal sulit per hari, tanpa sesi heroik, tanpa bergegas ekspresif melewati bagian mudah. Tinjauan kode mendapat perlakuan metronom — lambat, rata, setiap baris, terutama yang tampak baik-baik saja. Menulis pun: satu paragraf sehari pada tempo jujur, kecepatan di mana pemikiran benar-benar jernih, bukan kecepatan di mana tenggat panik. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Temukan tempo jujur Anda di kerja: kecepatan di mana pemikiran tetap jernih.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Segala yang saya pelajari tentang kepengecutan berbalut rubato berlaku sempurna pada setiap keterampilan berbagian sulit. Metronom adalah kotak kecil. Pelajarannya tidak kecil. Mereka menular seperti keteguhan menular — diam-diam, sepenuhnya, ke ruangan yang takkan pernah dimasuki kotak itu.",
 		),
@@ -2938,12 +3016,15 @@ const EN_014 = doc(
 		tx(
 			"Every figure on this page wears a number — 01 / 07 through 07 / 07 — and the numbers are a contract with the reader. They say: this essay has exactly seven visual thoughts, in this order, and none of them is decoration. Numbering disciplines the author more than the reader. An unnumbered image can sneak in to fill space; a numbered one must answer what number five means that number four did not. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx(
 				"Count your figures before you publish. If one has no job, delete it.",
 			),
 		),
+	),
+	para(
 		tx(
 			" I have deleted more photographs from this series than I kept, and every deletion improved the survivors. The numbers also give readers a map: six of seven means the end is near, which changes how the last image lands. Structure is hospitality. Numbering is structure you can see, which is the most hospitable kind.",
 		),
@@ -2958,12 +3039,15 @@ const EN_014 = doc(
 		tx(
 			"Side captions were the hardest fight in the design, and the fight tells you what they are for. A caption under a photograph explains the photograph. A caption beside it converses with it — same image, different posture, the text standing next to the picture like a friend rather than sitting beneath it like a label. On narrow screens the conversation stacks vertically, which is fine; friendship survives stacking. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"If the caption merely describes the image, delete the caption. Keep the image.",
 			),
 		),
+	),
+	para(
 		tx(
 			" The rule for side captions is the rule for all captions, sharpened: add what the eye cannot know — the when, the why, the thing outside the frame. Everything the eye already knows is clutter wearing a caption's clothes. Strip it.",
 		),
@@ -3106,10 +3190,13 @@ const ID_014 = doc(
 		tx(
 			"Setiap figur di halaman ini memakai nomor — 01 / 07 sampai 07 / 07 — dan nomor-nomor itu adalah kontrak dengan pembaca. Katanya: esai ini punya tepat tujuh gagasan visual, dalam urutan ini, dan tak satu pun dekorasi. Penomoran mendisiplinkan penulis lebih dari pembaca. Gambar tanpa nomor bisa menyelundup untuk mengisi ruang; yang bernomor harus menjawab apa arti nomor lima yang tak dimiliki nomor empat. ",
 		),
-		sidenote(
-			"1",
+	),
+	footnote(
+		para(
 			tx("Hitung figur Anda sebelum terbit. Jika satu tak punya tugas, hapus."),
 		),
+	),
+	para(
 		tx(
 			" Saya telah menghapus lebih banyak foto dari seri ini daripada yang saya simpan, dan setiap penghapusan memperbaiki yang selamat. Nomor juga memberi pembaca peta: enam dari tujuh berarti akhir dekat, yang mengubah cara gambar terakhir mendarat. Struktur adalah keramahan. Penomoran adalah struktur yang bisa dilihat, yaitu jenis paling ramah.",
 		),
@@ -3124,12 +3211,15 @@ const ID_014 = doc(
 		tx(
 			"Keterangan samping adalah pertarungan tersulit dalam desain, dan pertarungan itu memberi tahu apa gunanya. Keterangan di bawah foto menjelaskan foto. Keterangan di sampingnya berdialog dengannya — gambar yang sama, postur berbeda, teks berdiri di samping gambar seperti kawan bukan duduk di bawahnya seperti label. Di layar sempit dialog menumpuk vertikal, dan itu baik-baik saja; persahabatan selamat ditumpuk. ",
 		),
-		sidenote(
-			"2",
+	),
+	footnote(
+		para(
 			tx(
 				"Jika keterangan hanya mendeskripsikan gambar, hapus keterangan. Simpan gambar.",
 			),
 		),
+	),
+	para(
 		tx(
 			" Aturan keterangan samping adalah aturan semua keterangan, dipertajam: tambahkan yang tak bisa diketahui mata — kapan, mengapa, hal di luar bingkai. Segala yang sudah diketahui mata adalah kekacauan berbaju keterangan. Lucuti.",
 		),

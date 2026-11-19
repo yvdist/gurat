@@ -1062,26 +1062,12 @@ img {
 	color: var(--ink);
 }
 
-/* narrow screens: sidenotes collapse inline (spec §A4) */
-.sidenote {
-	display: inline;
-}
 
 .post-sidenotes {
 	color: var(--muted);
 	font-size: var(--font-size-small);
 }
 
-@media (min-width: 1280px) {
-	.sidenote {
-		float: right;
-		clear: right;
-		width: 220px;
-		margin-right: -240px;
-		font-size: var(--font-size-small);
-		color: var(--muted);
-	}
-}
 
 /* byline + prevnext */
 .byline {

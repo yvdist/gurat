@@ -75,20 +75,11 @@ function stripInline(node: unknown): Record<string, unknown> | null {
 		}
 		case "hardBreak":
 			return { type: "hardBreak" };
-		case "sidenote": {
-			// Label only; nested inlines recurse (links inside survive).
-			const attrs =
-				typeof n.attrs === "object" && n.attrs !== null
-					? (n.attrs as Record<string, unknown>)
-					: {};
-			const label = typeof attrs.label === "string" ? attrs.label : "";
-			const content = Array.isArray(n.content)
-				? n.content
-						.map(stripInline)
-						.filter((c): c is Record<string, unknown> => c !== null)
-				: [];
-			return { type: "sidenote", attrs: { label }, content };
-		}
+		case "sidenote":
+			// Legacy node (removed from the schema): unreachable via
+			// stripInlines, which splices sidenote children directly.
+			// Fallback drops it rather than leaking an unknown type.
+			return null;
 		default:
 			return null;
 	}
@@ -96,9 +87,23 @@ function stripInline(node: unknown): Record<string, unknown> | null {
 
 function stripInlines(content: unknown): Record<string, unknown>[] {
 	if (!Array.isArray(content)) return [];
-	return content
-		.map(stripInline)
-		.filter((c): c is Record<string, unknown> => c !== null);
+	const out: Record<string, unknown>[] = [];
+	for (const item of content) {
+		if (
+			typeof item === "object" &&
+			item !== null &&
+			(item as Record<string, unknown>).type === "sidenote"
+		) {
+			// Legacy sidenote: splice recursively-stripped children in place
+			// (label discarded; empty → nothing). Never throws on old rows.
+			const raw = (item as Record<string, unknown>).content;
+			out.push(...stripInlines(raw));
+			continue;
+		}
+		const stripped = stripInline(item);
+		if (stripped !== null) out.push(stripped);
+	}
+	return out;
 }
 
 function stripCodeText(node: unknown): Record<string, unknown> | null {

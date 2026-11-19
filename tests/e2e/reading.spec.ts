@@ -44,7 +44,6 @@ test("post page shows translated content and switches locale", async ({
 	expect(html).not.toContain("<script");
 	// Phase-3 nodes render in the fixture post.
 	expect(html).toContain("pullquote");
-	expect(html).toContain("sidenote");
 	expect(html).toContain("footnotes");
 	// Translation link leads to the Indonesian counterpart.
 	await page.getByRole("link", { name: "Bahasa Indonesia" }).click();

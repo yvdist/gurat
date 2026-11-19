@@ -49,15 +49,7 @@ export interface HardBreak {
 	type: "hardBreak";
 }
 
-export interface Sidenote {
-	type: "sidenote";
-	attrs: {
-		label: string;
-	};
-	content: Inline[];
-}
-
-export type Inline = DocText | HardBreak | Sidenote;
+export type Inline = DocText | HardBreak;
 
 export interface Paragraph {
 	type: "paragraph";
@@ -186,22 +178,9 @@ const DocTextSchema = z
 
 const HardBreakSchema = z.object({ type: z.literal("hardBreak") }).strict();
 
-// Assigned below: sidenotes nest inlines (e.g. a link inside a sidenote).
-let InlineSchema: z.ZodType<Inline>;
-const lazyInline = (): z.ZodType<Inline> => InlineSchema;
-
-const SidenoteSchema = z
-	.object({
-		type: z.literal("sidenote"),
-		attrs: z.object({ label: z.string() }).strict(),
-		content: z.array(z.lazy(lazyInline)).min(1),
-	})
-	.strict();
-
-InlineSchema = z.discriminatedUnion("type", [
+const InlineSchema = z.discriminatedUnion("type", [
 	DocTextSchema,
 	HardBreakSchema,
-	SidenoteSchema,
 ]);
 
 // Assigned below after the container schemas (they reference it lazily).

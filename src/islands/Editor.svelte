@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Editor, Node } from "@tiptap/core";
+import { Editor } from "@tiptap/core";
 import LinkExt from "@tiptap/extension-link";
 import StarterKit from "@tiptap/starter-kit";
 import { onDestroy, onMount } from "svelte";
@@ -12,9 +12,32 @@ import {
 	type TocEntry,
 } from "../lib/content/render";
 import type { Media } from "../server/db/schema";
+import {
+	applyLinkHref,
+	insertFootnote as insertFootnoteAt,
+	insertPullquote as insertPullquoteAt,
+	stripLinkAttrs as stripLinkAttrsFn,
+	togglePullquote as togglePullquoteAt,
+	validateLinkHref,
+} from "./editor/inserts";
+import {
+	fetchLibrary,
+	filesToFigures as filesToFiguresUpload,
+	insertFigureAt as insertFigureAtEditor,
+	insertFigurePair,
+	uploadOneImage,
+} from "./editor/media";
+import { createFigureView, Footnote, Pullquote } from "./editor/nodes";
+import { currentDocJson as currentDocJsonOf } from "./editor/save";
+import {
+	buildSlashItems,
+	deleteSlashText as deleteSlashTextAt,
+	filterSlashItems,
+	pickSlashItem as pickSlashItemAt,
+	type SlashItem,
+	slashQueryAfterEdit,
+} from "./editor/slash";
 import { docToTiptap, tiptapToDoc } from "./editorDoc";
-import { fileToVariants, uploadMedia } from "./mediaClient";
-import { generateOgImage } from "./ogImage";
 
 // Writing-first editor island (plan Step 4). Mounted `client:only` from the
 // post pages. All metadata state lives here (`$state`); the Astro wrappers
@@ -85,58 +108,8 @@ const {
 	allMedia = [],
 }: Props = $props();
 
-// Custom nodes — names match the schema `type` values 1:1 so stored
-// JSON round-trips through Tiptap unchanged.
-
-const Sidenote = Node.create({
-	name: "sidenote",
-	group: "inline",
-	inline: true,
-	atom: false,
-	content: "inline*",
-	addAttributes() {
-		return { label: { default: "" } };
-	},
-	parseHTML() {
-		return [{ tag: "span.sidenote[data-label]" }];
-	},
-	renderHTML({ node, HTMLAttributes }) {
-		return [
-			"span",
-			{
-				...HTMLAttributes,
-				class: "sidenote",
-				"data-label": node.attrs.label ?? "",
-			},
-			["span", { class: "sidenote-label" }, node.attrs.label ?? ""],
-			["span", { class: "sidenote-content" }, 0],
-		];
-	},
-});
-
-const Footnote = Node.create({
-	name: "footnote",
-	group: "block",
-	content: "block+",
-	parseHTML() {
-		return [{ tag: "section.footnotes" }];
-	},
-	renderHTML({ HTMLAttributes }) {
-		return ["section", { ...HTMLAttributes, class: "footnotes" }, 0];
-	},
-});
-
-const Pullquote = Node.create({
-	name: "pullquote",
-	group: "block",
-	content: "block+",
-	parseHTML() {
-		return [{ tag: "figure.pullquote" }];
-	},
-	renderHTML({ HTMLAttributes }) {
-		return ["figure", { ...HTMLAttributes, class: "pullquote" }, 0];
-	},
-});
+// Custom nodes (./editor/nodes) — names match the schema `type` values 1:1
+// so stored JSON round-trips through Tiptap unchanged.
 
 // mediaId → smallest-variant preview URL (populated from the library before
 // the editor mounts; uploads add entries synchronously before insertion).
@@ -149,38 +122,7 @@ function previewUrl(mediaId: string): string {
 	return `${prefix}/media/${mediaId}/preview`;
 }
 
-const FigureView = Node.create({
-	name: "figure",
-	group: "block",
-	atom: true,
-	selectable: true,
-	addAttributes() {
-		return {
-			mediaId: { default: "" },
-			alt: { default: "" },
-			caption: { default: "" },
-			layout: { default: "inline" },
-		};
-	},
-	parseHTML() {
-		return [{ tag: "figure" }];
-	},
-	renderHTML({ node, HTMLAttributes }) {
-		const attrs = node.attrs as Record<string, string>;
-		return [
-			"figure",
-			{ ...HTMLAttributes, class: `layout-${attrs.layout ?? "inline"}` },
-			[
-				"img",
-				{
-					src: previewUrl(attrs.mediaId ?? ""),
-					alt: attrs.alt ?? "",
-				},
-			],
-			...(attrs.caption ? [["figcaption", {}, attrs.caption] as const] : []),
-		];
-	},
-});
+const FigureView = createFigureView(previewUrl);
 
 let element: HTMLElement | null = $state(null);
 let editor: Editor | null = $state(null);
@@ -221,8 +163,6 @@ let publishedInput = $state(
 let linkDialog: HTMLDialogElement | null = $state(null);
 let linkHref = $state("");
 let linkError = $state("");
-let sidenoteDialog: HTMLDialogElement | null = $state(null);
-let sidenoteLabel = $state("");
 let pullquoteDialog: HTMLDialogElement | null = $state(null);
 let showDeleteConfirm = $state(false);
 let deleteSlug = $state("");
@@ -383,9 +323,7 @@ function markDirty() {
 }
 
 function currentDocJson(): string {
-	if (!editor) return initialDoc;
-	const doc = tiptapToDoc(editor.getJSON());
-	return JSON.stringify(doc);
+	return currentDocJsonOf(editor, initialDoc);
 }
 
 async function save(overwrite: boolean): Promise<boolean> {
@@ -657,15 +595,7 @@ async function remove() {
 }
 
 function stripLinkAttrs(html: string): string {
-	// Paste cleanup: keep only href (+title) on pasted links — drop
-	// target/rel/class so pasted JSON never carries schema-foreign attrs.
-	return html.replaceAll(/<a\b([^>]*)>/gi, (...args: [string, string]) => {
-		const attrs = args[1];
-		const href = /href\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i.exec(attrs)?.[1] ?? "";
-		const title =
-			/title\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i.exec(attrs)?.[1] ?? "";
-		return `<a href=${href}${title ? ` title=${title}` : ""}>`;
-	});
+	return stripLinkAttrsFn(html);
 }
 
 function openLinkDialog() {
@@ -684,93 +614,32 @@ function applyLink() {
 	if (!editor) return;
 	const href = linkHref.trim();
 	if (href !== "") {
-		try {
-			const url =
-				href.startsWith("/") && !href.startsWith("//")
-					? new URL(href, "https://x.invalid")
-					: href.startsWith("#") || href.startsWith("?")
-						? new URL(`https://x.invalid/${href}`)
-						: new URL(href);
-			const proto =
-				href.startsWith("/") && !href.startsWith("//")
-					? "relative"
-					: href.startsWith("#") || href.startsWith("?")
-						? "fragment"
-						: url.protocol;
-			if (
-				!["relative", "fragment", "http:", "https:", "mailto:"].includes(proto)
-			) {
-				linkError =
-					"Only http(s), mailto, and site-relative links are allowed.";
-				return;
-			}
-		} catch {
-			linkError = "Only http(s), mailto, and site-relative links are allowed.";
+		const error = validateLinkHref(href);
+		if (error !== null) {
+			linkError = error;
 			return;
 		}
-		editor.chain().focus().setLink({ href }).run();
-	} else {
-		editor.chain().focus().unsetLink().run();
 	}
+	applyLinkHref(editor, href);
 	linkDialog?.close();
 	showLinkPopover = false;
 	refreshSelection();
 	markDirty();
 }
 
-function insertSidenote() {
-	if (!editor || sidenoteLabel.trim() === "") return;
-	editor
-		.chain()
-		.focus()
-		.insertContent({
-			type: "sidenote",
-			attrs: { label: sidenoteLabel.trim() },
-			content: [{ type: "text", text: "note" }],
-		})
-		.run();
-	sidenoteDialog?.close();
-	sidenoteLabel = "";
-	markDirty();
-}
-
 function insertPullquote() {
-	editor
-		?.chain()
-		.focus()
-		.insertContent({
-			type: "pullquote",
-			content: [
-				{ type: "paragraph", content: [{ type: "text", text: "Quote" }] },
-			],
-		})
-		.run();
+	insertPullquoteAt(editor);
 	pullquoteDialog?.close();
 	markDirty();
 }
 
 function insertFootnote() {
-	editor
-		?.chain()
-		.focus()
-		.insertContent({
-			type: "footnote",
-			content: [
-				{ type: "paragraph", content: [{ type: "text", text: "Footnote" }] },
-			],
-		})
-		.run();
+	insertFootnoteAt(editor);
 	markDirty();
 }
 
 function togglePullquote(): void {
-	if (!editor) return;
-	if (editor.isActive("pullquote")) {
-		editor.chain().focus().lift("pullquote").run();
-	} else {
-		// Wrap the current block in a pullquote.
-		editor.chain().focus().wrapIn("pullquote").run();
-	}
+	togglePullquoteAt(editor);
 	refreshSelection();
 	markDirty();
 }
@@ -786,22 +655,21 @@ interface MediaListResponse {
 async function refreshLibrary(): Promise<void> {
 	libraryError = null;
 	try {
-		const res = await fetch("/admin/api/media");
-		if (!res.ok) throw new Error(`library failed (${res.status})`);
-		const data = (await res.json()) as MediaListResponse;
-		const items = (data.media ?? []).map((m) => ({
-			id: m.id,
-			altDefault: m.altDefault,
-			width: m.width,
-			height: m.height,
-			variantsJson: m.variantsJson,
-			useCount: m.useCount ?? 0,
-		}));
+		const {
+			items,
+			raw,
+			previewUrls: urls,
+		} = await fetchLibrary({
+			fetchMedia: async () => {
+				const res = await fetch("/admin/api/media");
+				if (!res.ok) throw new Error(`library failed (${res.status})`);
+				return (await res.json()) as MediaListResponse;
+			},
+			mediaBaseUrl,
+		});
 		library = items;
-		libraryFull = data.media ?? [];
-		for (const m of data.media ?? []) {
-			previewUrls.set(m.id, smallestVariantUrl(m, mediaBaseUrl));
-		}
+		libraryFull = raw;
+		for (const [id, url] of urls) previewUrls.set(id, url);
 	} catch (err) {
 		libraryError = err instanceof Error ? err.message : "library failed";
 	}
@@ -826,15 +694,7 @@ function insertFigureAt(
 	caption: string,
 	layout: string,
 ): void {
-	if (!editor) return;
-	editor
-		.chain()
-		.focus()
-		.insertContent({
-			type: "figure",
-			attrs: { mediaId, alt, caption, layout },
-		})
-		.run();
+	insertFigureAtEditor(editor, mediaId, alt, caption, layout);
 	markDirty();
 }
 
@@ -855,29 +715,7 @@ function insertFromPicker(): void {
 	}
 	const alt = pickerDecorative ? "" : pickerAlt.trim();
 	if (pickerMode === "pair") {
-		// One atomic insert of both pair-layout figures: two back-to-back
-		// insertFigureAt calls leave a NodeSelection on the first figure
-		// that the second insert replaces.
-		if (!editor) return;
-		editor
-			.chain()
-			.focus()
-			.insertContent([
-				{
-					type: "figure",
-					attrs: {
-						mediaId: pickerMediaId,
-						alt,
-						caption: pickerCaption.trim(),
-						layout: "pair",
-					},
-				},
-				{
-					type: "figure",
-					attrs: { mediaId: pickerMediaId, alt, caption: "", layout: "pair" },
-				},
-			])
-			.run();
+		insertFigurePair(editor, pickerMediaId, alt, pickerCaption.trim());
 		markDirty();
 	} else {
 		insertFigureAt(pickerMediaId, alt, pickerCaption.trim(), pickerLayout);
@@ -889,8 +727,12 @@ async function pickerUpload(file: File): Promise<void> {
 	pickerBusy = true;
 	pickerError = null;
 	try {
-		const prepared = await fileToVariants(file);
-		const { id } = await uploadMedia(prepared, pickerAlt.trim());
+		const { id } = await uploadOneImage(file, pickerAlt.trim(), {
+			fetchMedia: async () => ({ media: [] }),
+			mediaBaseUrl,
+			fileToVariants,
+			uploadMedia,
+		});
 		await refreshLibrary();
 		pickerMediaId = id;
 		markDirty();
@@ -903,44 +745,17 @@ async function pickerUpload(file: File): Promise<void> {
 
 /** Pipeline for dropped/pasted files: variants → upload → insert at cursor. */
 async function filesToFigures(files: File[]): Promise<void> {
-	const images = files.filter((f) => f.type.startsWith("image/"));
-	if (images.length === 0 || !editor) return;
-	for (const file of images) {
-		try {
-			const prepared = await fileToVariants(file);
-			const { id } = await uploadMedia(prepared, "");
-			previewUrls.set(
-				id,
-				smallestVariantUrl(
-					{
-						id,
-						r2KeyPrefix: `media/${id}/`,
-						mime: "image/webp",
-						width: prepared.sourceWidth,
-						height: prepared.sourceHeight,
-						bytes: prepared.sourceBytes,
-						altDefault: "",
-						dominantColor: prepared.dominant,
-						variantsJson: JSON.stringify(
-							prepared.variants.map((v) => ({
-								w: v.w,
-								key: `media/${id}/${v.w}.webp`,
-								bytes: v.blob.size,
-								mime: "image/webp",
-							})),
-						),
-						createdAt: Date.now(),
-					} as Media,
-					mediaBaseUrl,
-				),
-			);
-			// Dropped/pasted images carry no author alt yet: insert with an
-			// empty alt so the save renders the default until edited.
-			insertFigureAt(id, "", "", "inline");
-		} catch {
+	if (!editor) return;
+	await filesToFiguresUpload(editor, files, {
+		fetchMedia: async () => ({ media: [] }),
+		mediaBaseUrl,
+		fileToVariants,
+		uploadMedia,
+		onPreview: (id, url) => previewUrls.set(id, url),
+		onError: () => {
 			saveState = "saved";
-		}
-	}
+		},
+	});
 }
 
 // Selection-driven floating UI (custom Svelte over coordsAtPos, no new deps).
@@ -1009,11 +824,7 @@ function setFigureCaption(caption: string): void {
 }
 
 // Slash menu: custom keydown `/` combobox issuing the same insert commands.
-interface SlashItem {
-	id: string;
-	label: string;
-	run: () => void;
-}
+// State ($state) stays here; item list + edit ops live in ./editor/slash.
 let slashOpen = $state(false);
 let slashFrom = $state(0);
 let slashQuery = $state("");
@@ -1022,55 +833,24 @@ let slashPos: { x: number; y: number } | null = $state(null);
 let slashArmed = false;
 
 function slashItems(): SlashItem[] {
-	return [
-		{
-			id: "img-inline",
-			label: "Image · inline",
-			run: () => openImageDialog("insert"),
+	return buildSlashItems({
+		openImageDialog,
+		setPickerLayout: (layout) => {
+			pickerLayout = layout;
 		},
-		{
-			id: "img-full",
-			label: "Image · full-bleed",
-			run: () => {
-				openImageDialog("insert");
-				pickerLayout = "full";
-			},
+		insertHorizontalRule: () => {
+			editor?.chain().focus().setHorizontalRule().run();
+			markDirty();
 		},
-		{
-			id: "img-pair",
-			label: "Image · pair",
-			run: () => openImageDialog("pair"),
+		toggleBlockquote: () => {
+			editor?.chain().focus().toggleBlockquote().run();
+			refreshSelection();
+			markDirty();
 		},
-		{
-			id: "divider",
-			label: "Divider · gurat line",
-			run: () => {
-				editor?.chain().focus().setHorizontalRule().run();
-				markDirty();
-			},
-		},
-		{
-			id: "sidenote",
-			label: "Sidenote",
-			run: () => sidenoteDialog?.showModal(),
-		},
-		{
-			id: "quote",
-			label: "Quote",
-			run: () => {
-				editor?.chain().focus().toggleBlockquote().run();
-				refreshSelection();
-				markDirty();
-			},
-		},
-	];
+	});
 }
 
-const slashFiltered = $derived(
-	slashItems().filter((item) =>
-		item.label.toLowerCase().includes(slashQuery.toLowerCase()),
-	),
-);
+const slashFiltered = $derived(filterSlashItems(slashItems(), slashQuery));
 
 function openSlashMenu(): void {
 	if (!editor) return;
@@ -1093,43 +873,22 @@ function closeSlashMenu(): void {
 }
 
 function deleteSlashText(): void {
-	if (!editor) return;
-	try {
-		const to = editor.state.selection.from;
-		if (to <= slashFrom) return;
-		const raw = editor.state.doc.textBetween(slashFrom, to, " ");
-		if (!raw.startsWith("/")) return;
-		editor.chain().focus().deleteRange({ from: slashFrom, to }).run();
-	} catch {
-		/* selection already moved; insert anyway */
-	}
+	deleteSlashTextAt(editor, slashFrom);
 }
 
 function pickSlashItem(item: SlashItem): void {
-	deleteSlashText();
-	closeSlashMenu();
-	editor?.chain().focus().run();
-	item.run();
+	pickSlashItemAt(editor, item, slashFrom, () => closeSlashMenu());
 }
 
 function syncSlashQuery(): void {
 	if (!editor || !slashOpen) return;
-	try {
-		const to = editor.state.selection.from;
-		if (to <= slashFrom) {
-			closeSlashMenu();
-			return;
-		}
-		const text = editor.state.doc.textBetween(slashFrom + 1, to, " ");
-		if (text.includes(" ") || text.includes("\n")) {
-			closeSlashMenu();
-			return;
-		}
-		slashQuery = text;
-		slashIndex = 0;
-	} catch {
+	const result = slashQueryAfterEdit(editor, slashFrom);
+	if (result.close) {
 		closeSlashMenu();
+		return;
 	}
+	slashQuery = result.query;
+	slashIndex = 0;
 }
 
 // DETAILS slide-over.
@@ -1376,7 +1135,6 @@ onMount(() => {
 					openOnClick: false,
 					HTMLAttributes: { rel: "noopener noreferrer" },
 				}),
-				Sidenote,
 				Footnote,
 				Pullquote,
 				FigureView,
@@ -2242,16 +2000,6 @@ onDestroy(() => {
 			</label>
 			{#if linkError}<p class="ed-error">{linkError}</p>{/if}
 			<button type="button" onclick={applyLink}>Apply</button>
-			<button type="submit">Cancel</button>
-		</form>
-	</dialog>
-
-	<dialog bind:this={sidenoteDialog} aria-label="Insert sidenote">
-		<form method="dialog">
-			<label>Label
-				<input bind:value={sidenoteLabel} aria-label="Sidenote label" />
-			</label>
-			<button type="button" onclick={insertSidenote}>Insert</button>
 			<button type="submit">Cancel</button>
 		</form>
 	</dialog>
