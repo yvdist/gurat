@@ -107,6 +107,7 @@ img {
 /* header */
 .site-header {
 	border-bottom: var(--hairline) solid var(--line);
+	margin-bottom: var(--space-6);
 }
 
 .site-header .page {
@@ -582,10 +583,15 @@ img {
 /* compact about preview: portrait + bio + MORE → */
 .about-preview {
 	display: grid;
-	grid-template-columns: 160px 1fr;
+	grid-template-columns: 200px minmax(0, 1fr);
 	gap: var(--space-6);
 	align-items: center;
 	padding-block: var(--space-8);
+}
+
+.about-preview > div {
+	max-width: 40rem;
+	min-width: 0;
 }
 
 .about-preview img {
@@ -796,9 +802,9 @@ img {
 	display: none;
 }
 
-/* archive rows: NO. NNN · serif title · TAG · DATE · MIN + CSS-only hover
-   cover preview (row-embedded img on :hover/:focus-within, positioned
-   right; @media(hover:none) shows nothing — zero JS). */
+/* archive rows: NO. NNN · serif title · TAG · DATE · MIN + permanent
+   left thumbnail (row-embedded img, first column via order; rows
+   without a cover keep the 5-column grid — zero JS). */
 .archive-layout {
 	display: grid;
 	grid-template-columns: 1fr;
@@ -839,34 +845,33 @@ img {
 	color: var(--muted);
 }
 
+.archive-row:has(.row-preview) {
+	grid-template-columns: 132px 90px 1fr auto auto auto;
+}
+
 .archive-row .row-preview {
-	display: none;
-	position: absolute;
-	right: 0;
-	top: 50%;
-	transform: translateY(-50%);
-	width: 220px;
-	pointer-events: none;
-}
-
-.archive-row:hover .row-preview,
-.archive-row:focus-within .row-preview {
 	display: block;
-}
-
-@media (hover: none) {
-	.archive-row:hover .row-preview,
-	.archive-row:focus-within .row-preview {
-		display: none;
-	}
+	position: static;
+	order: -1;
+	width: 132px;
+	height: 88px;
+	object-fit: cover;
+	transform: none;
+	pointer-events: none;
+	border: var(--hairline) solid var(--line);
 }
 
 /* about: portrait left, content right; stacks text-first on narrow */
 .about-grid {
 	display: grid;
-	grid-template-columns: 280px 1fr;
+	grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
 	gap: var(--space-8);
 	align-items: start;
+}
+
+.about-body {
+	max-width: 46rem;
+	min-width: 0;
 }
 
 .about-portrait {
@@ -925,6 +930,14 @@ img {
 
 	.archive-row {
 		grid-template-columns: 72px 1fr auto;
+	}
+
+	.archive-row:has(.row-preview) {
+		grid-template-columns: 72px 1fr auto;
+	}
+
+	.archive-row .row-preview {
+		display: none;
 	}
 
 	.archive-row .row-tag,

@@ -188,33 +188,33 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 				editDialog.showModal();
 			});
 		}
-		editForm?.addEventListener("submit", async (e) => {
-			if (!(editDialog instanceof HTMLDialogElement)) return;
-			if (editDialog.returnValue === "cancel") return;
-			e.preventDefault();
-			const res = await fetch(`/admin/api/tags/${editId_}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					slug: editSlug instanceof HTMLInputElement ? editSlug.value : "",
-					labelEn: editEn instanceof HTMLInputElement ? editEn.value : "",
-					labelId: editIdInput instanceof HTMLInputElement ? editIdInput.value : "",
-				}),
-			});
-			if (!res.ok) {
-				const err = await readError(res);
-				const hint = adminErrorHint(err.code, err.detail);
-				if (editError instanceof HTMLElement) {
-					editError.textContent = hint;
-					editError.hidden = false;
-				} else {
-					toast(hint, "err");
-				}
-				return;
-			}
-			toast("Tag saved");
-			window.location.reload();
+	editForm?.addEventListener("submit", async (e) => {
+		if ((e as SubmitEvent).submitter?.getAttribute("value") === "cancel") return;
+		if (!(editDialog instanceof HTMLDialogElement)) return;
+		e.preventDefault();
+		const res = await fetch(`/admin/api/tags/${editId_}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				slug: editSlug instanceof HTMLInputElement ? editSlug.value : "",
+				labelEn: editEn instanceof HTMLInputElement ? editEn.value : "",
+				labelId: editIdInput instanceof HTMLInputElement ? editIdInput.value : "",
+			}),
 		});
+		if (!res.ok) {
+			const err = await readError(res);
+			const hint = adminErrorHint(err.code, err.detail);
+			if (editError instanceof HTMLElement) {
+				editError.textContent = hint;
+				editError.hidden = false;
+			} else {
+				toast(hint, "err");
+			}
+			return;
+		}
+		toast("Tag saved");
+		window.location.reload();
+	});
 
 		const deleteDialog = document.getElementById("tag-delete-dialog");
 		const deleteForm = document.getElementById("tag-delete-form");
@@ -237,27 +237,27 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 				deleteDialog.showModal();
 			});
 		}
-		deleteForm?.addEventListener("submit", async (e) => {
-			if (!(deleteDialog instanceof HTMLDialogElement)) return;
-			if (deleteDialog.returnValue === "cancel") return;
-			e.preventDefault();
-			const res = await fetch(`/admin/api/tags/${deleteId_}`, {
-				method: "DELETE",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ confirm: deleteCheck instanceof HTMLInputElement ? deleteCheck.checked : false }),
-			});
-			if (!res.ok) {
-				const err = await readError(res);
-				const hint = adminErrorHint(err.code, err.detail);
-				if (deleteError instanceof HTMLElement) {
-					deleteError.textContent = hint;
-					deleteError.hidden = false;
-				}
-				toast(hint, "err");
-				return;
-			}
-			toast("Tag deleted");
-			window.location.reload();
+	deleteForm?.addEventListener("submit", async (e) => {
+		if ((e as SubmitEvent).submitter?.getAttribute("value") === "cancel") return;
+		if (!(deleteDialog instanceof HTMLDialogElement)) return;
+		e.preventDefault();
+		const res = await fetch(`/admin/api/tags/${deleteId_}`, {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ confirm: deleteCheck instanceof HTMLInputElement ? deleteCheck.checked : false }),
 		});
+		if (!res.ok) {
+			const err = await readError(res);
+			const hint = adminErrorHint(err.code, err.detail);
+			if (deleteError instanceof HTMLElement) {
+				deleteError.textContent = hint;
+				deleteError.hidden = false;
+			}
+			toast(hint, "err");
+			return;
+		}
+		toast("Tag deleted");
+		window.location.reload();
+	});
 	</script>
 	</Admin>

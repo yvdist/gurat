@@ -833,6 +833,7 @@ body[data-focus="on"] .admin-details {
 	border: var(--hairline) solid var(--ink);
 	border-radius: var(--radius);
 	padding: var(--space-4);
+	width: min(28rem, 90vw);
 	max-width: min(32rem, 90vw);
 }
 

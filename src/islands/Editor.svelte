@@ -848,10 +848,30 @@ function insertFromPicker(): void {
 	}
 	const alt = pickerDecorative ? "" : pickerAlt.trim();
 	if (pickerMode === "pair") {
-		// Two consecutive pair-layout figures so `groupFigures` renders the
-		// pair treatment.
-		insertFigureAt(pickerMediaId, alt, pickerCaption.trim(), "pair");
-		insertFigureAt(pickerMediaId, alt, "", "pair");
+		// One atomic insert of both pair-layout figures: two back-to-back
+		// insertFigureAt calls leave a NodeSelection on the first figure
+		// that the second insert replaces.
+		if (!editor) return;
+		editor
+			.chain()
+			.focus()
+			.insertContent([
+				{
+					type: "figure",
+					attrs: {
+						mediaId: pickerMediaId,
+						alt,
+						caption: pickerCaption.trim(),
+						layout: "pair",
+					},
+				},
+				{
+					type: "figure",
+					attrs: { mediaId: pickerMediaId, alt, caption: "", layout: "pair" },
+				},
+			])
+			.run();
+		markDirty();
 	} else {
 		insertFigureAt(pickerMediaId, alt, pickerCaption.trim(), pickerLayout);
 	}
@@ -1069,8 +1089,10 @@ function deleteSlashText(): void {
 	if (!editor) return;
 	try {
 		const to = editor.state.selection.from;
-		if (to > slashFrom)
-			editor.chain().focus().deleteRange({ from: slashFrom, to }).run();
+		if (to <= slashFrom) return;
+		const raw = editor.state.doc.textBetween(slashFrom, to, " ");
+		if (!raw.startsWith("/")) return;
+		editor.chain().focus().deleteRange({ from: slashFrom, to }).run();
 	} catch {
 		/* selection already moved; insert anyway */
 	}
@@ -1287,8 +1309,9 @@ function globalKeydown(e: KeyboardEvent): void {
 		toggleFocus();
 	} else if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
 		e.preventDefault();
-		openSlashMenu();
 		editor?.chain().focus().run();
+		slashFrom = editor?.state.selection.from ?? 0;
+		openSlashMenu();
 	}
 }
 
@@ -2020,10 +2043,11 @@ onDestroy(() => {
 			<button
 				type="button"
 				class="ed-link"
-				onclick={() => {
-					openSlashMenu();
-					editor?.chain().focus().run();
-				}}
+			onclick={() => {
+				editor?.chain().focus().run();
+				slashFrom = editor?.state.selection.from ?? 0;
+				openSlashMenu();
+			}}
 			>
 				/ INSERT
 			</button>
@@ -2415,6 +2439,15 @@ onDestroy(() => {
 		width: min(100%, calc(68ch + 2rem));
 		min-width: 0;
 		padding: 2rem 1rem 6rem;
+		/* Backstop: keep viewport-wide .layout-full math inside the
+		   sidebar-offset admin canvas. clip (not hidden) so nothing
+		   re-anchors; canvas holds no fixed/sticky descendants. */
+		overflow-x: clip;
+	}
+	.ed-body .layout-full {
+		/* Editor-only: full renders container-width here. Published
+		   output is byte-identical (article.css untouched). */
+		margin-inline: 0;
 	}
 	.ed-cover img {
 		width: 100%;
@@ -2488,15 +2521,16 @@ onDestroy(() => {
 		top: 0;
 		right: 0;
 		bottom: 0;
-		/* Below the sticky topbar (z-index 30) so PREVIEW/DETAILS/Publish
-		   stay clickable while the drawer is open; still above canvas.
-		   Slides under the bar, so the top padding clears it. */
-		z-index: 20;
+		/* Full-height drawer paints above the sticky topbar (z-index 30);
+		   PREVIEW/DETAILS/Publish unreachable while open — CLOSE ✕ in
+		   the drawer head and Esc are the exits. Still below the slash
+		   menu and bubble (z-index 50) and native dialogs (top layer). */
+		z-index: 40;
 		width: min(22rem, 92vw);
 		max-height: none;
 		border-left: 1px solid var(--line);
 		background: var(--surface, var(--bg));
-		padding: 4rem 1rem 1rem;
+		padding: 1rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;

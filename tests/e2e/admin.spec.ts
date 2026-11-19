@@ -29,8 +29,8 @@ test("create → autosave → preview → publish → 200 → unpublish → 404"
 	await page.getByRole("button", { name: "DETAILS" }).click();
 	await page.locator("#meta-slug").fill(SLUG);
 	await page.locator("#meta-excerpt").fill("E2E excerpt");
-
-	// Type into the Tiptap surface; autosave fires ~2 s after the update.
+	// DETAILS paints above the topbar; close it so Publish is clickable.
+	await page.keyboard.press("Escape");
 	// The first save creates the row and swaps the URL to its id — waiting
 	// for that (not the initial "saved" text) proves the save landed.
 	const editor = page.locator(
@@ -50,17 +50,22 @@ test("create → autosave → preview → publish → 200 → unpublish → 404"
 	expect(preview.status()).toBe(200);
 	expect(await preview.text()).toContain("Hello from e2e");
 
-	// Publish → public URL 200. Stays on the edit page; Unpublish appears.
+	// Publish → public URL 200. Stays on the edit page; Unpublish appears
+	// in the DETAILS drawer (Danger zone), so reopen it first — the drawer
+	// paints above the topbar while open.
 	await page.getByRole("button", { name: "Publish", exact: true }).click();
 	await page.getByRole("button", { name: "Confirm publish" }).click();
+	await page.getByRole("button", { name: "DETAILS" }).click();
 	const unpubBtn = page.getByRole("button", { name: "Unpublish", exact: true });
 	await expect(unpubBtn).toBeVisible({ timeout: 15000 });
 	const pub = await request.get(`/writing/${SLUG}`);
 	expect(pub.status()).toBe(200);
 	expect(await pub.text()).toContain("Hello from e2e");
 
-	// Unpublish → 404. Stays on the edit page; Publish reappears.
+	// Unpublish → 404. Stays on the edit page; Publish reappears (topbar —
+	// close DETAILS so it isn't covered).
 	await unpubBtn.click();
+	await page.keyboard.press("Escape");
 	await expect(
 		page.getByRole("button", { name: "Publish", exact: true }),
 	).toBeVisible({ timeout: 15000 });

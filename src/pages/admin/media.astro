@@ -258,8 +258,8 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 		});
 	}
 	renameForm?.addEventListener("submit", async (e) => {
+		if ((e as SubmitEvent).submitter?.getAttribute("value") === "cancel") return;
 		if (!(renameDialog instanceof HTMLDialogElement)) return;
-		if (renameDialog.returnValue === "cancel") return;
 		e.preventDefault();
 		const res = await fetch(`/admin/api/media/${renameId}`, {
 			method: "PUT",
@@ -295,8 +295,8 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 		});
 	}
 	deleteForm?.addEventListener("submit", async (e) => {
+		if ((e as SubmitEvent).submitter?.getAttribute("value") === "cancel") return;
 		if (!(deleteDialog instanceof HTMLDialogElement)) return;
-		if (deleteDialog.returnValue === "cancel") return;
 		e.preventDefault();
 		const res = await fetch(`/admin/api/media/${deleteId}`, { method: "DELETE" });
 		if (!res.ok) {
