@@ -45,6 +45,7 @@ pnpm dev                         # workerd runtime + local D1 (dev/prod parity)
 - `scripts/seed.ts` — emits seed SQL, applied via `wrangler d1 execute --local`
 - `tests/` — workerd integration tests (`db`, `i18n`) + Playwright smoke (`e2e/`)
 - `docs/decisions/` — ADRs; `docs/phase-reports/` — per-phase acceptance evidence
+- `mcp/` — `gurat-mcp` Worker: draft-only MCP endpoint for AI draft generation ([`docs/mcp.md`](docs/mcp.md))
 
 ## Admin access (Cloudflare Access)
 

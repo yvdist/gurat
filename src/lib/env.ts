@@ -21,6 +21,8 @@ export interface Env {
 	MEDIA_BASE_URL: string;
 	/** Original uploads stored (separate private bucket). Default `"false"`; media pipeline only. */
 	KEEP_ORIGINALS?: string;
+	/** Bearer token for the MCP Worker (`gurat-mcp`). Secret — dashboard only. */
+	MCP_BEARER_TOKEN?: string;
 	[k: string]: unknown;
 }
 

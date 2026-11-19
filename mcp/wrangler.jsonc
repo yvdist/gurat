@@ -1,0 +1,18 @@
+{
+	"$schema": "../node_modules/wrangler/config-schema.json",
+	"name": "gurat-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-30",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "gurat",
+			"database_id": "d1ab1a16-5b6c-42bd-a03c-90962ec9d921",
+			"migrations_dir": "../migrations"
+		}
+	]
+	// No `vars` block: dashboard is the single source of truth
+	// (MCP_BEARER_TOKEN is a secret, set via `wrangler secret put`).
+	// Same 2026-11-18 rule as the main Worker — a `vars` block here
+	// would overwrite dashboard values on every deploy.
+}

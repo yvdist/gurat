@@ -4,6 +4,7 @@ dist/
 .wrangler/
 .dev.vars
 src/worker-configuration.d.ts
+mcp/src/worker-configuration.d.ts
 playwright-report/
 test-results/
 *.sqlite*
