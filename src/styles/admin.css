@@ -641,9 +641,24 @@ body.admin {
 	color: var(--ink);
 	border: var(--hairline) solid var(--ink);
 	border-radius: var(--radius);
-	padding: var(--space-1) var(--space-2);
+	padding: 0.5rem 1rem;
 	cursor: pointer;
 	min-height: var(--tap-min);
+	white-space: nowrap;
+}
+/* Destructive voice: solid --error red. Ghost/outline base stays the
+   secondary voice; ink-fill .admin-btn-primary is the confirm voice. */
+.admin button.admin-btn-danger {
+	background: var(--error);
+	border-color: var(--error);
+	color: #fff;
+}
+/* <button> primary must outrank the `.admin button` base (0,1,1 beats
+   bare `.admin-btn-primary` 0,1,0): Save/Create render ink-fill. */
+.admin button.admin-btn-primary {
+	background: var(--ink);
+	color: var(--bg);
+	border-color: var(--ink);
 }
 
 .admin button:hover {
@@ -703,8 +718,13 @@ body.admin {
 
 .admin-media-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: var(--space-4);
+}
+@media (max-width: 768px) {
+	.admin-media-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 
 .admin-media-card {
@@ -733,6 +753,7 @@ body.admin {
 	object-fit: cover;
 	display: block;
 	background: var(--surface);
+	height: 12rem;
 }
 
 /* Editor shell: plain canvas, top bar, bottom bar, slide-over */
@@ -894,11 +915,16 @@ body[data-focus="on"] .admin-details {
 	}
 }
 
-/* Posts index filter bar: one aligned row, roomy fields, submit pinned to
-   the field baseline (fixes cramped/misaligned bar with CSS only). */
+/* Posts index filter bar: chips share one full-width wrapped row above the
+   fields; Tag/Search/Filter/view-toggle sit on one aligned baseline. */
 .admin-filters {
-	gap: var(--space-4);
+	display: grid;
+	grid-template-columns: repeat(3, minmax(10rem, 1fr)) auto;
+	gap: var(--space-2) var(--space-4);
 	align-items: end;
+}
+.admin-filters .admin-chips {
+	grid-column: 1 / -1;
 }
 .admin-filters .admin-field input,
 .admin-filters .admin-field select {
@@ -907,15 +933,15 @@ body[data-focus="on"] .admin-details {
 .admin-filters button[type="submit"] {
 	align-self: end;
 }
-.admin-view-toggle {
+.admin-filters .admin-view-toggle {
 	display: flex;
 	gap: var(--space-1);
 	align-self: end;
-	margin-inline-start: auto;
+	margin-inline-start: 0;
 }
 @media (max-width: 768px) {
-	.admin-view-toggle {
-		margin-inline-start: 0;
+	.admin-filters {
+		grid-template-columns: minmax(0, 1fr);
 	}
 }
 

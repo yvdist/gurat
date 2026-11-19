@@ -2439,6 +2439,10 @@ onDestroy(() => {
 		width: min(100%, calc(68ch + 2rem));
 		min-width: 0;
 		padding: 2rem 1rem 6rem;
+		/* Guarantee viewport-scale room so the canvas grows with content
+		   instead of reading as a cramped box. No max-height/overflow-y
+		   here: inner scrollbars are the bug, page scroll owns growth. */
+		min-height: calc(100dvh - 12rem);
 		/* Backstop: keep viewport-wide .layout-full math inside the
 		   sidebar-offset admin canvas. clip (not hidden) so nothing
 		   re-anchors; canvas holds no fixed/sticky descendants. */
@@ -2495,6 +2499,9 @@ onDestroy(() => {
 	.ed-subtitle:focus {
 		outline: 1px solid var(--rule, currentColor);
 		outline-offset: 4px;
+	}
+	.ed-body :global(.tiptap) {
+		min-height: 60dvh;
 	}
 	.ed-body :global(.tiptap:focus) {
 		outline: none;

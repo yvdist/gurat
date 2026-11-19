@@ -93,7 +93,7 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 						{m.posts.length > 0 && <span class="admin-media-meta" title={m.posts.join(", ")}>used in: {m.posts.join(", ")}</span>}
 						<span class="admin-media-actions">
 							<button type="button" data-media-rename={m.id} data-media-alt={m.altDefault}>Rename</button>
-							<button type="button" data-media-delete={m.id} data-media-posts={m.posts.join(",")}>Delete</button>
+							<button type="button" class="admin-btn-danger" data-media-delete={m.id} data-media-posts={m.posts.join(",")}>Delete</button>
 						</span>
 					</figcaption>
 				</figure>
@@ -121,7 +121,7 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 				<input name="altDefault" id="media-rename-alt" maxlength={200} />
 			</label>
 			<p class="admin-error" id="media-rename-error" role="alert" hidden></p>
-			<button type="submit">Save alt</button>
+			<button type="submit" class="admin-btn-primary">Save alt</button>
 			<button type="submit" value="cancel" formnovalidate>Cancel</button>
 		</form>
 	</dialog>
@@ -131,7 +131,7 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 			<h2>Delete media</h2>
 			<p id="media-delete-text"></p>
 			<p class="admin-error" id="media-delete-error" role="alert" hidden></p>
-			<button type="submit">Delete</button>
+			<button type="submit" class="admin-btn-danger">Delete</button>
 			<button type="submit" value="cancel" formnovalidate>Cancel</button>
 		</form>
 	</dialog>
