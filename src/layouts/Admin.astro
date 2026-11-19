@@ -74,6 +74,7 @@ Astro.response.headers.set("Cache-Control", "no-store");
 					<a href="/admin/settings" aria-current={current === "settings" ? "page" : undefined}>Settings</a>
 				</div>
 				<div class="admin-foot">
+					<div class="admin-theme" role="group" aria-label="Theme"><button type="button" data-theme-value="light" aria-pressed="false">Light</button><button type="button" data-theme-value="dark" aria-pressed="false">Dark</button></div>
 					<a href="/">View site ↗</a>
 					<span>{email}</span>
 					<a href={logoutUrl}>Sign out</a>

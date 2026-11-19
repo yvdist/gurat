@@ -103,6 +103,37 @@ function savedAgo(updatedAt: number): string {
 	return hours === 1 ? "saved 1 hour ago" : `saved ${hours} hours ago`;
 }
 const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/access/logout`;
+
+// 12 UTC weekly buckets ending this week (SSR-only, no JS). Counts rows with
+// status === "published" (covers future publishedAt scheduled rows, same as
+// countAdminMetrics) by publishedAt ?? updatedAt. Empty DB hides the section.
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const weekStartUtc = (t: number): number => {
+	const d = new Date(t);
+	const day = (d.getUTCDay() + 6) % 7;
+	return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
+};
+const thisWeekStart = weekStartUtc(now);
+const activityBuckets = Array.from({ length: 12 }, (_, i) => {
+	const start = thisWeekStart - (11 - i) * WEEK_MS;
+	return { start, end: start + WEEK_MS, count: 0 };
+});
+let activityTotal = 0;
+for (const p of all) {
+	if (p.status !== "published") continue;
+	const t = p.publishedAt ?? p.updatedAt;
+	const idx = Math.floor((weekStartUtc(t) - thisWeekStart) / WEEK_MS) + 11;
+	if (idx < 0 || idx > 11) continue;
+	activityBuckets[idx].count++;
+	activityTotal++;
+}
+const activityMax = Math.max(1, ...activityBuckets.map((b) => b.count));
+const activityLabel = (t: number): string =>
+	new Date(t).toLocaleString("en-GB", {
+		day: "2-digit",
+		month: "short",
+		timeZone: "UTC",
+	});
 ---
 
 <Admin title="Dashboard" email={identity.email} current="dashboard" logoutUrl={logoutUrl}>
@@ -110,8 +141,9 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 	<div class="admin-topbar">
 		<h1>Dashboard</h1>
 		<div class="admin-topbar-actions">
-			<form method="get" action="/admin/posts" role="search">
+			<form class="admin-search-form" method="get" action="/admin/posts" role="search">
 				<input class="admin-search" type="search" name="q" placeholder="search posts" aria-label="Search posts" />
+				<button class="admin-btn-secondary" type="submit">Search</button>
 			</form>
 			<a class="admin-btn-primary" href="/admin/posts/new">[+ NEW POST]</a>
 		</div>
@@ -124,6 +156,18 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 		<li><span class="admin-metric-label">Missing translation</span><span class="admin-metric-value">{metrics.missingTranslation}</span></li>
 	</ul>
 
+	{activityTotal > 0 && (
+		<section class="admin-card admin-activity" aria-label="Publishing activity">
+			<h2>Activity</h2>
+			<p class="admin-status">{activityTotal} published · last 12 weeks</p>
+			<ul class="admin-bars" aria-hidden="true">
+				{activityBuckets.map((b) => (
+					<li><span style={`height:${Math.round((b.count / activityMax) * 100)}%`}></span></li>
+				))}
+			</ul>
+			<p class="admin-activity-range"><time>{activityLabel(activityBuckets[0].start)}</time><time>{activityLabel(activityBuckets[11].start)}</time></p>
+		</section>
+	)}
 	<div class="admin-panels">
 		<div>
 			{latestDraft !== null && (
@@ -193,10 +237,10 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 
 			<section class="admin-card" aria-label="Free-tier usage">
 				<h2>Free-tier usage</h2>
-				<ul>
-					<li>D1 storage 12 MB / 5 GB</li>
-					<li>R2 images 84 MB / 10 GB</li>
-					<li>Worker requests today 1.2K / 100K</li>
+				<ul class="admin-meters">
+					<li><span class="admin-meter-row"><span>D1 storage</span><span>12 MB / 5 GB</span></span><span class="admin-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0.2" aria-label="D1 storage"><span style="width:0.2%"></span></span></li>
+					<li><span class="admin-meter-row"><span>R2 images</span><span>84 MB / 10 GB</span></span><span class="admin-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0.8" aria-label="R2 images"><span style="width:0.8%"></span></span></li>
+					<li><span class="admin-meter-row"><span>Worker requests today</span><span>1.2K / 100K</span></span><span class="admin-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="1.2" aria-label="Worker requests today"><span style="width:1.2%"></span></span></li>
 				</ul>
 				<p class="admin-status">Sample values; real numbers come from Cloudflare.</p>
 			</section>
@@ -206,7 +250,7 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 					<h2>Recent uploads</h2>
 					<ul class="admin-upload-grid">
 						{uploads.map((m) => (
-							<li><img src={smallestVariantUrl(m, env.MEDIA_BASE_URL)} alt="" loading="lazy" width={m.width} height={m.height} /></li>
+							<li><img src={smallestVariantUrl(m, env.MEDIA_BASE_URL)} alt="" loading="lazy" width="320" height="240" /></li>
 						))}
 					</ul>
 				</section>
