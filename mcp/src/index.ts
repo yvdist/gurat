@@ -3,7 +3,6 @@ import {
 	createMcpHandler,
 	hostHeaderValidationResponse,
 	McpServer,
-	originValidationResponse,
 } from "@modelcontextprotocol/server";
 import { registerTools } from "./tools";
 
@@ -108,12 +107,13 @@ export function createHandler(env: McpEnv) {
 			if (request.method !== "POST")
 				return new Response("Method not allowed", { status: 405 });
 
+			// Origin allowlist hanya relevan untuk cookie/session (browser
+			// mengirim kredensial otomatis). Endpoint ini bearer-only: token
+			// di header eksplisit, jadi Origin apa pun — termasuk claude.ai —
+			// boleh lewat; tanpa token yang valid tetap 401.
 			const host = new URL(env.SITE_URL || url.origin).hostname;
 			const rejected = hostRejected(request, [host]);
 			if (rejected) return rejected;
-			const originRejected = originValidationResponse(request, [host]);
-			if (originRejected) return originRejected;
-
 			const authed = await checkBearer(request, env);
 			if (authed) {
 				// Echo the request id (if parseable) without leaking token detail.

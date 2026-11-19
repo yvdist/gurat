@@ -62,4 +62,26 @@ describe("bearer auth", () => {
 			"update-draft",
 		]);
 	});
+
+	it("accepts browser cross-origin requests with a valid token", async () => {
+		// Claude web sends Origin: https://claude.ai; bearer-only auth means
+		// any Origin is fine as long as the token checks out.
+		const req = rpc("tools/list", {});
+		req.headers.set("Origin", "https://claude.ai");
+		const res = await createHandler(testEnv()).fetch(req);
+		expect(res.status).toBe(200);
+	});
+
+	it("still rejects cross-origin requests without a token", async () => {
+		const req = new Request("http://localhost/mcp", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Origin: "https://evil.example",
+			},
+			body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+		});
+		const res = await createHandler(testEnv()).fetch(req);
+		expect(res.status).toBe(401);
+	});
 });
