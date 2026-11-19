@@ -926,9 +926,19 @@ body[data-focus="on"] .admin-details {
 .admin-filters .admin-chips {
 	grid-column: 1 / -1;
 }
+.admin-filters .admin-chips + .admin-chips {
+	border-inline-start: var(--hairline) solid var(--line);
+	padding-inline-start: var(--space-4);
+}
 .admin-filters .admin-field input,
 .admin-filters .admin-field select {
 	min-width: 12rem;
+}
+.admin-filters .admin-field input,
+.admin-filters .admin-field select,
+.admin-filters button[type="submit"],
+.admin-filters .admin-view-toggle button {
+	min-height: 2.5rem;
 }
 .admin-filters button[type="submit"] {
 	align-self: end;
@@ -942,6 +952,10 @@ body[data-focus="on"] .admin-details {
 @media (max-width: 768px) {
 	.admin-filters {
 		grid-template-columns: minmax(0, 1fr);
+	}
+	.admin-filters .admin-chips + .admin-chips {
+		border-inline-start: 0;
+		padding-inline-start: 0;
 	}
 }
 

@@ -554,10 +554,17 @@ const checklistTitle = $derived(metaTitle.trim() !== "");
 const checklistSlug = $derived(/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(metaSlug));
 const checklistBody = $derived(words > 0 || hasContentBlocks);
 const checklistCover = $derived(metaCover !== "");
-const checklistTranslation = $derived(groupId !== null);
 const checklistReady = $derived(
 	checklistTitle && checklistSlug && checklistBody,
 );
+
+// Excerpt autogrow: page scroll owns growth, the field never scrolls
+// internally. Called from oninput and once after mount/hydration.
+function fitExcerpt(el: HTMLTextAreaElement | null): void {
+	if (!el) return;
+	el.style.height = "auto";
+	el.style.height = `${el.scrollHeight}px`;
+}
 
 function openPublishDialog(): void {
 	publishError = null;
@@ -1464,6 +1471,9 @@ onMount(() => {
 		});
 		window.addEventListener("beforeunload", beforeUnload);
 		window.addEventListener("keydown", globalKeydown);
+		fitExcerpt(
+			document.getElementById("meta-excerpt") as HTMLTextAreaElement | null,
+		);
 		tickTimer = setInterval(() => {
 			nowTick = Date.now();
 		}, 30000);
@@ -1578,7 +1588,9 @@ onDestroy(() => {
 					placeholder="A one-line summary…"
 					aria-label="Excerpt"
 					oninput={(e) => {
-						metaExcerpt = (e.target as HTMLTextAreaElement).value;
+						const ta = e.target as HTMLTextAreaElement;
+						metaExcerpt = ta.value;
+						fitExcerpt(ta);
 						markDirty();
 					}}
 				/>
@@ -1774,7 +1786,9 @@ onDestroy(() => {
 						rows={3}
 						aria-label="Excerpt"
 						oninput={(e) => {
-							metaExcerpt = (e.target as HTMLTextAreaElement).value;
+							const ta = e.target as HTMLTextAreaElement;
+							metaExcerpt = ta.value;
+							fitExcerpt(ta);
 							markDirty();
 						}}
 					/>
@@ -2338,12 +2352,7 @@ onDestroy(() => {
 				<li>
 					{checklistCover ? "✓" : "!"} Cover image{checklistCover
 						? " set"
-						: " missing (warning only)"}
-				</li>
-				<li>
-					{checklistTranslation ? "✓" : "!"} Translation counterpart{checklistTranslation
-						? " linked"
-						: " not linked yet"}
+						: " (optional)"}
 				</li>
 			</ul>
 			{#if publishError}<p class="ed-error">{publishError}</p>{/if}
@@ -2492,7 +2501,8 @@ onDestroy(() => {
 		font-family: var(--font-serif, serif);
 		font-style: italic;
 		font-size: 1.15rem;
-		resize: vertical;
+		resize: none;
+		overflow: hidden;
 		padding: 0;
 		margin: 0 0 2rem;
 	}
