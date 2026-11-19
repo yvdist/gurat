@@ -1,5 +1,6 @@
 ---
 import Admin from "../../layouts/Admin.astro";
+import { serializeMediaPayload } from "../../lib/admin/mediaPayload";
 import { smallestVariantUrl } from "../../lib/content/render";
 import { getEnv } from "../../lib/env";
 import type { AccessIdentity } from "../../server/auth/access";
@@ -90,7 +91,7 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 					<figcaption>
 						<code title={m.id}>{m.id}</code>
 						<span class="admin-media-meta">{m.width}×{m.height} · {m.useCount} {m.useCount === 1 ? "post" : "posts"}</span>
-						{m.posts.length > 0 && <span class="admin-media-meta" title={m.posts.join(", ")}>used in: {m.posts.join(", ")}</span>}
+						{m.posts.length > 0 && <span class="admin-media-meta" title={m.posts.join(", ")}>used in {m.useCount} {m.useCount === 1 ? "post" : "posts"}</span>}
 						<span class="admin-media-actions">
 							<button type="button" data-media-rename={m.id} data-media-alt={m.altDefault}>Rename</button>
 							<button type="button" class="admin-btn-danger" data-media-delete={m.id} data-media-posts={m.posts.join(",")}>Delete</button>
@@ -136,7 +137,7 @@ const logoutUrl = `${env.ACCESS_TEAM_DOMAIN || "https://login.invalid"}/cdn-cgi/
 		</form>
 	</dialog>
 </Admin>
-	<script type="application/json" id="media-data" data-base-url={baseUrl}>{JSON.stringify(items.map((m) => ({ id: m.id, altDefault: m.altDefault, width: m.width, height: m.height, variantsJson: m.variantsJson, useCount: m.useCount, posts: m.posts })))}</script>
+	<script type="application/json" id="media-data" data-base-url={baseUrl} set:html={serializeMediaPayload(items.map((m) => ({ id: m.id, altDefault: m.altDefault, width: m.width, height: m.height, variantsJson: m.variantsJson, useCount: m.useCount, posts: m.posts })))} />
 
 <script>
 	import { adminErrorHint, toast } from "../../lib/admin/toast";

@@ -736,6 +736,7 @@ body.admin {
 	flex-direction: column;
 	gap: var(--space-1);
 	min-width: 0;
+	overflow: hidden;
 }
 
 /* Lightbox thumb trigger: invisible button frame around the card image. */
@@ -1031,23 +1032,23 @@ body[data-focus="on"] .admin-details {
 /* Media cards: uniform height via flex column + fixed action row; meta
    clamped to fixed lines so tall captions can't stretch the card. */
 .admin-media-card figcaption {
+	display: flex;
+	flex-direction: column;
 	flex: 1;
+	min-width: 0;
 }
 .admin-media-card figcaption code {
 	display: block;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	min-width: 0;
 }
 .admin-media-meta {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	font-family: var(--font-mono);
-	font-size: var(--font-size-meta);
-	letter-spacing: var(--tracking-meta);
-	text-transform: uppercase;
-	color: var(--muted);
+	min-width: 0;
 }
 .admin-media-actions {
 	display: flex;
